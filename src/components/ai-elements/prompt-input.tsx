@@ -14,16 +14,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { ChatStatus, FileUIPart } from "ai";
 import {
-  ImageIcon,
-  Loader2Icon,
-  PaperclipIcon,
-  PlusIcon,
-  SendIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react";
+  Add01Icon,
+  ArrowUp02Icon,
+  AttachmentIcon,
+  Cancel01Icon,
+  Image02Icon,
+  StopIcon,
+} from "@hugeicons/core-free-icons";
+import type { ChatStatus, FileUIPart } from "ai";
 import { nanoid } from "nanoid";
 import {
   type ChangeEventHandler,
@@ -45,6 +44,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { Spinner } from "../ui/spinner";
+import SharedIcon from "../shared/shared-icon";
 
 type AttachmentsContext = {
   files: (FileUIPart & { id: string })[];
@@ -97,7 +98,7 @@ export function PromptInputAttachment({
         />
       ) : (
         <div className="flex size-full items-center justify-center text-muted-foreground">
-          <PaperclipIcon className="size-4" />
+          <SharedIcon icon={AttachmentIcon} />
         </div>
       )}
       <Button
@@ -108,7 +109,7 @@ export function PromptInputAttachment({
         type="button"
         variant="outline"
       >
-        <XIcon className="h-3 w-3" />
+        <SharedIcon icon={Cancel01Icon} className="h-3 w-3" />
       </Button>
     </div>
   );
@@ -182,7 +183,7 @@ export const PromptInputActionAddAttachments = ({
         attachments.openFileDialog();
       }}
     >
-      <ImageIcon className="mr-2 size-4" /> {label}
+      <SharedIcon icon={Image02Icon} className="mr-2" /> {label}
     </DropdownMenuItem>
   );
 };
@@ -433,7 +434,7 @@ export const PromptInput = ({
       />
       <form
         className={cn(
-          "w-full divide-y overflow-hidden rounded-xl border bg-background shadow-sm",
+          "w-full divide-y overflow-hidden rounded-3.5xl border bg-background shadow-sm",
           className
         )}
         onSubmit={handleSubmit}
@@ -485,13 +486,13 @@ export const PromptInputTextarea = ({
 
   const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = (event) => {
     const items = event.clipboardData?.items;
-    
+
     if (!items) {
       return;
     }
 
     const files: File[] = [];
-    
+
     for (const item of items) {
       if (item.kind === "file") {
         const file = item.getAsFile();
@@ -512,7 +513,7 @@ export const PromptInputTextarea = ({
       className={cn(
         "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
         "field-sizing-content bg-transparent dark:bg-transparent",
-        "max-h-48 min-h-16",
+        "max-h-48 min-h-11",
         "focus-visible:ring-0",
         className
       )}
@@ -570,7 +571,7 @@ export const PromptInputButton = ({
   return (
     <Button
       className={cn(
-        "shrink-0 gap-1.5 rounded-lg",
+        "shrink-0 gap-1.5 rounded-xl",
         variant === "ghost" && "text-muted-foreground",
         newSize === "default" && "px-3",
         className
@@ -598,7 +599,7 @@ export const PromptInputActionMenuTrigger = ({
 }: PromptInputActionMenuTriggerProps) => (
   <DropdownMenuTrigger asChild>
     <PromptInputButton className={className} {...props}>
-      {children ?? <PlusIcon className="size-4" />}
+      {children ?? <SharedIcon icon={Add01Icon} />}
     </PromptInputButton>
   </DropdownMenuTrigger>
 );
@@ -638,19 +639,19 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
-  let Icon = <SendIcon className="size-4" />;
+  let Icon = <SharedIcon icon={ArrowUp02Icon} />;
 
   if (status === "submitted") {
-    Icon = <Loader2Icon className="size-4 animate-spin" />;
+    Icon = <Spinner className="size-4" />;
   } else if (status === "streaming") {
-    Icon = <SquareIcon className="size-4" />;
+    Icon = <SharedIcon icon={StopIcon} />;
   } else if (status === "error") {
-    Icon = <XIcon className="size-4" />;
+    Icon = <SharedIcon icon={Cancel01Icon} />;
   }
 
   return (
     <Button
-      className={cn("gap-1.5 rounded-lg", className)}
+      className={cn("gap-1.5 rounded-xl", className)}
       size={size}
       type="submit"
       variant={variant}

@@ -6,16 +6,17 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type { ToolUIPart } from "ai";
-import {
-  CheckCircleIcon,
-  ChevronDownIcon,
-  CircleIcon,
-  ClockIcon,
-  WrenchIcon,
-  XCircleIcon,
-} from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { CodeBlock } from "./code-block";
+import {
+  ArrowDown01Icon,
+  CancelCircleIcon,
+  CheckmarkCircle01Icon,
+  CircleIcon,
+  Clock01Icon,
+  Wrench01Icon,
+} from "@hugeicons/core-free-icons";
+import SharedIcon from "../shared/shared-icon";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
@@ -42,10 +43,16 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
   } as const;
 
   const icons = {
-    "input-streaming": <CircleIcon className="size-4" />,
-    "input-available": <ClockIcon className="size-4 animate-pulse" />,
-    "output-available": <CheckCircleIcon className="size-4 text-green-600" />,
-    "output-error": <XCircleIcon className="size-4 text-red-600" />,
+    "input-streaming": <SharedIcon icon={CircleIcon} />,
+    "input-available": (
+      <SharedIcon icon={Clock01Icon} className="animate-pulse" />
+    ),
+    "output-available": (
+      <SharedIcon icon={CheckmarkCircle01Icon} className="text-green-600" />
+    ),
+    "output-error": (
+      <SharedIcon icon={CancelCircleIcon} className="text-red-600" />
+    ),
   } as const;
 
   return (
@@ -71,13 +78,16 @@ export const ToolHeader = ({
     {...props}
   >
     <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
+      <SharedIcon icon={Wrench01Icon} className="text-muted-foreground" />
       <span className="font-medium text-sm">
         {title ?? type.split("-").slice(1).join("-")}
       </span>
       {getStatusBadge(state)}
     </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    <SharedIcon
+      icon={ArrowDown01Icon}
+      className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+    />
   </CollapsibleTrigger>
 );
 

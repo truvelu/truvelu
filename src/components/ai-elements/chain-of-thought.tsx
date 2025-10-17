@@ -6,14 +6,15 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import {
-  BrainIcon,
-  ChevronDownIcon,
-  DotIcon,
-  type LucideIcon,
-} from "lucide-react";
 import type { ComponentProps } from "react";
 import { createContext, memo, useContext } from "react";
+import { IconSvgElement } from "@hugeicons/react";
+import {
+  AiBrain01Icon,
+  ArrowDown01Icon,
+  Asterisk02Icon,
+} from "@hugeicons/core-free-icons";
+import Icon from "../shared/shared-icon";
 
 type ChainOfThoughtContextValue = {
   isOpen: boolean;
@@ -85,13 +86,14 @@ export const ChainOfThoughtHeader = memo(
           )}
           {...props}
         >
-          <BrainIcon className="size-4" />
+          <SharedIcon icon={AiBrain01Icon} />
           <span className="flex-1 text-left">
             {children ?? "Chain of Thought"}
           </span>
-          <ChevronDownIcon
+          <Icon
+            icon={ArrowDown01Icon}
             className={cn(
-              "size-4 transition-transform",
+              "transition-transform",
               isOpen ? "rotate-180" : "rotate-0"
             )}
           />
@@ -102,7 +104,7 @@ export const ChainOfThoughtHeader = memo(
 );
 
 export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
-  icon?: LucideIcon;
+  icon?: IconSvgElement;
   label: string;
   description?: string;
   status?: "complete" | "active" | "pending";
@@ -111,7 +113,7 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 export const ChainOfThoughtStep = memo(
   ({
     className,
-    icon: Icon = DotIcon,
+    icon: Icon = Asterisk02Icon,
     label,
     description,
     status = "complete",
@@ -135,7 +137,7 @@ export const ChainOfThoughtStep = memo(
         {...props}
       >
         <div className="relative mt-0.5">
-          <Icon className="size-4" />
+          <SharedIcon icon={Icon} />
           <div className="-mx-px absolute top-7 bottom-0 left-1/2 w-px bg-border" />
         </div>
         <div className="flex-1 space-y-2">

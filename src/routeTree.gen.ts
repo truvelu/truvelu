@@ -10,128 +10,78 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DemoTanstackQueryRouteImport } from './routes/demo.tanstack-query'
-import { Route as DemoConvexRouteImport } from './routes/demo.convex'
-import { Route as DemoClerkRouteImport } from './routes/demo.clerk'
-import { Route as ApiDemoTqTodosRouteImport } from './routes/api.demo-tq-todos'
-import { Route as ApiDemoNamesRouteImport } from './routes/api.demo-names'
-import { Route as DemoStartServerFuncsRouteImport } from './routes/demo.start.server-funcs'
-import { Route as DemoStartApiRequestRouteImport } from './routes/demo.start.api-request'
+import { Route as LChar123LearningIdChar125RouteImport } from './routes/l.{-$learningId}'
+import { Route as CChar123ChatIdChar125RouteImport } from './routes/c.{-$chatId}'
+import { Route as LChar123LearningIdChar125CChar123ChatIdChar125RouteImport } from './routes/l.{-$learningId}_.c.{-$chatId}'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
-  id: '/demo/tanstack-query',
-  path: '/demo/tanstack-query',
+const LChar123LearningIdChar125Route =
+  LChar123LearningIdChar125RouteImport.update({
+    id: '/l/{-$learningId}',
+    path: '/l/{-$learningId}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CChar123ChatIdChar125Route = CChar123ChatIdChar125RouteImport.update({
+  id: '/c/{-$chatId}',
+  path: '/c/{-$chatId}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoConvexRoute = DemoConvexRouteImport.update({
-  id: '/demo/convex',
-  path: '/demo/convex',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoClerkRoute = DemoClerkRouteImport.update({
-  id: '/demo/clerk',
-  path: '/demo/clerk',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDemoTqTodosRoute = ApiDemoTqTodosRouteImport.update({
-  id: '/api/demo-tq-todos',
-  path: '/api/demo-tq-todos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDemoNamesRoute = ApiDemoNamesRouteImport.update({
-  id: '/api/demo-names',
-  path: '/api/demo-names',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoStartServerFuncsRoute = DemoStartServerFuncsRouteImport.update({
-  id: '/demo/start/server-funcs',
-  path: '/demo/start/server-funcs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoStartApiRequestRoute = DemoStartApiRequestRouteImport.update({
-  id: '/demo/start/api-request',
-  path: '/demo/start/api-request',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const LChar123LearningIdChar125CChar123ChatIdChar125Route =
+  LChar123LearningIdChar125CChar123ChatIdChar125RouteImport.update({
+    id: '/l/{-$learningId}_/c/{-$chatId}',
+    path: '/l/{-$learningId}/c/{-$chatId}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/demo-names': typeof ApiDemoNamesRoute
-  '/api/demo-tq-todos': typeof ApiDemoTqTodosRoute
-  '/demo/clerk': typeof DemoClerkRoute
-  '/demo/convex': typeof DemoConvexRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/demo/start/api-request': typeof DemoStartApiRequestRoute
-  '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
+  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
+  '/l/{-$learningId}/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/demo-names': typeof ApiDemoNamesRoute
-  '/api/demo-tq-todos': typeof ApiDemoTqTodosRoute
-  '/demo/clerk': typeof DemoClerkRoute
-  '/demo/convex': typeof DemoConvexRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/demo/start/api-request': typeof DemoStartApiRequestRoute
-  '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
+  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
+  '/l/{-$learningId}/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/demo-names': typeof ApiDemoNamesRoute
-  '/api/demo-tq-todos': typeof ApiDemoTqTodosRoute
-  '/demo/clerk': typeof DemoClerkRoute
-  '/demo/convex': typeof DemoConvexRoute
-  '/demo/tanstack-query': typeof DemoTanstackQueryRoute
-  '/demo/start/api-request': typeof DemoStartApiRequestRoute
-  '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
+  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
+  '/l/{-$learningId}_/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/api/demo-names'
-    | '/api/demo-tq-todos'
-    | '/demo/clerk'
-    | '/demo/convex'
-    | '/demo/tanstack-query'
-    | '/demo/start/api-request'
-    | '/demo/start/server-funcs'
+    | '/c/{-$chatId}'
+    | '/l/{-$learningId}'
+    | '/l/{-$learningId}/c/{-$chatId}'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/api/demo-names'
-    | '/api/demo-tq-todos'
-    | '/demo/clerk'
-    | '/demo/convex'
-    | '/demo/tanstack-query'
-    | '/demo/start/api-request'
-    | '/demo/start/server-funcs'
+    | '/c/{-$chatId}'
+    | '/l/{-$learningId}'
+    | '/l/{-$learningId}/c/{-$chatId}'
   id:
     | '__root__'
     | '/'
-    | '/api/demo-names'
-    | '/api/demo-tq-todos'
-    | '/demo/clerk'
-    | '/demo/convex'
-    | '/demo/tanstack-query'
-    | '/demo/start/api-request'
-    | '/demo/start/server-funcs'
+    | '/c/{-$chatId}'
+    | '/l/{-$learningId}'
+    | '/l/{-$learningId}_/c/{-$chatId}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiDemoNamesRoute: typeof ApiDemoNamesRoute
-  ApiDemoTqTodosRoute: typeof ApiDemoTqTodosRoute
-  DemoClerkRoute: typeof DemoClerkRoute
-  DemoConvexRoute: typeof DemoConvexRoute
-  DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
-  DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
-  DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
+  CChar123ChatIdChar125Route: typeof CChar123ChatIdChar125Route
+  LChar123LearningIdChar125Route: typeof LChar123LearningIdChar125Route
+  LChar123LearningIdChar125CChar123ChatIdChar125Route: typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 
 declare module '@tanstack/react-router' {
@@ -143,53 +93,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/tanstack-query': {
-      id: '/demo/tanstack-query'
-      path: '/demo/tanstack-query'
-      fullPath: '/demo/tanstack-query'
-      preLoaderRoute: typeof DemoTanstackQueryRouteImport
+    '/l/{-$learningId}': {
+      id: '/l/{-$learningId}'
+      path: '/l/{-$learningId}'
+      fullPath: '/l/{-$learningId}'
+      preLoaderRoute: typeof LChar123LearningIdChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/convex': {
-      id: '/demo/convex'
-      path: '/demo/convex'
-      fullPath: '/demo/convex'
-      preLoaderRoute: typeof DemoConvexRouteImport
+    '/c/{-$chatId}': {
+      id: '/c/{-$chatId}'
+      path: '/c/{-$chatId}'
+      fullPath: '/c/{-$chatId}'
+      preLoaderRoute: typeof CChar123ChatIdChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/clerk': {
-      id: '/demo/clerk'
-      path: '/demo/clerk'
-      fullPath: '/demo/clerk'
-      preLoaderRoute: typeof DemoClerkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/demo-tq-todos': {
-      id: '/api/demo-tq-todos'
-      path: '/api/demo-tq-todos'
-      fullPath: '/api/demo-tq-todos'
-      preLoaderRoute: typeof ApiDemoTqTodosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/demo-names': {
-      id: '/api/demo-names'
-      path: '/api/demo-names'
-      fullPath: '/api/demo-names'
-      preLoaderRoute: typeof ApiDemoNamesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/start/server-funcs': {
-      id: '/demo/start/server-funcs'
-      path: '/demo/start/server-funcs'
-      fullPath: '/demo/start/server-funcs'
-      preLoaderRoute: typeof DemoStartServerFuncsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/start/api-request': {
-      id: '/demo/start/api-request'
-      path: '/demo/start/api-request'
-      fullPath: '/demo/start/api-request'
-      preLoaderRoute: typeof DemoStartApiRequestRouteImport
+    '/l/{-$learningId}_/c/{-$chatId}': {
+      id: '/l/{-$learningId}_/c/{-$chatId}'
+      path: '/l/{-$learningId}/c/{-$chatId}'
+      fullPath: '/l/{-$learningId}/c/{-$chatId}'
+      preLoaderRoute: typeof LChar123LearningIdChar125CChar123ChatIdChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -197,13 +119,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiDemoNamesRoute: ApiDemoNamesRoute,
-  ApiDemoTqTodosRoute: ApiDemoTqTodosRoute,
-  DemoClerkRoute: DemoClerkRoute,
-  DemoConvexRoute: DemoConvexRoute,
-  DemoTanstackQueryRoute: DemoTanstackQueryRoute,
-  DemoStartApiRequestRoute: DemoStartApiRequestRoute,
-  DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
+  CChar123ChatIdChar125Route: CChar123ChatIdChar125Route,
+  LChar123LearningIdChar125Route: LChar123LearningIdChar125Route,
+  LChar123LearningIdChar125CChar123ChatIdChar125Route:
+    LChar123LearningIdChar125CChar123ChatIdChar125Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

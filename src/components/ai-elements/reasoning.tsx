@@ -5,10 +5,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Response } from "./response";
+import { AiBrain01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import SharedIcon from "../shared/shared-icon";
 
 type ReasoningContextValue = {
   isStreaming: boolean;
@@ -134,11 +135,12 @@ export const ReasoningTrigger = memo(
       >
         {children ?? (
           <>
-            <BrainIcon className="size-4" />
+            <SharedIcon icon={AiBrain01Icon} />
             {getThinkingMessage(isStreaming, duration)}
-            <ChevronDownIcon
+            <SharedIcon
+              icon={ArrowDown01Icon}
               className={cn(
-                "size-4 transition-transform",
+                "transition-transform",
                 isOpen ? "rotate-180" : "rotate-0"
               )}
             />

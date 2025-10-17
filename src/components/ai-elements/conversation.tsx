@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowDownIcon } from "lucide-react";
+import { ArrowDown02Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import SharedIcon from "../shared/shared-icon";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
@@ -25,7 +26,7 @@ export const ConversationContent = ({
   className,
   ...props
 }: ConversationContentProps) => (
-  <StickToBottom.Content className={cn("p-4", className)} {...props} />
+  <StickToBottom.Content className={cn("p-3", className)} {...props} />
 );
 
 export type ConversationEmptyStateProps = ComponentProps<"div"> & {
@@ -75,6 +76,8 @@ export const ConversationScrollButton = ({
     scrollToBottom();
   }, [scrollToBottom]);
 
+  console.log({ isAtBottom });
+
   return (
     !isAtBottom && (
       <Button
@@ -88,7 +91,7 @@ export const ConversationScrollButton = ({
         variant="outline"
         {...props}
       >
-        <ArrowDownIcon className="size-4" />
+        <SharedIcon icon={ArrowDown02Icon} />
       </Button>
     )
   );

@@ -6,8 +6,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { type LucideIcon, XIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
+import { IconSvgElement } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import SharedIcon from "../shared/shared-icon";
 
 export type ArtifactProps = HTMLAttributes<HTMLDivElement>;
 
@@ -55,7 +57,7 @@ export const ArtifactClose = ({
     variant={variant}
     {...props}
   >
-    {children ?? <XIcon className="size-4" />}
+    {children ?? <SharedIcon icon={Cancel01Icon} />}
     <span className="sr-only">Close</span>
   </Button>
 );
@@ -90,7 +92,7 @@ export const ArtifactActions = ({
 export type ArtifactActionProps = ComponentProps<typeof Button> & {
   tooltip?: string;
   label?: string;
-  icon?: LucideIcon;
+  icon?: IconSvgElement;
 };
 
 export const ArtifactAction = ({
@@ -114,7 +116,7 @@ export const ArtifactAction = ({
       variant={variant}
       {...props}
     >
-      {Icon ? <Icon className="size-4" /> : children}
+      {Icon ? <SharedIcon icon={Icon} /> : children}
       <span className="sr-only">{label || tooltip}</span>
     </Button>
   );

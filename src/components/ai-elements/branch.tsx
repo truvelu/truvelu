@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { UIMessage } from "ai";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import Icon from "../shared/shared-icon";
 
 type BranchContextType = {
   currentBranch: number;
@@ -156,7 +157,7 @@ export const BranchPrevious = ({
       variant="ghost"
       {...props}
     >
-      {children ?? <ChevronLeftIcon size={14} />}
+      {children ?? <SharedIcon icon={ArrowRight01Icon} />}
     </Button>
   );
 };
@@ -186,7 +187,7 @@ export const BranchNext = ({
       variant="ghost"
       {...props}
     >
-      {children ?? <ChevronRightIcon size={14} />}
+      {children ?? <SharedIcon icon={ArrowRight01Icon} />}
     </Button>
   );
 };

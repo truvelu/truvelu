@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps, HTMLAttributes, ReactNode } from "react";
 import { createContext, useContext, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -8,6 +8,7 @@ import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
+import SharedIcon from "../shared/shared-icon";
 
 type CodeBlockContextType = {
   code: string;
@@ -130,7 +131,7 @@ export const CodeBlockCopyButton = ({
     }
   };
 
-  const Icon = isCopied ? CheckIcon : CopyIcon;
+  const Icon = isCopied ? Tick02Icon : Copy01Icon;
 
   return (
     <Button
@@ -140,7 +141,7 @@ export const CodeBlockCopyButton = ({
       variant="ghost"
       {...props}
     >
-      {children ?? <Icon size={14} />}
+      {children ?? <SharedIcon icon={Icon} size={14} />}
     </Button>
   );
 };

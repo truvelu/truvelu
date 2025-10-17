@@ -4,8 +4,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, SearchIcon } from "lucide-react";
+import { ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";
+import SharedIcon from "../shared/shared-icon";
 
 export type TaskItemFileProps = ComponentProps<"div">;
 
@@ -56,9 +57,12 @@ export const TaskTrigger = ({
   <CollapsibleTrigger asChild className={cn("group", className)} {...props}>
     {children ?? (
       <div className="flex w-full cursor-pointer items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
-        <SearchIcon className="size-4" />
+        <SharedIcon icon={Search01Icon} />
         <p className="text-sm">{title}</p>
-        <ChevronDownIcon className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+        <SharedIcon
+          icon={ArrowDown01Icon}
+          className="transition-transform group-data-[state=open]:rotate-180"
+        />
       </div>
     )}
   </CollapsibleTrigger>

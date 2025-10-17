@@ -12,9 +12,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, useContext, useState } from "react";
+import SharedIcon from "../shared/shared-icon";
 
 export type WebPreviewContextValue = {
   url: string;
@@ -207,9 +208,10 @@ export const WebPreviewConsole = ({
           variant="ghost"
         >
           Console
-          <ChevronDownIcon
+          <SharedIcon
+            icon={ArrowDown01Icon}
             className={cn(
-              "h-4 w-4 transition-transform duration-200",
+              "transition-transform duration-200",
               consoleOpen && "rotate-180"
             )}
           />
