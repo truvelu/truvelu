@@ -9,52 +9,59 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as LChar123LearningIdChar125RouteImport } from './routes/l.{-$learningId}'
-import { Route as CChar123ChatIdChar125RouteImport } from './routes/c.{-$chatId}'
-import { Route as LChar123LearningIdChar125CChar123ChatIdChar125RouteImport } from './routes/l.{-$learningId}_.c.{-$chatId}'
+import { Route as ChatLayoutRouteImport } from './routes/_chatLayout'
+import { Route as ChatLayoutIndexRouteImport } from './routes/_chatLayout.index'
+import { Route as ChatLayoutLChar123LearningIdChar125RouteImport } from './routes/_chatLayout.l.{-$learningId}'
+import { Route as ChatLayoutCChar123ChatIdChar125RouteImport } from './routes/_chatLayout.c.{-$chatId}'
+import { Route as ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125RouteImport } from './routes/_chatLayout.l.{-$learningId}_.c.{-$chatId}'
 
-const IndexRoute = IndexRouteImport.update({
+const ChatLayoutRoute = ChatLayoutRouteImport.update({
+  id: '/_chatLayout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatLayoutIndexRoute = ChatLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ChatLayoutRoute,
 } as any)
-const LChar123LearningIdChar125Route =
-  LChar123LearningIdChar125RouteImport.update({
+const ChatLayoutLChar123LearningIdChar125Route =
+  ChatLayoutLChar123LearningIdChar125RouteImport.update({
     id: '/l/{-$learningId}',
     path: '/l/{-$learningId}',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => ChatLayoutRoute,
   } as any)
-const CChar123ChatIdChar125Route = CChar123ChatIdChar125RouteImport.update({
-  id: '/c/{-$chatId}',
-  path: '/c/{-$chatId}',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LChar123LearningIdChar125CChar123ChatIdChar125Route =
-  LChar123LearningIdChar125CChar123ChatIdChar125RouteImport.update({
+const ChatLayoutCChar123ChatIdChar125Route =
+  ChatLayoutCChar123ChatIdChar125RouteImport.update({
+    id: '/c/{-$chatId}',
+    path: '/c/{-$chatId}',
+    getParentRoute: () => ChatLayoutRoute,
+  } as any)
+const ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route =
+  ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125RouteImport.update({
     id: '/l/{-$learningId}_/c/{-$chatId}',
     path: '/l/{-$learningId}/c/{-$chatId}',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => ChatLayoutRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
-  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
-  '/l/{-$learningId}/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
+  '/': typeof ChatLayoutIndexRoute
+  '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
+  '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
-  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
-  '/l/{-$learningId}/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
+  '/': typeof ChatLayoutIndexRoute
+  '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
+  '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/c/{-$chatId}': typeof CChar123ChatIdChar125Route
-  '/l/{-$learningId}': typeof LChar123LearningIdChar125Route
-  '/l/{-$learningId}_/c/{-$chatId}': typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
+  '/_chatLayout': typeof ChatLayoutRouteWithChildren
+  '/_chatLayout/': typeof ChatLayoutIndexRoute
+  '/_chatLayout/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
+  '/_chatLayout/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/_chatLayout/l/{-$learningId}_/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,58 +78,79 @@ export interface FileRouteTypes {
     | '/l/{-$learningId}/c/{-$chatId}'
   id:
     | '__root__'
-    | '/'
-    | '/c/{-$chatId}'
-    | '/l/{-$learningId}'
-    | '/l/{-$learningId}_/c/{-$chatId}'
+    | '/_chatLayout'
+    | '/_chatLayout/'
+    | '/_chatLayout/c/{-$chatId}'
+    | '/_chatLayout/l/{-$learningId}'
+    | '/_chatLayout/l/{-$learningId}_/c/{-$chatId}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  CChar123ChatIdChar125Route: typeof CChar123ChatIdChar125Route
-  LChar123LearningIdChar125Route: typeof LChar123LearningIdChar125Route
-  LChar123LearningIdChar125CChar123ChatIdChar125Route: typeof LChar123LearningIdChar125CChar123ChatIdChar125Route
+  ChatLayoutRoute: typeof ChatLayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_chatLayout': {
+      id: '/_chatLayout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof ChatLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_chatLayout/': {
+      id: '/_chatLayout/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ChatLayoutIndexRouteImport
+      parentRoute: typeof ChatLayoutRoute
     }
-    '/l/{-$learningId}': {
-      id: '/l/{-$learningId}'
+    '/_chatLayout/l/{-$learningId}': {
+      id: '/_chatLayout/l/{-$learningId}'
       path: '/l/{-$learningId}'
       fullPath: '/l/{-$learningId}'
-      preLoaderRoute: typeof LChar123LearningIdChar125RouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ChatLayoutLChar123LearningIdChar125RouteImport
+      parentRoute: typeof ChatLayoutRoute
     }
-    '/c/{-$chatId}': {
-      id: '/c/{-$chatId}'
+    '/_chatLayout/c/{-$chatId}': {
+      id: '/_chatLayout/c/{-$chatId}'
       path: '/c/{-$chatId}'
       fullPath: '/c/{-$chatId}'
-      preLoaderRoute: typeof CChar123ChatIdChar125RouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ChatLayoutCChar123ChatIdChar125RouteImport
+      parentRoute: typeof ChatLayoutRoute
     }
-    '/l/{-$learningId}_/c/{-$chatId}': {
-      id: '/l/{-$learningId}_/c/{-$chatId}'
+    '/_chatLayout/l/{-$learningId}_/c/{-$chatId}': {
+      id: '/_chatLayout/l/{-$learningId}_/c/{-$chatId}'
       path: '/l/{-$learningId}/c/{-$chatId}'
       fullPath: '/l/{-$learningId}/c/{-$chatId}'
-      preLoaderRoute: typeof LChar123LearningIdChar125CChar123ChatIdChar125RouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125RouteImport
+      parentRoute: typeof ChatLayoutRoute
     }
   }
 }
 
+interface ChatLayoutRouteChildren {
+  ChatLayoutIndexRoute: typeof ChatLayoutIndexRoute
+  ChatLayoutCChar123ChatIdChar125Route: typeof ChatLayoutCChar123ChatIdChar125Route
+  ChatLayoutLChar123LearningIdChar125Route: typeof ChatLayoutLChar123LearningIdChar125Route
+  ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route: typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
+}
+
+const ChatLayoutRouteChildren: ChatLayoutRouteChildren = {
+  ChatLayoutIndexRoute: ChatLayoutIndexRoute,
+  ChatLayoutCChar123ChatIdChar125Route: ChatLayoutCChar123ChatIdChar125Route,
+  ChatLayoutLChar123LearningIdChar125Route:
+    ChatLayoutLChar123LearningIdChar125Route,
+  ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route:
+    ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route,
+}
+
+const ChatLayoutRouteWithChildren = ChatLayoutRoute._addFileChildren(
+  ChatLayoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  CChar123ChatIdChar125Route: CChar123ChatIdChar125Route,
-  LChar123LearningIdChar125Route: LChar123LearningIdChar125Route,
-  LChar123LearningIdChar125CChar123ChatIdChar125Route:
-    LChar123LearningIdChar125CChar123ChatIdChar125Route,
+  ChatLayoutRoute: ChatLayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

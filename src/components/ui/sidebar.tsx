@@ -211,8 +211,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const { pretendIsMobile, isMobile, state, openMobile, setOpenMobile } =
-    useSidebar();
+  const { pretendIsMobile, isMobile, state } = useSidebar();
 
   if (collapsible === "none") {
     return (

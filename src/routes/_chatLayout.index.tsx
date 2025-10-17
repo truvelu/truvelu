@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AiPromptInput } from "@/components/shared/ai-prompt-input";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_chatLayout/")({
   component: App,
 });
 

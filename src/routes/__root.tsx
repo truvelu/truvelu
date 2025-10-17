@@ -15,15 +15,6 @@ import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/shared/app-sidebar";
-import { Header } from "@/components/shared/header";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { CanvasProvider } from "@/contexts/canvas";
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -63,14 +54,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <ClerkProvider>
           <ConvexProvider>
-            <CanvasProvider>
-              <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset className="overflow-x-hidden">
-                  {children}
-                </SidebarInset>
-              </SidebarProvider>
-            </CanvasProvider>
+            {children}
             <TanstackDevtools
               config={{
                 position: "bottom-right",

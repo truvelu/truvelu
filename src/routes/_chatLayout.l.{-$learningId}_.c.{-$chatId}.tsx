@@ -1,8 +1,10 @@
-import { AiConversationResponsive } from "@/components/shared/ai-conversation";
+import AiConversation from "@/components/shared/ai-conversation";
 import { SignInButton, useUser } from "@clerk/clerk-react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/l/{-$learningId}_/c/{-$chatId}")({
+export const Route = createFileRoute(
+  "/_chatLayout/l/{-$learningId}_/c/{-$chatId}"
+)({
   component: RouteComponent,
   beforeLoad: (context) => {
     if (!!context.params.learningId && !context.params.chatId) {
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/l/{-$learningId}_/c/{-$chatId}")({
 });
 
 function RouteComponent() {
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
 
   if (!isLoaded) {
     return <div className="p-4">Loading...</div>;
@@ -34,5 +36,5 @@ function RouteComponent() {
     );
   }
 
-  return <AiConversationResponsive />;
+  return <AiConversation />;
 }

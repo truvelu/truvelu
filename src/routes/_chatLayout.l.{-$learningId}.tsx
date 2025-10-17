@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/l/{-$learningId}")({
+export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
   component: RouteComponent,
   beforeLoad: (context) => {
     if (!context.params.learningId) {
