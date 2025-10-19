@@ -100,8 +100,6 @@ const NavLearningItem = () => {
               <SidebarMenuSubButton
                 className="cursor-pointer rounded-3.5xl"
                 onClick={() => {
-                  console.log("hai");
-
                   navigate({
                     to: "/l/{-$learningId}/c/{-$chatId}",
                     params: {

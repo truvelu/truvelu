@@ -1,4 +1,11 @@
-import { Fragment, memo, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Conversation,
   ConversationContent,
@@ -12,12 +19,14 @@ import { cn } from "@/lib/utils";
 import { Action, Actions } from "../ai-elements/actions";
 import { useSidebar } from "../ui/sidebar";
 import {
+  Comment01Icon,
+  CommentAdd02Icon,
   Copy01Icon,
   Message01Icon,
   RefreshIcon,
 } from "@hugeicons/core-free-icons";
 import SharedIcon from "./shared-icon";
-import { MESSAGES } from "@/constants/messages";
+import { MESSAGES, MESSAGES_THREAD, MessageType } from "@/constants/messages";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import { useShallow } from "zustand/react/shallow";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
@@ -26,14 +35,14 @@ const AiConversation = memo(() => {
   const {
     open: sidebarOpen,
     setOpen: setSidebarOpen,
-    setPretendIsMobile,
+    setOpenMobile: setSidebarOpenMobile,
   } = useSidebar();
   const roomId = useGetRoomId();
-  const { upsertCanvas, getCanvas, clearCanvas } = useCanvasStore(
-    useShallow(({ upsertCanvas, getCanvas, clearCanvas }) => ({
+  const { upsertCanvas, getCanvas, removeCanvas } = useCanvasStore(
+    useShallow(({ upsertCanvas, getCanvas, removeCanvas }) => ({
       upsertCanvas,
       getCanvas,
-      clearCanvas,
+      removeCanvas,
     }))
   );
 
@@ -41,15 +50,42 @@ const AiConversation = memo(() => {
 
   const [inputHeight, setInputHeight] = useState(0);
 
-  const handleInputReady = () => {
+  const handleInputReady = useCallback(() => {
     if (inputRef.current) {
       setInputHeight(inputRef.current.offsetHeight);
     }
-  };
+  }, []);
 
-  const selectedCanvas = getCanvas({ roomId: roomId ?? "" })?.find(
-    (canvas) => canvas.type === CanvasType.CONTENT
-  );
+  const handleOpenCanvas = ({
+    type,
+    threadId,
+  }: {
+    type: CanvasType;
+    threadId: string;
+  }) => {
+    const existingCanvas = getCanvas({
+      roomId,
+      threadId,
+      type,
+    });
+
+    if (existingCanvas.length > 0) {
+      removeCanvas({
+        type,
+        roomId,
+        threadId,
+      });
+    } else {
+      upsertCanvas({
+        type,
+        data: { threadId, roomId },
+      });
+    }
+
+    if (existingCanvas.length > 0 && sidebarOpen) return;
+    setSidebarOpen(false);
+    setSidebarOpenMobile(false);
+  };
 
   useEffect(() => {
     const input = inputRef.current;
@@ -89,110 +125,120 @@ const AiConversation = memo(() => {
               description="Type a message below to begin chatting"
             />
           ) : (
-            MESSAGES.map((message) => (
-              <Fragment key={message.id}>
-                {message.parts.map((part, i) => {
-                  switch (part.type) {
-                    case "text":
-                      return (
-                        <Fragment key={`${message.id}-${i}`}>
-                          <Message
-                            from={message.role}
-                            className={
-                              message.role === "user" ? "first:pt-0 pt-12" : ""
+            MESSAGES.map((message) => {
+              const textPart = message.parts.find(
+                (part) => part.type === MessageType.TEXT
+              );
+              const deepDiscussion = MESSAGES_THREAD.find(
+                (msg) => msg.id === message.id
+              );
+
+              return (
+                <Fragment key={message.id}>
+                  {message.parts.map((part, i) => {
+                    switch (part.type) {
+                      case MessageType.TEXT:
+                        return (
+                          <Fragment key={`${message.id}-${i}`}>
+                            <Message
+                              from={message.role}
+                              className={
+                                message.role === "user"
+                                  ? "first:pt-0 pt-12"
+                                  : ""
+                              }
+                            >
+                              <MessageContent variant="flat">
+                                <Response>{part.text}</Response>
+                              </MessageContent>
+                            </Message>
+                          </Fragment>
+                        );
+
+                      case MessageType.CANVAS:
+                        return (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            className="flex flex-col gap-1 rounded-2.5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
+                            onClick={() =>
+                              handleOpenCanvas({
+                                type: CanvasType.CONTENT,
+                                threadId: message.id,
+                              })
                             }
                           >
-                            <MessageContent variant="flat">
-                              <Response>{part.text}</Response>
-                            </MessageContent>
-                          </Message>
+                            <h1 className="text-base font-semibold">
+                              {part.title}
+                            </h1>
+                            <p className="text-sm text-gray-400">
+                              Interactive canvas
+                            </p>
+                          </div>
+                        );
 
-                          {part.canvas && (
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              className="flex flex-col gap-1 rounded-2.5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
-                              onClick={() => {
-                                console.log({
-                                  selectedCanvas,
-                                  messageId: message.id,
-                                  equal:
-                                    selectedCanvas?.data?.threadId ===
-                                    message.id,
-                                });
+                      default:
+                        return null;
+                    }
+                  })}
 
-                                if (
-                                  selectedCanvas?.data?.threadId === message.id
-                                ) {
-                                  clearCanvas();
-                                  setPretendIsMobile(false);
-                                }
+                  <Actions role={message.role}>
+                    {message.role === "user" && (
+                      <Action onClick={() => {}} label="Retry">
+                        <SharedIcon icon={RefreshIcon} />
+                      </Action>
+                    )}
 
-                                if (
-                                  selectedCanvas?.data?.threadId !== message.id
-                                ) {
-                                  upsertCanvas({
-                                    type: CanvasType.CONTENT,
-                                    data: { threadId: message.id, roomId },
-                                  });
-                                  setPretendIsMobile(true);
-                                }
+                    {message.role === "assistant" && (
+                      <Action onClick={() => {}} label="Retry">
+                        <SharedIcon icon={RefreshIcon} />
+                      </Action>
+                    )}
 
-                                if (
-                                  selectedCanvas?.data?.threadId ===
-                                    message.id &&
-                                  sidebarOpen
-                                )
-                                  return;
-                                setSidebarOpen(false);
-                              }}
-                            >
-                              <h1 className="text-base font-semibold">
-                                {part.canvas.title}
-                              </h1>
-                              <p className="text-sm text-gray-400">
-                                Interactive canvas
-                              </p>
-                            </div>
-                          )}
-                          {message.role === "user" && (
-                            <Actions className="justify-end">
-                              <Action onClick={() => {}} label="Retry">
-                                <SharedIcon icon={RefreshIcon} size={18} />
-                              </Action>
-                              <Action
-                                onClick={() =>
-                                  navigator.clipboard.writeText(part.text)
-                                }
-                                label="Copy"
-                              >
-                                <SharedIcon icon={Copy01Icon} size={18} />
-                              </Action>
-                            </Actions>
-                          )}
-                          {message.role === "assistant" && (
-                            <Actions>
-                              <Action onClick={() => {}} label="Retry">
-                                <SharedIcon icon={RefreshIcon} />
-                              </Action>
-                              <Action
-                                onClick={() =>
-                                  navigator.clipboard.writeText(part.text)
-                                }
-                                label="Copy"
-                              >
-                                <SharedIcon icon={Copy01Icon} />
-                              </Action>
-                            </Actions>
-                          )}
-                        </Fragment>
-                      );
-                    default:
-                      return null;
-                  }
-                })}
-              </Fragment>
-            ))
+                    <Action
+                      onClick={() => {
+                        if (!textPart) return;
+                        navigator.clipboard.writeText(textPart.text);
+                      }}
+                      label="Copy"
+                    >
+                      <SharedIcon icon={Copy01Icon} />
+                    </Action>
+
+                    <Action
+                      label={
+                        deepDiscussion?.messages?.length
+                          ? "Deep Discussion"
+                          : "New Deep Discussion"
+                      }
+                      className={cn(
+                        deepDiscussion?.messages?.length &&
+                          "rounded-3.5xl px-2.5 w-fit border border-ring"
+                      )}
+                      onClick={() => {
+                        handleOpenCanvas({
+                          type: CanvasType.THREAD,
+                          threadId: message.id,
+                        });
+                      }}
+                    >
+                      <SharedIcon
+                        icon={
+                          deepDiscussion?.messages?.length
+                            ? Comment01Icon
+                            : CommentAdd02Icon
+                        }
+                      />
+                      {deepDiscussion?.messages?.length && (
+                        <span className="text-sm font-medium">
+                          {deepDiscussion?.messages?.length}
+                        </span>
+                      )}
+                    </Action>
+                  </Actions>
+                </Fragment>
+              );
+            })
           )}
         </ConversationContent>
         <ConversationScrollButton

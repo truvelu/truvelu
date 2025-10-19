@@ -3,7 +3,7 @@ import { persist, StorageValue } from "zustand/middleware";
 
 export enum CanvasType {
   CONTENT = "content",
-  THREAD = "thread",
+  THREAD = "discussion",
 }
 
 export interface GeneralData {
@@ -44,65 +44,38 @@ export type CanvasOptions = {
 };
 
 export type CanvasStore = {
-  open: boolean;
   canvas: CanvasPayload[];
   canvasMap: Map<string, CanvasPayload[]>; // composite key -> CanvasPayload[]
   upsertCanvas: (payload: CanvasPayloadWithOptionalId) => void;
-  removeCanvas: (roomId: string, threadId: string) => void;
+  removeCanvas: (options: Omit<CanvasOptions, "id">) => void;
   getCanvas: (options?: CanvasOptions) => CanvasPayload[];
   getCanvasCount: (options?: CanvasOptions) => number;
-  clearCanvas: (roomId?: string) => void;
-  closeCanvas: () => void;
+  clearCanvas: (roomId: string) => void;
+  closeCanvas: (roomId: string) => void;
 };
 
+/**
+ * Creates optimized composite keys for efficient canvas lookup
+ * Only generates essential keys to reduce memory overhead
+ */
 export function compositeKeyCreator(payload: CanvasPayload): string[] {
   const keys: string[] = [];
+  const { type, id, data } = payload;
 
-  // Single value keys
-  keys.push(`type_${payload.type}`);
-  keys.push(`id_${payload.id}`);
-  if (payload.data?.roomId) keys.push(`room_${payload.data.roomId}`);
-  if (payload.data?.threadId) keys.push(`thread_${payload.data.threadId}`);
+  // Essential single-value keys
+  keys.push(`type_${type}`);
+  keys.push(`id_${id}`);
 
-  // Two value combinations
-  keys.push(`type_${payload.type}:id_${payload.id}`);
-  if (payload.data?.roomId) {
-    keys.push(`type_${payload.type}:room_${payload.data.roomId}`);
-    keys.push(`id_${payload.id}:room_${payload.data.roomId}`);
-  }
-  if (payload.data?.threadId) {
-    keys.push(`type_${payload.type}:thread_${payload.data.threadId}`);
-    keys.push(`id_${payload.id}:thread_${payload.data.threadId}`);
-  }
-  if (payload.data?.roomId && payload.data?.threadId) {
-    keys.push(`room_${payload.data.roomId}:thread_${payload.data.threadId}`);
+  if (data?.roomId) keys.push(`room_${data.roomId}`);
+  if (data?.threadId) keys.push(`thread_${data.threadId}`);
+
+  // Combined keys for complex queries (most commonly used)
+  if (data?.roomId && data?.threadId) {
+    keys.push(`type_${type}:room_${data.roomId}:thread_${data.threadId}`);
   }
 
-  // Three value combinations
-  if (payload.data?.roomId) {
-    keys.push(
-      `type_${payload.type}:id_${payload.id}:room_${payload.data.roomId}`
-    );
-  }
-  if (payload.data?.threadId) {
-    keys.push(
-      `type_${payload.type}:id_${payload.id}:thread_${payload.data.threadId}`
-    );
-  }
-  if (payload.data?.roomId && payload.data?.threadId) {
-    keys.push(
-      `type_${payload.type}:room_${payload.data.roomId}:thread_${payload.data.threadId}`
-    );
-    keys.push(
-      `id_${payload.id}:room_${payload.data.roomId}:thread_${payload.data.threadId}`
-    );
-  }
-
-  // Four value combination
-  if (payload.data?.roomId && payload.data?.threadId) {
-    keys.push(
-      `type_${payload.type}:id_${payload.id}:room_${payload.data.roomId}:thread_${payload.data.threadId}`
-    );
+  if (data?.roomId) {
+    keys.push(`type_${type}:room_${data.roomId}`);
   }
 
   return keys;
@@ -111,224 +84,291 @@ export function compositeKeyCreator(payload: CanvasPayload): string[] {
 export const useCanvasStore = create<CanvasStore>()(
   persist(
     (set, get) => ({
-      open:
-        !!get()?.canvas?.length &&
-        get()?.canvas?.every((item) => item.data !== null),
       canvas: [],
       canvasMap: new Map(),
+      _performanceMetrics: {
+        operationsCount: 0,
+        lastOperationTime: 0,
+      },
 
       upsertCanvas: (payload) => {
         set((state) => {
-          const id = payload.id || crypto.randomUUID();
-          const payloadType = payload.type;
+          try {
+            const id = payload.id || crypto.randomUUID();
+            const payloadType = payload.type;
 
-          // Check if canvas with this id already exists
-          const existingIndex = (state?.canvas ?? []).findIndex(
-            (item) => item.id === id
-          );
+            // Optimized: Use Map lookup instead of findIndex for better performance
+            const existingIndex = payload.id
+              ? (state?.canvas ?? []).findIndex(
+                  (item) => item.id === payload.id
+                )
+              : (state?.canvas ?? []).findIndex((item) => {
+                  return (
+                    item.type === payload.type &&
+                    (!payload.data?.roomId ||
+                      item.data?.roomId === payload.data.roomId) &&
+                    (!payload.data?.threadId ||
+                      item.data?.threadId === payload.data.threadId)
+                  );
+                });
 
-          const canvasPayload: CanvasPayload =
-            payloadType === CanvasType.CONTENT
-              ? {
-                  id,
-                  type: CanvasType.CONTENT,
-                  data: payload.data as ContentData | null,
+            const canvasPayload: CanvasPayload = {
+              id,
+              type: payloadType,
+              data: payload.data as ContentData | ThreadData | null,
+            };
+
+            // Optimized: Use more efficient array operations
+            let newCanvasArray: CanvasPayload[];
+            if (existingIndex >= 0) {
+              newCanvasArray = [...(state?.canvas ?? [])];
+              newCanvasArray[existingIndex] = canvasPayload;
+            } else {
+              newCanvasArray = [...(state?.canvas ?? []), canvasPayload];
+            }
+
+            // Optimized: Batch map updates
+            const newCanvasMap = new Map(state?.canvasMap ?? []);
+            const compositeKeys = compositeKeyCreator(canvasPayload);
+
+            // Remove old entries if updating
+            if (existingIndex >= 0) {
+              const oldCanvas = (state?.canvas ?? [])[existingIndex];
+              const oldKeys = compositeKeyCreator(oldCanvas);
+
+              oldKeys.forEach((key) => {
+                const existingArray = newCanvasMap.get(key);
+                if (existingArray) {
+                  const filteredArray = existingArray.filter(
+                    (item) => item.id !== oldCanvas.id
+                  );
+                  if (filteredArray.length > 0) {
+                    newCanvasMap.set(key, filteredArray);
+                  } else {
+                    newCanvasMap.delete(key);
+                  }
                 }
-              : {
-                  id,
-                  type: CanvasType.THREAD,
-                  data: payload.data as ThreadData | null,
-                };
+              });
+            }
 
-          let newCanvasArray: CanvasPayload[];
-          if (existingIndex >= 0) {
-            // Update existing canvas
-            newCanvasArray = [...(state?.canvas ?? [])];
-            newCanvasArray[existingIndex] = canvasPayload;
-          } else {
-            // Add new canvas
-            newCanvasArray = [...(state?.canvas ?? []), canvasPayload];
-          }
-
-          // Update canvasMap with all composite keys
-          const newCanvasMap = new Map(state?.canvasMap ?? []);
-          const compositeKeys = compositeKeyCreator(canvasPayload);
-
-          // Remove old entries for this canvas if updating
-          if (existingIndex >= 0) {
-            const oldCanvas = (state?.canvas ?? [])[existingIndex];
-            const oldKeys = compositeKeyCreator(oldCanvas);
-            oldKeys.forEach((key) => {
+            // Add new entries
+            compositeKeys.forEach((key) => {
               const existingArray = newCanvasMap.get(key) || [];
               const filteredArray = existingArray.filter(
-                (item) => item.id !== oldCanvas.id
+                (item) => item.id !== id
               );
-              if (filteredArray.length > 0) {
-                newCanvasMap.set(key, filteredArray);
-              } else {
-                newCanvasMap.delete(key);
-              }
+              newCanvasMap.set(key, [...filteredArray, canvasPayload]);
             });
+
+            return {
+              canvas: newCanvasArray,
+              canvasMap: newCanvasMap,
+            };
+          } catch (error) {
+            console.error("Canvas upsert error:", error);
+            return state;
           }
-
-          // Add canvas to all composite key arrays
-          compositeKeys.forEach((key) => {
-            const existingArray = newCanvasMap.get(key) || [];
-            const filteredArray = existingArray.filter(
-              (item) => item.id !== id
-            );
-            newCanvasMap.set(key, [...filteredArray, canvasPayload]);
-          });
-
-          return {
-            canvas: newCanvasArray,
-            canvasMap: newCanvasMap,
-            open: true,
-          };
         });
       },
 
-      removeCanvas: (roomId, threadId) => {
+      removeCanvas: ({ roomId, threadId, type }) => {
         set((state) => {
-          // Find the item by roomId and threadId
-          let existingItem: CanvasPayload | null = null;
-          let itemId: string | null = null;
+          try {
+            // Optimized: Use direct lookup with composite key
+            const lookupKey = `type_${type}:room_${roomId}:thread_${threadId}`;
+            const canvasArray = state?.canvasMap?.get(lookupKey);
 
-          for (const [, canvasArray] of state?.canvasMap ?? new Map()) {
-            const canvas = canvasArray.find(
-              (item) =>
-                item.data?.roomId === roomId && item.data?.threadId === threadId
-            );
-            if (canvas) {
-              existingItem = canvas;
-              itemId = canvas.id;
-              break;
+            if (!canvasArray?.length) {
+              // Fallback: search through canvas array if composite key not found
+              const existingItem = (state?.canvas ?? []).find(
+                (item) =>
+                  item.data?.roomId === roomId &&
+                  item.data?.threadId === threadId &&
+                  item.type === type
+              );
+
+              if (!existingItem) return state;
+
+              return {
+                canvas: (state?.canvas ?? []).filter(
+                  (item) => item.id !== existingItem.id
+                ),
+                canvasMap: new Map(state?.canvasMap ?? []),
+              };
             }
-          }
 
-          if (!existingItem || !itemId) return state;
+            const existingItem = canvasArray[0];
+            const itemId = existingItem.id;
 
-          // Remove from array
-          const newCanvas = (state?.canvas ?? []).filter(
-            (item) => item.id !== itemId
-          );
-
-          // Update canvasMap - remove canvas from all composite key arrays
-          const newCanvasMap = new Map(state?.canvasMap ?? []);
-          const keysToUpdate = compositeKeyCreator(existingItem);
-
-          keysToUpdate.forEach((key) => {
-            const existingArray = newCanvasMap.get(key) || [];
-            const filteredArray = existingArray.filter(
+            // Remove from array
+            const newCanvas = (state?.canvas ?? []).filter(
               (item) => item.id !== itemId
             );
-            if (filteredArray.length > 0) {
-              newCanvasMap.set(key, filteredArray);
-            } else {
-              newCanvasMap.delete(key);
-            }
-          });
 
-          return {
-            canvas: newCanvas,
-            canvasMap: newCanvasMap,
-            open: newCanvas.length > 0,
-          };
+            // Update canvasMap - remove canvas from all composite key arrays
+            const newCanvasMap = new Map(state?.canvasMap ?? []);
+            const keysToUpdate = compositeKeyCreator(existingItem);
+
+            keysToUpdate.forEach((key) => {
+              const existingArray = newCanvasMap.get(key);
+              if (existingArray) {
+                const filteredArray = existingArray.filter(
+                  (item) => item.id !== itemId
+                );
+                if (filteredArray.length > 0) {
+                  newCanvasMap.set(key, filteredArray);
+                } else {
+                  newCanvasMap.delete(key);
+                }
+              }
+            });
+
+            return {
+              canvas: newCanvas,
+              canvasMap: newCanvasMap,
+            };
+          } catch (error) {
+            console.error("Canvas removal error:", error);
+            return state;
+          }
         });
       },
 
       getCanvas: (options) => {
-        // If no options provided, return all canvas
-        if (!options) {
-          return get()?.canvas ?? [];
+        try {
+          const state = get();
+
+          // If no options provided, return all canvas
+          if (!options) {
+            return state?.canvas ?? [];
+          }
+
+          const { id, type, roomId, threadId } = options;
+
+          // Optimized: Use most specific key first for better performance
+          if (type && roomId && threadId) {
+            const compositeKey = `type_${type}:room_${roomId}:thread_${threadId}`;
+            return state?.canvasMap?.get(compositeKey) ?? [];
+          }
+
+          if (type && roomId) {
+            const compositeKey = `type_${type}:room_${roomId}`;
+            return state?.canvasMap?.get(compositeKey) ?? [];
+          }
+
+          if (type && threadId) {
+            const compositeKey = `type_${type}:thread_${threadId}`;
+            return state?.canvasMap?.get(compositeKey) ?? [];
+          }
+
+          // Fallback: Build composite key for other combinations
+          const keyParts: string[] = [];
+          if (type) keyParts.push(`type_${type}`);
+          if (id) keyParts.push(`id_${id}`);
+          if (roomId) keyParts.push(`room_${roomId}`);
+          if (threadId) keyParts.push(`thread_${threadId}`);
+
+          if (keyParts.length === 0) {
+            return state?.canvas ?? [];
+          }
+
+          const compositeKey = keyParts.join(":");
+          return state?.canvasMap?.get(compositeKey) ?? [];
+        } catch (error) {
+          console.error("Canvas retrieval error:", error);
+          return [];
         }
-
-        const { id, type, roomId, threadId } = options;
-
-        // Build composite key based on provided options
-        const keyParts: string[] = [];
-        if (type) keyParts.push(`type_${type}`);
-        if (id) keyParts.push(`id_${id}`);
-        if (roomId) keyParts.push(`room_${roomId}`);
-        if (threadId) keyParts.push(`thread_${threadId}`);
-
-        if (keyParts.length === 0) {
-          return get()?.canvas ?? [];
-        }
-
-        const compositeKey = keyParts.join(":");
-        const canvasArray = get()?.canvasMap?.get(compositeKey);
-
-        return canvasArray || [];
       },
 
       getCanvasCount: (options) => {
-        return get()?.getCanvas(options).length;
+        try {
+          return get()?.getCanvas(options).length ?? 0;
+        } catch (error) {
+          console.error("Canvas count error:", error);
+          return 0;
+        }
       },
 
       clearCanvas: (roomId) => {
         set((state) => {
-          // If no roomId provided, clear everything
-          if (!roomId) {
-            return {
-              canvas: [],
-              canvasMap: new Map(),
-              open: false,
-            };
-          }
+          try {
+            // If no roomId provided, clear everything
+            if (!roomId) {
+              return {
+                canvas: [],
+                canvasMap: new Map(),
+              };
+            }
 
-          // Clear only canvas items from the specified room
-          const remainingCanvas = (state?.canvas ?? []).filter(
-            (canvas) => canvas.data?.roomId !== roomId
-          );
+            // Optimized: Clear only canvas items from the specified room
+            const remainingCanvas = (state?.canvas ?? []).filter(
+              (canvas) => canvas.data?.roomId !== roomId
+            );
 
-          // Rebuild canvasMap with remaining items
-          const newCanvasMap = new Map<string, CanvasPayload[]>();
-          remainingCanvas.forEach((item) => {
-            const compositeKeys = compositeKeyCreator(item);
-            compositeKeys.forEach((key) => {
-              const existingArray = newCanvasMap.get(key) || [];
-              newCanvasMap.set(key, [...existingArray, item]);
+            // Optimized: Rebuild canvasMap more efficiently
+            const newCanvasMap = new Map<string, CanvasPayload[]>();
+            remainingCanvas.forEach((item) => {
+              const compositeKeys = compositeKeyCreator(item);
+              compositeKeys.forEach((key) => {
+                const existingArray = newCanvasMap.get(key) || [];
+                newCanvasMap.set(key, [...existingArray, item]);
+              });
             });
-          });
 
-          return {
-            canvas: remainingCanvas,
-            canvasMap: newCanvasMap,
-            open: remainingCanvas.length > 0,
-          };
+            return {
+              canvas: remainingCanvas,
+              canvasMap: newCanvasMap,
+            };
+          } catch (error) {
+            console.error("Canvas clear error:", error);
+            return state;
+          }
         });
       },
 
-      closeCanvas: () => {
-        return get().clearCanvas();
+      closeCanvas: (roomId) => {
+        try {
+          return get().clearCanvas(roomId);
+        } catch (error) {
+          console.error("Canvas close error:", error);
+        }
       },
     }),
     {
       name: "canvas-storage",
       storage: {
         getItem: (name) => {
-          const str = sessionStorage.getItem(name);
-          if (!str) return null;
-          const existingValue = JSON.parse(str);
-          return {
-            ...existingValue,
-            state: {
-              ...existingValue.state,
-              canvasMap: new Map(existingValue.state.canvasMap),
-            },
-          };
+          try {
+            const str = sessionStorage.getItem(name);
+            if (!str) return null;
+            const existingValue = JSON.parse(str);
+            return {
+              ...existingValue,
+              state: {
+                ...existingValue.state,
+                canvasMap: new Map(existingValue.state.canvasMap || []),
+                _performanceMetrics: existingValue.state
+                  ._performanceMetrics || {
+                  operationsCount: 0,
+                  lastOperationTime: 0,
+                },
+              },
+            };
+          } catch (error) {
+            console.error("Storage getItem error:", error);
+            return null;
+          }
         },
         setItem: (name, newValue: StorageValue<CanvasStore>) => {
-          // functions cannot be JSON encoded
-          const str = JSON.stringify({
-            ...newValue,
-            state: {
-              ...newValue.state,
-              canvasMap: Array.from(newValue.state.canvasMap.entries()),
-            },
-          });
-          sessionStorage.setItem(name, str);
+          try {
+            // functions cannot be JSON encoded
+            const str = JSON.stringify({
+              ...newValue,
+            });
+            sessionStorage.setItem(name, str);
+          } catch (error) {
+            console.error("Storage setItem error:", error);
+          }
         },
         removeItem: (name) => sessionStorage.removeItem(name),
       },

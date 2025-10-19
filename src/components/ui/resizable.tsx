@@ -22,7 +22,7 @@ function ResizablePanelGroup({
 }
 
 const ResizablePanel = React.forwardRef<
-  React.ElementRef<typeof ResizablePrimitive.Panel>,
+  React.ComponentRef<typeof ResizablePrimitive.Panel>,
   React.ComponentProps<typeof ResizablePrimitive.Panel>
 >((props, ref) => {
   return (
@@ -52,8 +52,8 @@ function ResizableHandle({
       {...props}
     >
       {withHandle && (
-        <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border">
-          <SharedIcon icon={DragDropVerticalIcon} size={18} />
+        <div className="bg-border z-10 flex h-6 w-5 items-center justify-center rounded-xs border">
+          <SharedIcon icon={DragDropVerticalIcon} className="" />
         </div>
       )}
     </ResizablePrimitive.PanelResizeHandle>

@@ -2,40 +2,37 @@ import { memo } from "react";
 import CloseButton from "./close-button";
 import { cn } from "@/lib/utils";
 import { Response } from "../ai-elements/response";
-import { MESSAGES } from "@/constants/messages";
-import { CanvasType, useCanvasStore } from "@/zustand/canvas";
+import { MESSAGES, MessageType } from "@/constants/messages";
+import { useCanvasStore } from "@/zustand/canvas";
 import { useShallow } from "zustand/react/shallow";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DrawerTitle } from "../ui/drawer";
 
-const AiCanvasHeader = memo(
-  ({ onCloseCanvas, title }: { onCloseCanvas: () => void; title: string }) => {
-    const isMobile = useIsMobile();
+const AiCanvasHeaderResponsive = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return <DrawerTitle>{children}</DrawerTitle>;
+  }
+  return <>{children}</>;
+};
 
-    if (isMobile) {
-      return (
-        <DrawerTitle>
-          <div className="flex items-center gap-1 h-header px-2 bg-white">
-            <CloseButton
-              buttonProps={{
-                onClick: () => onCloseCanvas(),
-              }}
-            />
+const AiCanvasHeader = memo(({ title }: { title: string }) => {
+  const roomId = useGetRoomId();
+  const { clearCanvas } = useCanvasStore(
+    useShallow(({ clearCanvas }) => ({ clearCanvas }))
+  );
 
-            <div>
-              <h1 className="text-base pl-3 pr-2">{title}</h1>
-            </div>
-          </div>
-        </DrawerTitle>
-      );
-    }
-
-    return (
+  return (
+    <AiCanvasHeaderResponsive>
       <div className="flex items-center gap-1 h-header px-2 bg-white">
         <CloseButton
           buttonProps={{
-            onClick: () => onCloseCanvas(),
+            onClick: () => clearCanvas(roomId),
           }}
         />
 
@@ -43,45 +40,42 @@ const AiCanvasHeader = memo(
           <h1 className="text-base pl-3 pr-2">{title}</h1>
         </div>
       </div>
-    );
-  }
-);
+    </AiCanvasHeaderResponsive>
+  );
+});
 
-const AiCanvas = memo(({ onCloseCanvas }: { onCloseCanvas: () => void }) => {
+const AiCanvas = () => {
   const roomId = useGetRoomId();
-  const getCanvas = useCanvasStore(useShallow((state) => state.getCanvas));
-
-  const selectedContent = getCanvas({ roomId: roomId ?? "" })?.find(
-    (canvas) => canvas.type === CanvasType.CONTENT
+  const { getCanvas } = useCanvasStore(
+    useShallow(({ getCanvas }) => ({ getCanvas }))
   );
 
-  const canvasOpenedMessageList =
-    MESSAGES.find((message) => message.id === selectedContent?.data?.threadId)
-      ?.parts?.map((part) => part.canvas)
-      ?.flat()
-      ?.filter((part) => part !== undefined) ?? [];
-  const canvasOpenedMessage = canvasOpenedMessageList[0];
+  const canvasList = getCanvas({
+    roomId,
+  });
+  const canvasOpenedMessage = canvasList[0]?.data?.threadId ?? "";
+  const messageFinder = MESSAGES.find(
+    (message) => message.id === canvasOpenedMessage
+  );
+  const messagePartCanvas = messageFinder?.parts?.find(
+    (part) => part.type === MessageType.CANVAS
+  );
 
   return (
     <>
-      <AiCanvasHeader
-        onCloseCanvas={onCloseCanvas}
-        title={canvasOpenedMessage?.title ?? ""}
-      />
+      <AiCanvasHeader title={messagePartCanvas?.title ?? ""} />
       <div
         className={cn(
           "flex-1 h-full overflow-y-auto pt-3",
           "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] px-(--thread-content-margin)"
         )}
       >
-        {canvasOpenedMessage?.value && (
-          <Response>{canvasOpenedMessage?.value}</Response>
+        {messagePartCanvas?.value && (
+          <Response>{messagePartCanvas?.value}</Response>
         )}
       </div>
     </>
   );
-});
-
-AiCanvas.displayName = "AiCanvas";
+};
 
 export default AiCanvas;

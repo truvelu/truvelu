@@ -76,8 +76,6 @@ export const ConversationScrollButton = ({
     scrollToBottom();
   }, [scrollToBottom]);
 
-  console.log({ isAtBottom });
-
   return (
     !isAtBottom && (
       <Button

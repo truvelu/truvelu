@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Menu02Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
 import SharedIcon from "../shared/shared-icon";
+import { useCanvasCount } from "@/hooks/use-canvas";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -40,7 +41,6 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
-  setPretendIsMobile: (pretendIsMobile: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -68,8 +68,9 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
+  const canvasCount = useCanvasCount();
+
   const [openMobile, setOpenMobile] = React.useState(false);
-  const [pretendIsMobile, setPretendIsMobile] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -89,6 +90,8 @@ function SidebarProvider({
     },
     [setOpenProp, open]
   );
+
+  const pretendIsMobile = canvasCount > 0;
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -127,7 +130,6 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      setPretendIsMobile,
     }),
     [
       state,
@@ -138,7 +140,6 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
       pretendIsMobile,
-      setPretendIsMobile,
     ]
   );
 

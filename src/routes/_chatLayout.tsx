@@ -7,11 +7,9 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import {
-  SidebarInset,
-  SidebarProvider,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useCanvasOpenStatus } from "@/hooks/use-canvas-open-status";
+import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
@@ -25,36 +23,23 @@ export const Route = createFileRoute("/_chatLayout")({
 });
 
 function ResponsiveLayout({ children }: { children: ReactNode }) {
+  const roomId = useGetRoomId();
   const isMobile = useIsMobile();
-  const { setPretendIsMobile } = useSidebar();
-  const { open, closeCanvas, canvas, canvasMap } = useCanvasStore(
-    useShallow(({ open, closeCanvas, canvas, canvasMap }) => ({
-      open,
-      closeCanvas,
-      canvas,
-      canvasMap,
-    }))
-  );
-
-  console.log({ open, canvas, canvasMap });
+  const closeCanvas = useCanvasStore(useShallow((state) => state.closeCanvas));
+  const openCanvas = useCanvasOpenStatus();
 
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-
-  const onCloseCanvas = () => {
-    closeCanvas();
-    setPretendIsMobile(false);
-  };
 
   // Animate panel size based on canvasOpenedId
   useEffect(() => {
     if (rightPanelRef.current) {
-      if (!open) {
+      if (!openCanvas) {
         rightPanelRef.current.collapse();
       } else {
         rightPanelRef.current.expand();
       }
     }
-  }, [open]);
+  }, [openCanvas]);
 
   if (isMobile) {
     return (
@@ -68,15 +53,15 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
           {children}
 
           <Drawer
-            open={open}
+            open={openCanvas}
             onOpenChange={(open) => {
               if (!open) {
-                onCloseCanvas();
+                closeCanvas(roomId);
               }
             }}
           >
             <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90vh]">
-              <AiCanvas onCloseCanvas={onCloseCanvas} />
+              <AiCanvas />
             </DrawerContent>
           </Drawer>
         </div>
@@ -90,7 +75,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
         id="resizable-panel-left-panel"
         className={cn("relative h-svh lg:h-dvh")}
         defaultSize={65}
-        minSize={35}
+        minSize={45}
       >
         <Header />
 
@@ -100,24 +85,21 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
       <ResizableHandle
         id="resizable-handle"
         withHandle
-        className={cn(!open && "pointer-events-none opacity-0")}
+        className={cn(!openCanvas && "pointer-events-none opacity-0")}
       />
 
       <ResizablePanel
         ref={rightPanelRef}
         id="resizable-panel-right-panel"
-        defaultSize={open ? 35 : 0}
+        defaultSize={openCanvas ? 35 : 0}
         collapsible
         minSize={35}
         className={cn(
           "flex flex-col relative h-svh lg:h-dvh pb-3 transition-all duration-75 ease-in-out overflow-hidden",
           "shadow-[0_0_18px_rgba(0,0,0,0.12)] dark:shadow-[0_0_18px_rgba(0,0,0,0.48)] z-30"
         )}
-        onCollapse={() => {
-          onCloseCanvas();
-        }}
       >
-        <AiCanvas onCloseCanvas={onCloseCanvas} />
+        <AiCanvas />
       </ResizablePanel>
     </ResizablePanelGroup>
   );

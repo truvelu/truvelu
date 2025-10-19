@@ -8,10 +8,24 @@ import {
 import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 
-export type ActionsProps = ComponentProps<"div">;
+export type ActionsProps = ComponentProps<"div"> & {
+  role?: "user" | "assistant" | "system";
+};
 
-export const Actions = ({ className, children, ...props }: ActionsProps) => (
-  <div className={cn("flex items-center gap-1 h-12", className)} {...props}>
+export const Actions = ({
+  className,
+  children,
+  role = "user",
+  ...props
+}: ActionsProps) => (
+  <div
+    className={cn(
+      "flex items-center gap-1 h-12",
+      role === "user" && "justify-end",
+      className
+    )}
+    {...props}
+  >
     {children}
   </div>
 );
