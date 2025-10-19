@@ -83,12 +83,10 @@ export function NavUser() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton>
-            <SignInButton mode="modal">
-              <Button className="w-full rounded-2.5xl cursor-pointer">
-                Sign in
-              </Button>
-            </SignInButton>
+          <SidebarMenuButton asChild>
+            <Button className="w-full rounded-2.5xl cursor-pointer" asChild>
+              <SignInButton mode="modal">Sign in</SignInButton>
+            </Button>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

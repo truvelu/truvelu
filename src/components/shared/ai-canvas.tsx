@@ -6,6 +6,46 @@ import { MESSAGES } from "@/constants/messages";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import { useShallow } from "zustand/react/shallow";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DrawerTitle } from "../ui/drawer";
+
+const AiCanvasHeader = memo(
+  ({ onCloseCanvas, title }: { onCloseCanvas: () => void; title: string }) => {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+      return (
+        <DrawerTitle>
+          <div className="flex items-center gap-1 h-header px-2 bg-white">
+            <CloseButton
+              buttonProps={{
+                onClick: () => onCloseCanvas(),
+              }}
+            />
+
+            <div>
+              <h1 className="text-base pl-3 pr-2">{title}</h1>
+            </div>
+          </div>
+        </DrawerTitle>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-1 h-header px-2 bg-white">
+        <CloseButton
+          buttonProps={{
+            onClick: () => onCloseCanvas(),
+          }}
+        />
+
+        <div>
+          <h1 className="text-base pl-3 pr-2">{title}</h1>
+        </div>
+      </div>
+    );
+  }
+);
 
 const AiCanvas = memo(({ onCloseCanvas }: { onCloseCanvas: () => void }) => {
   const roomId = useGetRoomId();
@@ -24,17 +64,10 @@ const AiCanvas = memo(({ onCloseCanvas }: { onCloseCanvas: () => void }) => {
 
   return (
     <>
-      <div className="flex items-center gap-1 h-header px-2 bg-white">
-        <CloseButton
-          buttonProps={{
-            onClick: () => onCloseCanvas(),
-          }}
-        />
-
-        <div>
-          <h1 className="text-base pl-3 pr-2">{canvasOpenedMessage?.title}</h1>
-        </div>
-      </div>
+      <AiCanvasHeader
+        onCloseCanvas={onCloseCanvas}
+        title={canvasOpenedMessage?.title ?? ""}
+      />
       <div
         className={cn(
           "flex-1 h-full overflow-y-auto pt-3",

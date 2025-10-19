@@ -80,12 +80,15 @@ const NavLearningItem = () => {
             <CollapsibleTrigger
               className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-3.5xl"
               onClick={(e) => e.stopPropagation()}
+              asChild
             >
-              {isOpen ? (
-                <SharedIcon icon={FolderOpenIcon} />
-              ) : (
-                <SharedIcon icon={Folder01Icon} />
-              )}
+              <div>
+                {isOpen ? (
+                  <SharedIcon icon={FolderOpenIcon} />
+                ) : (
+                  <SharedIcon icon={Folder01Icon} />
+                )}
+              </div>
             </CollapsibleTrigger>
             <span className="pl-7">Learning</span>
           </SidebarMenuButton>

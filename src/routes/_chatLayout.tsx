@@ -126,7 +126,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 function ChatLayout() {
   return (
     <>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <AppSidebar />
         <SidebarInset className="overflow-x-hidden">
           <ResponsiveLayout>
