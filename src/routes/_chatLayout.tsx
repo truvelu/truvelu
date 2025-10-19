@@ -75,7 +75,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
               }
             }}
           >
-            <DrawerContent>
+            <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90vh]">
               <AiCanvas onCloseCanvas={onCloseCanvas} />
             </DrawerContent>
           </Drawer>

@@ -29,10 +29,10 @@ const AiConversation = memo(() => {
     setPretendIsMobile,
   } = useSidebar();
   const roomId = useGetRoomId();
-  const { addCanvas, getCanvasByRoomId, clearCanvas } = useCanvasStore(
-    useShallow(({ addCanvas, getCanvasByRoomId, clearCanvas }) => ({
-      addCanvas,
-      getCanvasByRoomId,
+  const { upsertCanvas, getCanvas, clearCanvas } = useCanvasStore(
+    useShallow(({ upsertCanvas, getCanvas, clearCanvas }) => ({
+      upsertCanvas,
+      getCanvas,
       clearCanvas,
     }))
   );
@@ -47,7 +47,7 @@ const AiConversation = memo(() => {
     }
   };
 
-  const selectedCanvas = getCanvasByRoomId(roomId ?? "")?.find(
+  const selectedCanvas = getCanvas({ roomId: roomId ?? "" })?.find(
     (canvas) => canvas.type === CanvasType.CONTENT
   );
 
@@ -131,7 +131,7 @@ const AiConversation = memo(() => {
                                 if (
                                   selectedCanvas?.data?.threadId !== message.id
                                 ) {
-                                  addCanvas({
+                                  upsertCanvas({
                                     type: CanvasType.CONTENT,
                                     data: { threadId: message.id, roomId },
                                   });

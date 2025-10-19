@@ -9,11 +9,9 @@ import { useGetRoomId } from "@/hooks/use-get-room-id";
 
 const AiCanvas = memo(({ onCloseCanvas }: { onCloseCanvas: () => void }) => {
   const roomId = useGetRoomId();
-  const getCanvasByRoomId = useCanvasStore(
-    useShallow((state) => state.getCanvasByRoomId)
-  );
+  const getCanvas = useCanvasStore(useShallow((state) => state.getCanvas));
 
-  const selectedContent = getCanvasByRoomId(roomId ?? "")?.find(
+  const selectedContent = getCanvas({ roomId: roomId ?? "" })?.find(
     (canvas) => canvas.type === CanvasType.CONTENT
   );
 
