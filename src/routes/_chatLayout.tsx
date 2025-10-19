@@ -8,7 +8,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { useCanvasOpenStatus } from "@/hooks/use-canvas-open-status";
+import { useCanvasOpenStatus } from "@/hooks/use-canvas";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
