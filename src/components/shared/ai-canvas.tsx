@@ -18,6 +18,7 @@ import SharedIcon from "./shared-icon";
 import AiConversation from "./ai-conversation";
 import { Button } from "../ui/button";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 
 const AiCanvasHeaderResponsive = ({
   children,
@@ -75,14 +76,11 @@ const AiCanvas = () => {
     switch (type) {
       case CanvasType.CONTENT:
         return (
-          <Response
-            className={cn(
-              "w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)",
-              "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] px-(--thread-content-margin)"
-            )}
-          >
-            {MATH_MARKDOWN}
-          </Response>
+          <ContainerWithMargin>
+            <ContainerWithMaxWidth className="w-full">
+              <Response>{MATH_MARKDOWN}</Response>
+            </ContainerWithMaxWidth>
+          </ContainerWithMargin>
         );
       case CanvasType.THREAD:
         return <AiConversation />;
