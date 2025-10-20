@@ -1,16 +1,19 @@
-import { useCanvasStore } from "@/zustand/canvas";
+import { createCanvasFinder, useCanvasStore } from "@/zustand/canvas";
 import { useGetRoomId } from "./use-get-room-id";
 import { useShallow } from "zustand/react/shallow";
 import { useMemo } from "react";
 
-export function useCanvasCount() {
+export function useCanvasList() {
   const roomId = useGetRoomId();
-  const canvas = useCanvasStore(useShallow((state) => state.canvas));
-  const canvasCount = useMemo(
-    () => canvas?.filter((item) => item.data?.roomId === roomId).length,
-    [canvas, roomId]
-  );
-  return canvasCount;
+  const canvasMap = useCanvasStore(useShallow((state) => state.canvasMap));
+  const finder = createCanvasFinder(canvasMap ?? new Map());
+  const canvasList = useMemo(() => finder.findByRoom(roomId), [finder, roomId]);
+  return canvasList;
+}
+
+export function useCanvasCount() {
+  const canvasList = useCanvasList();
+  return useMemo(() => canvasList?.length, [canvasList]);
 }
 
 export function useCanvasOpenStatus() {

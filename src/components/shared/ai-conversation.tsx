@@ -69,6 +69,8 @@ const AiConversation = memo(() => {
       type,
     });
 
+    console.log({ existingCanvas });
+
     if (existingCanvas.length > 0) {
       removeCanvas({
         type,

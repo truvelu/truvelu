@@ -1,13 +1,23 @@
-import { memo } from "react";
-import CloseButton from "./close-button";
+import { memo, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Response } from "../ai-elements/response";
-import { MESSAGES, MessageType } from "@/constants/messages";
-import { useCanvasStore } from "@/zustand/canvas";
+import { MATH_MARKDOWN } from "@/constants/messages";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import { useShallow } from "zustand/react/shallow";
-import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DrawerTitle } from "../ui/drawer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { useCanvasList } from "@/hooks/use-canvas";
+import {
+  Cancel01Icon,
+  Comment02Icon,
+  File01Icon,
+  MoreHorizontalIcon,
+} from "@hugeicons/core-free-icons";
+import SharedIcon from "./shared-icon";
+import AiConversation from "./ai-conversation";
+import { Button } from "../ui/button";
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 
 const AiCanvasHeaderResponsive = ({
   children,
@@ -21,60 +31,142 @@ const AiCanvasHeaderResponsive = ({
   return <>{children}</>;
 };
 
-const AiCanvasHeader = memo(({ title }: { title: string }) => {
-  const roomId = useGetRoomId();
-  const { clearCanvas } = useCanvasStore(
-    useShallow(({ clearCanvas }) => ({ clearCanvas }))
-  );
-
+const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
   return (
     <AiCanvasHeaderResponsive>
-      <div className="flex items-center gap-1 h-header px-2 bg-white">
-        <CloseButton
-          buttonProps={{
-            onClick: () => clearCanvas(roomId),
-          }}
-        />
+      <div
+        className={cn(
+          "flex items-center gap-1 h-header px-1 bg-white w-full justify-between"
+        )}
+      >
+        <div className="flex-1 w-[calc(100%-9.5rem)]">{children}</div>
 
-        <div>
-          <h1 className="text-base pl-3 pr-2">{title}</h1>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="cursor-pointer rounded-md"
+        >
+          <SharedIcon icon={MoreHorizontalIcon} />
+        </Button>
       </div>
     </AiCanvasHeaderResponsive>
   );
 });
 
 const AiCanvas = () => {
-  const roomId = useGetRoomId();
-  const { getCanvas } = useCanvasStore(
-    useShallow(({ getCanvas }) => ({ getCanvas }))
+  const isMobile = useIsMobile();
+  const canvasList = useCanvasList();
+  const { activeCanvasId, setActiveCanvasId, removeCanvas } = useCanvasStore(
+    useShallow(({ activeCanvasId, setActiveCanvasId, removeCanvas }) => ({
+      activeCanvasId,
+      setActiveCanvasId,
+      removeCanvas,
+    }))
   );
 
-  const canvasList = getCanvas({
-    roomId,
+  const [isHovered, setIsHovered] = useState<string>("");
+
+  const typeMap = {
+    [CanvasType.CONTENT]: { icon: File01Icon },
+    [CanvasType.THREAD]: { icon: Comment02Icon },
+  };
+
+  const componentMapper = (type: CanvasType) => {
+    switch (type) {
+      case CanvasType.CONTENT:
+        return (
+          <Response
+            className={cn(
+              "w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)",
+              "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] px-(--thread-content-margin)"
+            )}
+          >
+            {MATH_MARKDOWN}
+          </Response>
+        );
+      case CanvasType.THREAD:
+        return <AiConversation />;
+      default:
+        return null;
+    }
+  };
+
+  const canvasTabs = canvasList.map((canvas) => {
+    return {
+      ...canvas,
+      icon: typeMap[canvas.type]?.icon,
+      component: componentMapper(canvas.type),
+    };
   });
-  const canvasOpenedMessage = canvasList[0]?.data?.threadId ?? "";
-  const messageFinder = MESSAGES.find(
-    (message) => message.id === canvasOpenedMessage
-  );
-  const messagePartCanvas = messageFinder?.parts?.find(
-    (part) => part.type === MessageType.CANVAS
-  );
+
+  const lastCanvas = canvasList[canvasList.length - 1];
+
+  useEffect(() => {
+    setActiveCanvasId(lastCanvas?.id);
+  }, [lastCanvas]);
 
   return (
-    <>
-      <AiCanvasHeader title={messagePartCanvas?.title ?? ""} />
-      <div
-        className={cn(
-          "flex-1 h-full overflow-y-auto pt-3",
-          "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] px-(--thread-content-margin)"
-        )}
-      >
-        {messagePartCanvas?.value && (
-          <Response>{messagePartCanvas?.value}</Response>
-        )}
-      </div>
-    </>
+    <Tabs
+      value={activeCanvasId}
+      onValueChange={setActiveCanvasId}
+      className="gap-0"
+    >
+      <AiCanvasHeader>
+        <ScrollArea className="w-full p-0">
+          <TabsList className="bg-transparent">
+            {canvasTabs?.map((trigger) => (
+              <div
+                key={trigger.id}
+                className="relative"
+                onMouseEnter={() => {
+                  if (isMobile) return;
+                  setIsHovered(trigger.id);
+                }}
+                onMouseLeave={() => {
+                  if (isMobile) return;
+                  setIsHovered("");
+                }}
+              >
+                <TabsTrigger
+                  value={trigger.id}
+                  className={cn(
+                    "cursor-pointer data-[state=active]:border data-[state=active]:border-ring",
+                    "pl-1 pr-8"
+                  )}
+                >
+                  <SharedIcon icon={trigger.icon} />
+                </TabsTrigger>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 right-1 rounded-full p-1 size-fit cursor-pointer transition-opacity",
+                    isMobile || isHovered === trigger.id
+                      ? "opacity-100"
+                      : "opacity-0"
+                  )}
+                  onClick={() =>
+                    removeCanvas({
+                      type: trigger.type,
+                      threadId: trigger.data?.threadId,
+                      roomId: trigger.data?.roomId,
+                    })
+                  }
+                >
+                  <SharedIcon icon={Cancel01Icon} className="size-3" />
+                </Button>
+              </div>
+            ))}
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </AiCanvasHeader>
+      {canvasTabs.map((canvas) => (
+        <TabsContent key={canvas.id} value={canvas.id}>
+          <div>{canvas.component}</div>
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 };
 
