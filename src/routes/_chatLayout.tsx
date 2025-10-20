@@ -1,7 +1,12 @@
 import AiCanvas from "@/components/shared/ai-canvas";
 import { AppSidebar } from "@/components/shared/app-sidebar";
 import Header from "@/components/shared/header";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -61,6 +66,8 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
             }}
           >
             <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90vh]">
+              <DrawerTitle />
+              <DrawerDescription />
               <AiCanvas />
             </DrawerContent>
           </Drawer>
@@ -74,8 +81,8 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
       <ResizablePanel
         id="resizable-panel-left-panel"
         className={cn("relative h-svh lg:h-dvh")}
-        defaultSize={65}
-        minSize={45}
+        defaultSize={50}
+        minSize={35}
       >
         <Header />
 
@@ -91,7 +98,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
       <ResizablePanel
         ref={rightPanelRef}
         id="resizable-panel-right-panel"
-        defaultSize={openCanvas ? 35 : 0}
+        defaultSize={openCanvas ? 50 : 0}
         collapsible
         minSize={35}
         className={cn(

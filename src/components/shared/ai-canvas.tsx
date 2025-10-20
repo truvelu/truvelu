@@ -20,37 +20,19 @@ import { Button } from "../ui/button";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 
-const AiCanvasHeaderResponsive = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const isMobile = useIsMobile();
-  if (isMobile) {
-    return <DrawerTitle>{children}</DrawerTitle>;
-  }
-  return <>{children}</>;
-};
-
 const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
   return (
-    <AiCanvasHeaderResponsive>
-      <div
-        className={cn(
-          "flex items-center gap-1 h-header px-1 bg-white w-full justify-between"
-        )}
-      >
-        <div className="flex-1 w-[calc(100%-9.5rem)]">{children}</div>
+    <div
+      className={cn(
+        "flex items-center gap-1 h-header px-1 bg-white w-full justify-between"
+      )}
+    >
+      <div className="flex-1 w-[calc(100%-9.5rem)]">{children}</div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="cursor-pointer rounded-md"
-        >
-          <SharedIcon icon={MoreHorizontalIcon} />
-        </Button>
-      </div>
-    </AiCanvasHeaderResponsive>
+      <Button variant="ghost" size="icon" className="cursor-pointer rounded-md">
+        <SharedIcon icon={MoreHorizontalIcon} />
+      </Button>
+    </div>
   );
 });
 
