@@ -1,3 +1,4 @@
+import AiLearning from "@/components/shared/ai-learning";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
@@ -12,5 +13,5 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 });
 
 function RouteComponent() {
-  return <div>Hello "/l/-$learningId"!</div>;
+  return <AiLearning />;
 }

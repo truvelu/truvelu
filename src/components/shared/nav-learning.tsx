@@ -16,8 +16,6 @@ import {
   CollapsibleTrigger,
 } from "../ui/collapsible";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight01Icon,
@@ -103,8 +101,8 @@ const NavLearningItem = () => {
                   navigate({
                     to: "/l/{-$learningId}/c/{-$chatId}",
                     params: {
-                      learningId: "123",
-                      chatId: "456",
+                      learningId: crypto.randomUUID(),
+                      chatId: crypto.randomUUID(),
                     },
                   });
                 }}
@@ -120,8 +118,8 @@ const NavLearningItem = () => {
                   navigate({
                     to: "/l/{-$learningId}/c/{-$chatId}",
                     params: {
-                      learningId: "123",
-                      chatId: "789",
+                      learningId: crypto.randomUUID(),
+                      chatId: crypto.randomUUID(),
                     },
                   });
                 }}

@@ -113,19 +113,19 @@ const AiConversation = memo(() => {
     <>
       <Conversation
         className={cn(
-          "h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 bg-white",
+          "h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
           "[&>*]:[scrollbar-gutter:stable_both-edges]"
         )}
       >
         <ConversationContent
           className={cn(
-            "[--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(8)] thread-lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
+            "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(8)] lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
           )}
           style={{
             paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 8rem)`,
           }}
         >
-          <div className="w-full [--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+          <div className="w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
             {!MESSAGES.length ? (
               <ConversationEmptyState
                 icon={<SharedIcon icon={Message01Icon} size={48} />}
@@ -271,13 +271,13 @@ const AiConversation = memo(() => {
       <div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
         <div
           className={cn(
-            "text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
+            "text-base mx-auto [--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
           )}
         >
           <div
             className={cn(
               "pb-2 bg-white",
-              "[--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1"
+              "[--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1"
             )}
           >
             <AiPromptInput onReady={handleInputReady} />
