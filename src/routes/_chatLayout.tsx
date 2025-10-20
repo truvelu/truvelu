@@ -14,7 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { ReactNode, useEffect, useMemo, useRef } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
 import { useShallow } from "zustand/react/shallow";
 

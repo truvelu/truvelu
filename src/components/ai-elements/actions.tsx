@@ -5,30 +5,44 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 
 export type ActionsProps = ComponentProps<"div"> & {
   role?: "user" | "assistant" | "system";
+  showOnHover?: boolean;
+  hovered?: boolean;
 };
 
 export const Actions = ({
   className,
   children,
   role = "user",
+  showOnHover = false,
+  hovered = false,
   ...props
-}: ActionsProps) => (
-  <div
-    className={cn(
-      "flex items-center gap-1 h-12",
-      role === "user" && "justify-end",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </div>
-);
+}: ActionsProps) => {
+  const isMobile = useIsMobile();
+  const isUser = role === "user";
+
+  return (
+    <div
+      className={cn(
+        "transition-opacity duration-200",
+        "flex items-center gap-1 h-12",
+        isUser && "justify-end",
+        !isMobile && isUser && !hovered && showOnHover
+          ? "opacity-0"
+          : "opacity-100",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
 
 export type ActionProps = ComponentProps<typeof Button> & {
   tooltip?: string;

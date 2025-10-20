@@ -30,8 +30,10 @@ import { MESSAGES, MESSAGES_THREAD, MessageType } from "@/constants/messages";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import { useShallow } from "zustand/react/shallow";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AiConversation = memo(() => {
+  const isMobile = useIsMobile();
   const {
     open: sidebarOpen,
     setOpen: setSidebarOpen,
@@ -49,6 +51,7 @@ const AiConversation = memo(() => {
   const inputRef = useRef<HTMLDivElement>(null);
 
   const [inputHeight, setInputHeight] = useState(0);
+  const [hoveredId, setHoveredId] = useState<string>("");
 
   const handleInputReady = useCallback(() => {
     if (inputRef.current) {
@@ -68,8 +71,6 @@ const AiConversation = memo(() => {
       threadId,
       type,
     });
-
-    console.log({ existingCanvas });
 
     if (existingCanvas.length > 0) {
       removeCanvas({
@@ -110,138 +111,155 @@ const AiConversation = memo(() => {
 
   return (
     <>
-      <Conversation className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 bg-white">
+      <Conversation
+        className={cn(
+          "h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 bg-white",
+          "[&>*]:[scrollbar-gutter:stable_both-edges]"
+        )}
+      >
         <ConversationContent
           className={cn(
-            "w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)",
-            "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(8)] lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
+            "[--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(8)] thread-lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
           )}
           style={{
             paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 8rem)`,
           }}
         >
-          {!MESSAGES.length ? (
-            <ConversationEmptyState
-              icon={<SharedIcon icon={Message01Icon} size={48} />}
-              title="Start a conversation"
-              description="Type a message below to begin chatting"
-            />
-          ) : (
-            MESSAGES.map((message) => {
-              const textPart = message.parts.find(
-                (part) => part.type === MessageType.TEXT
-              );
-              const deepDiscussion = MESSAGES_THREAD.find(
-                (msg) => msg.id === message.id
-              );
+          <div className="w-full [--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)">
+            {!MESSAGES.length ? (
+              <ConversationEmptyState
+                icon={<SharedIcon icon={Message01Icon} size={48} />}
+                title="Start a conversation"
+                description="Type a message below to begin chatting"
+              />
+            ) : (
+              MESSAGES.map((message) => {
+                const textPart = message.parts.find(
+                  (part) => part.type === MessageType.TEXT
+                );
+                const deepDiscussion = MESSAGES_THREAD.find(
+                  (msg) => msg.id === message.id
+                );
 
-              return (
-                <Fragment key={message.id}>
-                  {message.parts.map((part, i) => {
-                    switch (part.type) {
-                      case MessageType.TEXT:
-                        return (
-                          <Fragment key={`${message.id}-${i}`}>
-                            <Message
-                              from={message.role}
-                              className={
-                                message.role === "user"
-                                  ? "first:pt-0 pt-12"
-                                  : ""
+                return (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "cursor-default",
+                      message.role === "user" ? "first:mt-0 mt-12" : ""
+                    )}
+                    onMouseEnter={() => {
+                      if (isMobile) return;
+                      setHoveredId(message.id);
+                    }}
+                    onMouseLeave={() => {
+                      if (isMobile) return;
+                      setHoveredId("");
+                    }}
+                  >
+                    {message.parts.map((part, i) => {
+                      switch (part.type) {
+                        case MessageType.TEXT:
+                          return (
+                            <Fragment key={`${message.id}-${i}`}>
+                              <Message from={message.role}>
+                                <MessageContent variant="flat">
+                                  <Response>{part.text}</Response>
+                                </MessageContent>
+                              </Message>
+                            </Fragment>
+                          );
+
+                        case MessageType.CANVAS:
+                          return (
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              className="flex flex-col gap-1 rounded-2.5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
+                              onClick={() =>
+                                handleOpenCanvas({
+                                  type: CanvasType.CONTENT,
+                                  threadId: message.id,
+                                })
                               }
                             >
-                              <MessageContent variant="flat">
-                                <Response>{part.text}</Response>
-                              </MessageContent>
-                            </Message>
-                          </Fragment>
-                        );
+                              <h1 className="text-base font-semibold">
+                                {part.title}
+                              </h1>
+                              <p className="text-sm text-gray-400">
+                                Interactive canvas
+                              </p>
+                            </div>
+                          );
 
-                      case MessageType.CANVAS:
-                        return (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            className="flex flex-col gap-1 rounded-2.5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
-                            onClick={() =>
-                              handleOpenCanvas({
-                                type: CanvasType.CONTENT,
-                                threadId: message.id,
-                              })
-                            }
-                          >
-                            <h1 className="text-base font-semibold">
-                              {part.title}
-                            </h1>
-                            <p className="text-sm text-gray-400">
-                              Interactive canvas
-                            </p>
-                          </div>
-                        );
-
-                      default:
-                        return null;
-                    }
-                  })}
-
-                  <Actions role={message.role}>
-                    {message.role === "user" && (
-                      <Action onClick={() => {}} label="Retry">
-                        <SharedIcon icon={RefreshIcon} />
-                      </Action>
-                    )}
-
-                    {message.role === "assistant" && (
-                      <Action onClick={() => {}} label="Retry">
-                        <SharedIcon icon={RefreshIcon} />
-                      </Action>
-                    )}
-
-                    <Action
-                      onClick={() => {
-                        if (!textPart) return;
-                        navigator.clipboard.writeText(textPart.text);
-                      }}
-                      label="Copy"
-                    >
-                      <SharedIcon icon={Copy01Icon} />
-                    </Action>
-
-                    <Action
-                      label={
-                        deepDiscussion?.messages?.length
-                          ? "Deep Discussion"
-                          : "New Deep Discussion"
+                        default:
+                          return null;
                       }
-                      className={cn(
-                        deepDiscussion?.messages?.length &&
-                          "rounded-3.5xl px-2.5 w-fit border border-ring"
-                      )}
-                      onClick={() => {
-                        handleOpenCanvas({
-                          type: CanvasType.THREAD,
-                          threadId: message.id,
-                        });
-                      }}
+                    })}
+
+                    <Actions
+                      role={message.role}
+                      showOnHover
+                      hovered={hoveredId === message.id}
                     >
-                      <SharedIcon
-                        icon={
-                          deepDiscussion?.messages?.length
-                            ? Comment01Icon
-                            : CommentAdd02Icon
-                        }
-                      />
-                      {deepDiscussion?.messages?.length && (
-                        <span className="text-sm font-medium">
-                          {deepDiscussion?.messages?.length}
-                        </span>
+                      {message.role === "user" && (
+                        <Action onClick={() => {}} label="Retry">
+                          <SharedIcon icon={RefreshIcon} />
+                        </Action>
                       )}
-                    </Action>
-                  </Actions>
-                </Fragment>
-              );
-            })
-          )}
+
+                      {message.role === "assistant" && (
+                        <Action onClick={() => {}} label="Retry">
+                          <SharedIcon icon={RefreshIcon} />
+                        </Action>
+                      )}
+
+                      <Action
+                        onClick={() => {
+                          if (!textPart) return;
+                          navigator.clipboard.writeText(textPart.text);
+                        }}
+                        label="Copy"
+                      >
+                        <SharedIcon icon={Copy01Icon} />
+                      </Action>
+
+                      <Action
+                        label={
+                          deepDiscussion?.messages?.length
+                            ? "Deep Discussion"
+                            : "New Deep Discussion"
+                        }
+                        className={cn(
+                          deepDiscussion?.messages?.length &&
+                            "rounded-3.5xl px-2.5 w-fit border border-ring"
+                        )}
+                        onClick={() => {
+                          handleOpenCanvas({
+                            type: CanvasType.THREAD,
+                            threadId: message.id,
+                          });
+                        }}
+                      >
+                        <SharedIcon
+                          icon={
+                            deepDiscussion?.messages?.length
+                              ? Comment01Icon
+                              : CommentAdd02Icon
+                          }
+                        />
+                        {deepDiscussion?.messages?.length && (
+                          <span className="text-sm font-medium">
+                            {deepDiscussion?.messages?.length}
+                          </span>
+                        )}
+                      </Action>
+                    </Actions>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </ConversationContent>
         <ConversationScrollButton
           style={{
@@ -253,11 +271,15 @@ const AiConversation = memo(() => {
       <div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
         <div
           className={cn(
-            "w-full [--thread-content-max-width:40rem] lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width)",
-            "[--thread-content-margin:--spacing(4)] sm:[--thread-content-margin:--spacing(6)] px-(--thread-content-margin)"
+            "text-base mx-auto [--thread-content-margin:--spacing(4)] thread-sm:[--thread-content-margin:--spacing(6)] thread-lg:[--thread-content-margin:--spacing(16)] px-(--thread-content-margin)"
           )}
         >
-          <div className="pb-2 bg-white">
+          <div
+            className={cn(
+              "pb-2 bg-white",
+              "[--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-(--thread-content-max-width) flex-1"
+            )}
+          >
             <AiPromptInput onReady={handleInputReady} />
           </div>
         </div>
