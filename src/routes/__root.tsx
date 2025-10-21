@@ -1,10 +1,10 @@
+import { TanstackDevtools } from "@tanstack/react-devtools";
 import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanstackDevtools } from "@tanstack/react-devtools";
 
 import ClerkProvider from "../integrations/clerk/provider";
 
@@ -15,6 +15,9 @@ import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
+
+import { useEffect } from "react";
+import { scan } from "react-scan";
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -46,6 +49,13 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    // Make sure to run this only after hydration
+    scan({
+      enabled: true,
+    });
+  }, []);
+
   return (
     <html lang="en">
       <head>

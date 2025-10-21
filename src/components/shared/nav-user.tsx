@@ -15,9 +15,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { SignInButton, SignOutButton, useUser } from "@clerk/clerk-react";
-import { Dialog, DialogContent } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { useState } from "react";
 import {
   CheckmarkBadge02Icon,
   CreditCardIcon,
@@ -25,6 +22,9 @@ import {
   SparklesIcon,
   UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
+import { useState } from "react";
+import { Button } from "../ui/button";
+import { Dialog, DialogContent } from "../ui/dialog";
 import SharedIcon from "./shared-icon";
 
 const ModalNavUserLogout = ({
@@ -39,7 +39,7 @@ const ModalNavUserLogout = ({
   return (
     <Dialog open={isOpenModalLogout} onOpenChange={onValueChangeModalLogout}>
       <DialogContent
-        className="px-6 py-8 w-fit h-fit md:p-10 rounded-3.5xl"
+        className="px-6 py-8 w-fit h-fit md:p-10 rounded-tlarge"
         showCloseButton={false}
       >
         <div className="flex-1 sm:max-w-80 text-balance">
@@ -51,13 +51,13 @@ const ModalNavUserLogout = ({
           </p>
           <div className="flex flex-col gap-4">
             <SignOutButton>
-              <Button className="w-full rounded-2.5xl cursor-pointer">
+              <Button className="w-full rounded-tmedium cursor-pointer">
                 Log out
               </Button>
             </SignOutButton>
             <Button
               variant="outline"
-              className="w-full rounded-2.5xl cursor-pointer"
+              className="w-full rounded-tmedium cursor-pointer"
               onClick={() => onValueChangeModalLogout(false)}
             >
               Cancel
@@ -84,7 +84,7 @@ export function NavUser() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
-            <Button className="w-full rounded-2.5xl cursor-pointer" asChild>
+            <Button className="w-full rounded-tmedium cursor-pointer" asChild>
               <SignInButton mode="modal">Sign in</SignInButton>
             </Button>
           </SidebarMenuButton>
@@ -159,7 +159,7 @@ export function NavUser() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onValueChangeModalLogout(true)}
-                className="w-full rounded-2.5xl cursor-pointer"
+                className="w-full rounded-tmedium cursor-pointer"
               >
                 <SharedIcon icon={Logout05Icon} />
                 Log out

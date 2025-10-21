@@ -1,4 +1,3 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -13,10 +12,17 @@ import {
   PromptInputToolbar,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
-import { Separator } from "../ui/separator";
-import { DropdownMenuItem } from "../ui/dropdown-menu";
-import BtnLoginOrChild from "./btn-login-or-child";
 import { ShapeCollectionIcon } from "@hugeicons/core-free-icons";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { DropdownMenuItem } from "../ui/dropdown-menu";
+import { Separator } from "../ui/separator";
+import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
 export const AiPromptInput = ({ onReady }: { onReady: () => void }) => {
@@ -53,7 +59,7 @@ export const AiPromptInput = ({ onReady }: { onReady: () => void }) => {
         <PromptInputTools>
           <PromptInputActionMenu>
             <PromptInputActionMenuTrigger className="!rounded-full cursor-pointer" />
-            <PromptInputActionMenuContent className="rounded-2.5xl p-1.5">
+            <PromptInputActionMenuContent className="rounded-tmedium p-1.5">
               <PromptInputActionAddAttachments className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer" />
               <Separator className="my-1.5" />
               <DropdownMenuItem className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer">

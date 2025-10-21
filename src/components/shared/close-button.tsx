@@ -1,8 +1,8 @@
-import { ComponentProps, memo } from "react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { type HugeiconsProps } from "@hugeicons/react";
-import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import type { HugeiconsProps } from "@hugeicons/react";
+import { type ComponentProps, memo } from "react";
+import { Button } from "../ui/button";
 import SharedIcon from "./shared-icon";
 
 interface CloseButtonProps {

@@ -6,13 +6,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../ui/collapsible";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { useNavigate } from "@tanstack/react-router";
 import SharedIcon from "./shared-icon";
 
 const NavChatItem = () => {
@@ -22,7 +22,7 @@ const NavChatItem = () => {
     <SidebarMenuItem>
       <SidebarMenuButton
         tooltip="Chat"
-        className="cursor-pointer rounded-3.5xl"
+        className="cursor-pointer rounded-tlarge"
         onClick={() => {
           navigate({
             to: "/c/{-$chatId}",

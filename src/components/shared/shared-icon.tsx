@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 import {
   HugeiconsIcon,
-  HugeiconsProps,
-  IconSvgElement,
+  type HugeiconsProps,
+  type IconSvgElement,
 } from "@hugeicons/react";
 import { memo } from "react";
 
@@ -13,7 +13,7 @@ interface IconProps extends Omit<HugeiconsProps, "icon"> {
 function SharedIcon({ icon, size, className, ...props }: IconProps) {
   return (
     <HugeiconsIcon
-      icon={icon!}
+      icon={icon}
       size={size}
       className={cn("size-5", className)}
       {...props}

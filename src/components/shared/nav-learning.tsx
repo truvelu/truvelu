@@ -11,13 +11,6 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import {
   ArrowRight01Icon,
   Delete02Icon,
   Edit03Icon,
@@ -26,7 +19,13 @@ import {
   FolderOpenIcon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import SharedIcon from "./shared-icon";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,13 +33,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import SharedIcon from "./shared-icon";
 
 const NavNewLearningItem = () => {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         tooltip="Learning"
-        className="cursor-pointer rounded-3.5xl"
+        className="cursor-pointer rounded-tlarge"
       >
         <SharedIcon icon={FolderAddIcon} />
         <span>Learning</span>
@@ -65,7 +65,7 @@ const NavLearningItem = () => {
         <div className="flex-1 justify-between flex flex-row items-center gap-1">
           <SidebarMenuButton
             tooltip="Learning"
-            className="rounded-3.5xl relative cursor-pointer"
+            className="rounded-tlarge relative cursor-pointer"
             onClick={() => {
               navigate({
                 to: "/l/{-$learningId}",
@@ -76,7 +76,7 @@ const NavLearningItem = () => {
             }}
           >
             <CollapsibleTrigger
-              className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-3.5xl"
+              className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
               onClick={(e) => e.stopPropagation()}
               asChild
             >
@@ -96,7 +96,7 @@ const NavLearningItem = () => {
           <SidebarMenuSub className="mr-0 pr-0">
             <SidebarMenuSubItem>
               <SidebarMenuSubButton
-                className="cursor-pointer rounded-3.5xl"
+                className="cursor-pointer rounded-tlarge"
                 onClick={() => {
                   navigate({
                     to: "/l/{-$learningId}/c/{-$chatId}",
@@ -113,7 +113,7 @@ const NavLearningItem = () => {
 
             <SidebarMenuSubItem>
               <SidebarMenuSubButton
-                className="cursor-pointer rounded-3.5xl"
+                className="cursor-pointer rounded-tlarge"
                 onClick={() => {
                   navigate({
                     to: "/l/{-$learningId}/c/{-$chatId}",
@@ -139,7 +139,7 @@ const NavLearningItem = () => {
           <DropdownMenuContent
             side="right"
             align="start"
-            className="rounded-2.5xl"
+            className="rounded-tmedium"
           >
             <DropdownMenuItem className="p-2.5 rounded-xl">
               <SharedIcon icon={Edit03Icon} />

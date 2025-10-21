@@ -1,6 +1,5 @@
-import * as React from "react";
-import { NavMain } from "@/components/shared/nav-main";
 import { NavLearning } from "@/components/shared/nav-learning";
+import { NavMain } from "@/components/shared/nav-main";
 import { NavUser } from "@/components/shared/nav-user";
 import {
   Sidebar,
@@ -11,11 +10,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { NavExplore } from "./nav-explore";
 import { useUser } from "@clerk/clerk-react";
-import { Button } from "../ui/button";
 import { Cancel01Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
+import type * as React from "react";
+import { Button } from "../ui/button";
 import { NavChat } from "./nav-chat";
+import { NavExplore } from "./nav-explore";
 import SharedIcon from "./shared-icon";
 
 export function AppSidebar({

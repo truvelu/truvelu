@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import { SignInButton, useUser } from "@clerk/clerk-react";
+import type { ReactNode } from "react";
 
 const BtnLoginOrChild = ({ children }: { children: ReactNode }) => {
   const { isSignedIn } = useUser();

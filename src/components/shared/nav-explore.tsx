@@ -18,7 +18,7 @@ export function NavExplore() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Community"
-              className="cursor-pointer rounded-3.5xl"
+              className="cursor-pointer rounded-tlarge"
             >
               <SharedIcon icon={BlockGameIcon} />
               <span>Community</span>

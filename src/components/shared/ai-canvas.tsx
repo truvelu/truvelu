@@ -1,24 +1,23 @@
-import { memo, useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-import { Response } from "../ai-elements/response";
 import { MATH_MARKDOWN } from "@/constants/messages";
-import { CanvasType, useCanvasStore } from "@/zustand/canvas";
-import { useShallow } from "zustand/react/shallow";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { DrawerTitle } from "../ui/drawer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { useCanvasList } from "@/hooks/use-canvas";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
   Cancel01Icon,
   Comment02Icon,
   File01Icon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import SharedIcon from "./shared-icon";
-import AiConversation from "./ai-conversation";
+import { memo, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { Response } from "../ai-elements/response";
 import { Button } from "../ui/button";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import AiConversation from "./ai-conversation";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
+import SharedIcon from "./shared-icon";
 
 const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
   return (

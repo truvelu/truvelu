@@ -1,4 +1,3 @@
-import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -6,15 +5,17 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import type { ComponentProps } from "react";
-import { createContext, memo, useContext } from "react";
-import { IconSvgElement } from "@hugeicons/react";
 import {
   AiBrain01Icon,
   ArrowDown01Icon,
   Asterisk02Icon,
 } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import type { ComponentProps } from "react";
+import { createContext, memo, useContext } from "react";
 import Icon from "../shared/shared-icon";
+import SharedIcon from "../shared/shared-icon";
 
 type ChainOfThoughtContextValue = {
   isOpen: boolean;

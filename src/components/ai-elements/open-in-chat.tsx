@@ -227,7 +227,7 @@ export const OpenInChatGPT = (props: OpenInChatGPTProps) => {
       <a
         className="flex items-center gap-2"
         href={providers.chatgpt.createUrl(query)}
-        rel="noopener"
+        rel="noreferrer noopener"
         target="_blank"
       >
         <span className="shrink-0">{providers.chatgpt.icon}</span>
@@ -247,7 +247,7 @@ export const OpenInClaude = (props: OpenInClaudeProps) => {
       <a
         className="flex items-center gap-2"
         href={providers.claude.createUrl(query)}
-        rel="noopener"
+        rel="noreferrer noopener"
         target="_blank"
       >
         <span className="shrink-0">{providers.claude.icon}</span>
@@ -267,7 +267,7 @@ export const OpenInT3 = (props: OpenInT3Props) => {
       <a
         className="flex items-center gap-2"
         href={providers.t3.createUrl(query)}
-        rel="noopener"
+        rel="noreferrer noopener"
         target="_blank"
       >
         <span className="shrink-0">{providers.t3.icon}</span>
@@ -287,7 +287,7 @@ export const OpenInScira = (props: OpenInSciraProps) => {
       <a
         className="flex items-center gap-2"
         href={providers.scira.createUrl(query)}
-        rel="noopener"
+        rel="noreferrer noopener"
         target="_blank"
       >
         <span className="shrink-0">{providers.scira.icon}</span>
@@ -307,7 +307,7 @@ export const OpenInv0 = (props: OpenInv0Props) => {
       <a
         className="flex items-center gap-2"
         href={providers.v0.createUrl(query)}
-        rel="noopener"
+        rel="noreferrer noopener"
         target="_blank"
       >
         <span className="shrink-0">{providers.v0.icon}</span>

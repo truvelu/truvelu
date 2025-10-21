@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
 import { Folder01Icon } from "@hugeicons/core-free-icons";
-import SharedIcon from "./shared-icon";
-import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import { Link } from "@tanstack/react-router";
+import { Button } from "../ui/button";
+import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
+import SharedIcon from "./shared-icon";
 
 function AiLearning() {
   return (
@@ -21,7 +21,10 @@ function AiLearning() {
                 <h1 className="text-2xl">Learning</h1>
               </div>
 
-              <Button variant="outline" className="rounded-3.5xl text-gray-500">
+              <Button
+                variant="outline"
+                className="rounded-tlarge text-gray-500"
+              >
                 Add Knowledge
               </Button>
             </div>
@@ -62,7 +65,7 @@ function AiLearning() {
                     className="group/project-item hover:bg-gray-50 active:bg-gray-50 flex min-h-16 cursor-pointer items-center p-3 text-sm select-none"
                   >
                     <Link
-                      to={`/l/{-$learningId}/c/{-$chatId}`}
+                      to={"/l/{-$learningId}/c/{-$chatId}"}
                       params={{
                         learningId: item.learningId,
                         chatId: item.chatId,

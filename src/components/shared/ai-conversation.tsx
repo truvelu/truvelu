@@ -1,3 +1,15 @@
+import { MESSAGES, MESSAGES_THREAD, MessageType } from "@/constants/messages";
+import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
+import {
+  Comment01Icon,
+  CommentAdd02Icon,
+  Copy01Icon,
+  Message01Icon,
+  RefreshIcon,
+} from "@hugeicons/core-free-icons";
 import {
   Fragment,
   memo,
@@ -6,6 +18,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { Action, Actions } from "../ai-elements/actions";
 import {
   Conversation,
   ConversationContent,
@@ -14,24 +28,10 @@ import {
 } from "../ai-elements/conversation";
 import { Message, MessageContent } from "../ai-elements/message";
 import { Response } from "../ai-elements/response";
-import { AiPromptInput } from "./ai-prompt-input";
-import { cn } from "@/lib/utils";
-import { Action, Actions } from "../ai-elements/actions";
 import { useSidebar } from "../ui/sidebar";
-import {
-  Comment01Icon,
-  CommentAdd02Icon,
-  Copy01Icon,
-  Message01Icon,
-  RefreshIcon,
-} from "@hugeicons/core-free-icons";
-import SharedIcon from "./shared-icon";
-import { MESSAGES, MESSAGES_THREAD, MessageType } from "@/constants/messages";
-import { CanvasType, useCanvasStore } from "@/zustand/canvas";
-import { useShallow } from "zustand/react/shallow";
-import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
+import SharedIcon from "./shared-icon";
 
 const AiConversation = memo(() => {
   const isMobile = useIsMobile();
@@ -175,7 +175,7 @@ const AiConversation = memo(() => {
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex flex-col gap-1 rounded-2.5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
+                                className="flex flex-col gap-1 rounded-2-5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
                                 onClick={() =>
                                   handleOpenCanvas({
                                     type: CanvasType.CONTENT,
@@ -232,7 +232,7 @@ const AiConversation = memo(() => {
                           }
                           className={cn(
                             deepDiscussion?.messages?.length &&
-                              "rounded-3.5xl px-2.5 w-fit border border-ring"
+                              "rounded-tlarge px-2.5 w-fit border border-ring"
                           )}
                           onClick={() => {
                             handleOpenCanvas({

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist, StorageValue } from "zustand/middleware";
+import { type StorageValue, persist } from "zustand/middleware";
 
 export enum CanvasType {
   CONTENT = "content",
@@ -412,10 +412,10 @@ export const useCanvasStore = create<CanvasStore>()(
               ...existingValue.state,
               canvasMap: new Map(
                 (existingValue?.state?.canvasMap ?? []).map(
-                  ([key, innerMapData]: [string, [string, any][]]) => [
-                    key,
-                    new Map(innerMapData),
-                  ]
+                  ([key, innerMapData]: [
+                    string,
+                    [string, CanvasPayload][],
+                  ]) => [key, new Map(innerMapData)]
                 )
               ),
             },

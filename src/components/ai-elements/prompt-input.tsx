@@ -27,15 +27,15 @@ import { nanoid } from "nanoid";
 import {
   type ChangeEventHandler,
   Children,
-  ClipboardEventHandler,
+  type ClipboardEventHandler,
   type ComponentProps,
-  createContext,
   type FormEvent,
   type FormEventHandler,
   Fragment,
   type HTMLAttributes,
   type KeyboardEventHandler,
   type RefObject,
+  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -44,8 +44,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { Spinner } from "../ui/spinner";
 import SharedIcon from "../shared/shared-icon";
+import { Spinner } from "../ui/spinner";
 
 type AttachmentsContext = {
   files: (FileUIPart & { id: string })[];
@@ -434,7 +434,7 @@ export const PromptInput = ({
       />
       <form
         className={cn(
-          "w-full divide-y overflow-hidden rounded-3.5xl border bg-background shadow-sm",
+          "w-full divide-y overflow-hidden rounded-tlarge border bg-background shadow-sm",
           className
         )}
         onSubmit={handleSubmit}

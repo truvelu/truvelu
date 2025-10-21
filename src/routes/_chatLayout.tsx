@@ -19,8 +19,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { ReactNode, useEffect, useRef } from "react";
-import { ImperativePanelHandle } from "react-resizable-panels";
+import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import type { ImperativePanelHandle } from "react-resizable-panels";
 import { useShallow } from "zustand/react/shallow";
 
 export const Route = createFileRoute("/_chatLayout")({

@@ -6,9 +6,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { ComponentProps, HTMLAttributes } from "react";
-import { IconSvgElement } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import type { ComponentProps, HTMLAttributes } from "react";
 import SharedIcon from "../shared/shared-icon";
 
 export type ArtifactProps = HTMLAttributes<HTMLDivElement>;
