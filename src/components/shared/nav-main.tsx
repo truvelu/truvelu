@@ -5,13 +5,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useUser } from "@clerk/clerk-react";
 import BtnLoginOrChild from "./btn-login-or-child";
 import { Search01Icon, TabletPenIcon } from "@hugeicons/core-free-icons";
 import SharedIcon from "./shared-icon";
+import { useConvexAuth } from "convex/react";
 
 export function NavMain() {
-  const { isSignedIn } = useUser();
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
   return (
     <SidebarGroup>
@@ -27,7 +27,7 @@ export function NavMain() {
               </BtnLoginOrChild>
             </SidebarMenuItem>
 
-            {isSignedIn && (
+            {!isLoading && isAuthenticated && (
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Search">
                   <SharedIcon icon={Search01Icon} />

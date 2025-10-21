@@ -1,6 +1,7 @@
 import AiConversation from "@/components/shared/ai-conversation";
-import { SignInButton, useUser } from "@clerk/clerk-react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useConvexAuth } from "convex/react";
 
 export const Route = createFileRoute(
   "/_chatLayout/l/{-$learningId}_/c/{-$chatId}"
@@ -22,16 +23,17 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const navigate = useNavigate()
 
-  if (!isLoaded) {
+  if (!isLoading) {
     return <div className="p-4">Loading...</div>;
   }
 
-  if (!isSignedIn) {
+  if (!isAuthenticated) {
     return (
       <div className="p-4">
-        <SignInButton />
+        <Button onClick={() => navigate({ to: "/auth" })} className="w-full rounded-tmedium cursor-pointer">Sign in</Button>
       </div>
     );
   }

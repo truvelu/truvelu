@@ -1,14 +1,15 @@
-import { SignInButton, useUser } from "@clerk/clerk-react";
+import { useConvexAuth } from "convex/react";
 import type { ReactNode } from "react";
+import SignInButton from "./sign-in-button";
 
 const BtnLoginOrChild = ({ children }: { children: ReactNode }) => {
-  const { isSignedIn } = useUser();
+	const { isAuthenticated } = useConvexAuth();
 
-  if (!isSignedIn) {
-    return <SignInButton mode="modal">{children}</SignInButton>;
-  }
+	if (!isAuthenticated) {
+		return <SignInButton mode="modal">{children}</SignInButton>;
+	}
 
-  return <>{children}</>;
+	return <>{children}</>;
 };
 
 export default BtnLoginOrChild;

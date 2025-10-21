@@ -26,7 +26,8 @@
 			},
 			"a11y": {
 				"useSemanticElements": "off",
-				"useKeyWithClickEvents": "off"
+				"useKeyWithClickEvents": "off",
+				"noSvgWithoutTitle": "off"
 			},
 			"style": {
 				"useSelfClosingElements": "off"

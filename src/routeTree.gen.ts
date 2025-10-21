@@ -9,12 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatLayoutRouteImport } from './routes/_chatLayout'
 import { Route as ChatLayoutIndexRouteImport } from './routes/_chatLayout.index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ChatLayoutLChar123LearningIdChar125RouteImport } from './routes/_chatLayout.l.{-$learningId}'
 import { Route as ChatLayoutCChar123ChatIdChar125RouteImport } from './routes/_chatLayout.c.{-$chatId}'
 import { Route as ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125RouteImport } from './routes/_chatLayout.l.{-$learningId}_.c.{-$chatId}'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatLayoutRoute = ChatLayoutRouteImport.update({
   id: '/_chatLayout',
   getParentRoute: () => rootRouteImport,
@@ -23,6 +30,11 @@ const ChatLayoutIndexRoute = ChatLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ChatLayoutRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChatLayoutLChar123LearningIdChar125Route =
   ChatLayoutLChar123LearningIdChar125RouteImport.update({
@@ -44,53 +56,74 @@ const ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/auth': typeof AuthRoute
   '/': typeof ChatLayoutIndexRoute
   '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesByTo {
+  '/auth': typeof AuthRoute
   '/': typeof ChatLayoutIndexRoute
   '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_chatLayout': typeof ChatLayoutRouteWithChildren
+  '/auth': typeof AuthRoute
   '/_chatLayout/': typeof ChatLayoutIndexRoute
   '/_chatLayout/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/_chatLayout/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/_chatLayout/l/{-$learningId}_/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/auth'
     | '/'
     | '/c/{-$chatId}'
     | '/l/{-$learningId}'
+    | '/api/auth/$'
     | '/l/{-$learningId}/c/{-$chatId}'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/auth'
     | '/'
     | '/c/{-$chatId}'
     | '/l/{-$learningId}'
+    | '/api/auth/$'
     | '/l/{-$learningId}/c/{-$chatId}'
   id:
     | '__root__'
     | '/_chatLayout'
+    | '/auth'
     | '/_chatLayout/'
     | '/_chatLayout/c/{-$chatId}'
     | '/_chatLayout/l/{-$learningId}'
+    | '/api/auth/$'
     | '/_chatLayout/l/{-$learningId}_/c/{-$chatId}'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   ChatLayoutRoute: typeof ChatLayoutRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_chatLayout': {
       id: '/_chatLayout'
       path: ''
@@ -104,6 +137,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof ChatLayoutIndexRouteImport
       parentRoute: typeof ChatLayoutRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_chatLayout/l/{-$learningId}': {
       id: '/_chatLayout/l/{-$learningId}'
@@ -151,6 +191,8 @@ const ChatLayoutRouteWithChildren = ChatLayoutRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   ChatLayoutRoute: ChatLayoutRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
