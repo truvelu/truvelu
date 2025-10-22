@@ -1,14 +1,12 @@
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
-import { useConvexAuth } from "convex/react";
 import { memo } from "react";
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
 
-export const Header = () => {
+export const Header = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 	const navigate = useNavigate();
 	const { isMobile } = useSidebar();
-	const { isAuthenticated } = useConvexAuth();
 
 	return (
 		<div

@@ -29,12 +29,15 @@ export const Route = createFileRoute("/_chatLayout")({
 });
 
 function ResponsiveLayout({ children }: { children: ReactNode }) {
+	const { token } = Route.useRouteContext();
 	const roomId = useGetRoomId();
 	const isMobile = useIsMobile();
 	const closeCanvas = useCanvasStore(useShallow((state) => state.closeCanvas));
 	const openCanvas = useCanvasOpenStatus();
 
 	const rightPanelRef = useRef<ImperativePanelHandle>(null);
+
+	const isAuthenticated = !!token;
 
 	// Animate panel size based on canvasOpenedId
 	useEffect(() => {
@@ -50,7 +53,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 	if (isMobile) {
 		return (
 			<>
-				<Header />
+				<Header isAuthenticated={isAuthenticated} />
 				<div
 					className={cn(
 						"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))]",
@@ -85,7 +88,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 				defaultSize={50}
 				minSize={35}
 			>
-				<Header />
+				<Header isAuthenticated={isAuthenticated} />
 
 				{children}
 			</ResizablePanel>
