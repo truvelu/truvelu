@@ -2,10 +2,17 @@ import AuthForm from "@/components/shared/auth-form";
 import SharedIcon from "@/components/shared/shared-icon";
 import { Button } from "@/components/ui/button";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/auth")({
 	component: RouteComponent,
+	beforeLoad: (context) => {
+		if (context.context.userId) {
+			throw redirect({
+				to: "/",
+			});
+		}
+	},
 });
 
 function RouteComponent() {
