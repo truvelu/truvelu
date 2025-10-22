@@ -4,11 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "start": "node .output/server/index.mjs",
-    "build": "vite build",
+    "start": "vite",
+    "build": "vite build && tsc --noEmit",
     "serve": "vite preview",
     "test": "vitest run",
-    "format": "biome format",
+    "format": "biome format --write",
     "lint": "biome lint",
     "check": "biome check"
   },

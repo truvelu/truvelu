@@ -6,6 +6,12 @@ import { useConvexAuth } from "convex/react";
 export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 	component: App,
 	beforeLoad: (context) => {
+		if (!context.context.userId) {
+			throw redirect({
+				to: "/auth",
+			});
+		}
+
 		if (!context.params.chatId) {
 			throw redirect({
 				to: "/",

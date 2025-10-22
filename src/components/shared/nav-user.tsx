@@ -14,8 +14,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
-import { convexQuery, useConvexAuth } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
 import {
 	CheckmarkBadge02Icon,
 	CreditCardIcon,
@@ -24,7 +23,6 @@ import {
 	UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useState } from "react";
 import { Button } from "../ui/button";

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/auth")({
 	component: RouteComponent,
 });
 
-export default function RouteComponent() {
+function RouteComponent() {
 	const navigate = useNavigate();
 
 	return (

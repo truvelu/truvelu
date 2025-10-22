@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Cancel01Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
-import { useConvexAuth } from "convex/react";
 import type * as React from "react";
 import { Button } from "../ui/button";
 import { NavChat } from "./nav-chat";
@@ -23,10 +22,6 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & { side?: "left" | "right" }) {
 	const { state, isMobile, toggleSidebar, pretendIsMobile, openMobile } =
 		useSidebar();
-
-	const { isAuthenticated, isLoading } = useConvexAuth();
-
-	if (isLoading || !isAuthenticated) return null;
 
 	return (
 		<Sidebar collapsible="icon" {...props} side={props?.side ?? "left"}>

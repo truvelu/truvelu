@@ -3,11 +3,8 @@
  * This demonstrates how to use the finder functions outside of the Zustand store
  */
 
-import {
-	type CanvasPayload,
-	createCanvasFinder,
-	useCanvasStore,
-} from "@/zustand/canvas";
+import { createCanvasFinder } from "@/lib/canvas.utils";
+import { type CanvasPayload, useCanvasStore } from "@/zustand/canvas";
 import { CanvasType } from "@/zustand/canvas";
 
 // Example 1: Using finder with store state
