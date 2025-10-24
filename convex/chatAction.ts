@@ -52,10 +52,6 @@ export const updateThreadTitle = internalAction({
 			},
 			{ storageOptions: { saveMessages: "none" } },
 		);
-		await Promise.all([
-			thread.updateMetadata({ title, summary }),
-			ctx.runMutation,
-		]);
 		await thread.updateMetadata({ title, summary });
 	},
 });

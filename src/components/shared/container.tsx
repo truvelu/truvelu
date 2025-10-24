@@ -55,5 +55,6 @@ const ContainerWithMargin = memo(
 );
 
 ContainerWithMargin.displayName = "ContainerWithMargin";
+ContainerWithMaxWidth.displayName = "ContainerWithMaxWidth";
 
 export { ContainerWithMaxWidth, ContainerWithMargin };

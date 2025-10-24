@@ -36,21 +36,13 @@ import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
-interface AiConversationContentProps {
-	inputRef: React.RefObject<HTMLDivElement | null>;
-	inputHeight: number;
-	setInputHeight: (height: number) => void;
-}
-
-const AiConversationContent = memo((props: AiConversationContentProps) => {
-	const { inputRef, inputHeight, setInputHeight } = props;
-
+const AiConversationContent = memo(() => {
+	const roomId = useGetRoomId();
 	const {
 		open: sidebarOpen,
 		setOpen: setSidebarOpen,
 		setOpenMobile: setSidebarOpenMobile,
 	} = useSidebar();
-	const roomId = useGetRoomId();
 	const { upsertCanvas, getCanvas, removeCanvas } = useCanvasStore(
 		useShallow(({ upsertCanvas, getCanvas, removeCanvas }) => ({
 			upsertCanvas,
@@ -61,14 +53,17 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 	const { isIntersecting, ref } = useIntersectionObserver({
 		threshold: 0.5,
 	});
-	const { isAtBottom, scrollRef } = useStickToBottomContext();
+	const { isAtBottom, scrollRef, scrollToBottom } = useStickToBottomContext();
 
-	const [isReadyToShow, setIsReadyToShow] = useState(false);
 	const prevRoomIdRef = useRef<string | null>(null);
 	const prevScrollHeightRef = useRef<number>(0);
 	const prevScrollTopRef = useRef<number>(0);
 	const isLoadingMoreRef = useRef(false);
 	const prevMessagesLengthRef = useRef<number>(0);
+	const inputRef = useRef<HTMLDivElement>(null);
+
+	const [isReadyToShow, setIsReadyToShow] = useState(false);
+	const [inputHeight, setInputHeight] = useState(0);
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useQuery(
@@ -90,6 +85,36 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 		api.chat.listThreadMessages,
 		chat?.threadId ? { threadId: chat?.threadId ?? "" } : "skip",
 		{ initialNumItems: 20, stream: true },
+	);
+	const sendChatMessage = useMutation({
+		mutationKey: ["sendChatMessage"],
+		mutationFn: useConvexMutation(
+			api.chat.sendChatMessage,
+		).withOptimisticUpdate(
+			optimisticallySendMessage(api.chat.listThreadMessages),
+		),
+	});
+
+	const handleInputReady = useCallback(() => {
+		if (inputRef.current) {
+			setInputHeight(inputRef.current.offsetHeight);
+		}
+	}, []);
+
+	const handleSubmit = useCallback(
+		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
+			if (!chat?.threadId || !user?._id?.toString() || !roomId) return;
+			sendChatMessage.mutate({
+				threadId: chat?.threadId ?? "",
+				roomId: roomId,
+				prompt: message.text ?? "",
+				modelKey: "x-ai/grok-4-fast",
+				userId: user?._id?.toString() ?? "",
+			});
+			scrollToBottom();
+			event.preventDefault();
+		},
+		[chat?.threadId, user?._id, roomId, sendChatMessage, scrollToBottom],
 	);
 
 	const handleOpenCanvas = useCallback(
@@ -160,7 +185,7 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 			ro.disconnect();
 			window.removeEventListener("resize", updateHeight);
 		};
-	}, [inputRef, setInputHeight]);
+	}, []);
 
 	// Wait for scroll to reach bottom before showing messages
 	useEffect(() => {
@@ -171,7 +196,7 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 		// Add a small delay to ensure scroll is complete
 		const timer = setTimeout(() => {
 			setIsReadyToShow(true);
-		}, 100);
+		}, 250);
 
 		return () => clearTimeout(timer);
 	}, [isAtBottom, status, isReadyToShow]);
@@ -272,84 +297,12 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</ConversationContent>
+
 			<ConversationScrollButton
 				style={{
 					bottom: `calc(${inputHeight}px + 1.5rem)`,
 				}}
 			/>
-		</>
-	);
-});
-
-const AiConversation = () => {
-	const roomId = useGetRoomId();
-
-	const inputRef = useRef<HTMLDivElement>(null);
-
-	const [inputHeight, setInputHeight] = useState(0);
-
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat } = useQuery(
-		convexQuery(
-			api.chat.getChat,
-			!!user?._id?.toString() && !!roomId
-				? {
-						userId: user?._id?.toString() ?? "",
-						uuid: roomId,
-					}
-				: "skip",
-		),
-	);
-
-	const passableProps = useMemo(
-		() => ({
-			inputRef,
-			inputHeight,
-			setInputHeight,
-		}),
-		[inputHeight],
-	);
-
-	const sendChatMessage = useMutation({
-		mutationKey: ["sendChatMessage"],
-		mutationFn: useConvexMutation(
-			api.chat.sendChatMessage,
-		).withOptimisticUpdate(
-			optimisticallySendMessage(api.chat.listThreadMessages),
-		),
-	});
-
-	const handleInputReady = useCallback(() => {
-		if (inputRef.current) {
-			setInputHeight(inputRef.current.offsetHeight);
-		}
-	}, []);
-
-	const handleSubmit = async (
-		message: PromptInputMessage,
-		event: FormEvent<HTMLFormElement>,
-	) => {
-		if (!chat?.threadId || !user?._id?.toString() || !roomId) return;
-		sendChatMessage.mutate({
-			threadId: chat?.threadId ?? "",
-			roomId: roomId,
-			prompt: message.text ?? "",
-			modelKey: "x-ai/grok-4-fast",
-			userId: user?._id?.toString() ?? "",
-		});
-		event.preventDefault();
-	};
-
-	return (
-		<>
-			<Conversation
-				className={cn(
-					"h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
-					"[&>div]:[scrollbar-gutter:stable_both-edges]",
-				)}
-			>
-				<AiConversationContent {...passableProps} />
-			</Conversation>
 
 			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
 				<ContainerWithMargin>
@@ -360,7 +313,20 @@ const AiConversation = () => {
 			</div>
 		</>
 	);
-};
+});
+
+const AiConversation = memo(() => {
+	return (
+		<Conversation
+			className={cn(
+				"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
+				"[&>div]:[scrollbar-gutter:stable_both-edges]",
+			)}
+		>
+			<AiConversationContent />
+		</Conversation>
+	);
+});
 
 AiConversation.displayName = "AiConversation";
 

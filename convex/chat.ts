@@ -104,7 +104,7 @@ export const sendChatMessage = mutation({
 		modelKey: modelOptionsValidator,
 	},
 	handler: async (ctx, { userId, threadId, roomId, prompt, modelKey }) => {
-		const { messageId } = await createChatAgentWithModel({
+		const { messageId, message } = await createChatAgentWithModel({
 			modelId: modelKey,
 		}).saveMessage(ctx, {
 			threadId,
@@ -113,15 +113,19 @@ export const sendChatMessage = mutation({
 			skipEmbeddings: true,
 		});
 
+		const orderMessage = message?.order ?? 0;
+
 		await Promise.all([
 			ctx.scheduler.runAfter(0, internal.chatAction.streamAsync, {
 				threadId,
 				modelKey,
 				promptMessageId: messageId,
 			}),
-			ctx.scheduler.runAfter(0, internal.chatAction.updateThreadTitle, {
-				threadId,
-			}),
+			orderMessage > 0
+				? Promise.resolve()
+				: ctx.scheduler.runAfter(0, internal.chatAction.updateThreadTitle, {
+						threadId,
+					}),
 		]);
 
 		return { threadId, messageId, roomId };
