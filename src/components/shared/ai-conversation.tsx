@@ -1,40 +1,50 @@
-import { MESSAGES, MESSAGES_THREAD, MessageType } from "@/constants/messages";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
-import { CanvasType, useCanvasStore } from "@/zustand/canvas";
+import { type CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
-	Comment01Icon,
-	CommentAdd02Icon,
-	Copy01Icon,
-	Message01Icon,
-	RefreshIcon,
-} from "@hugeicons/core-free-icons";
+	optimisticallySendMessage,
+	useUIMessages,
+} from "@convex-dev/agent/react";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { Message01Icon } from "@hugeicons/core-free-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "convex/_generated/api";
 import {
-	Fragment,
+	type FormEvent,
 	memo,
 	useCallback,
 	useEffect,
+	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useShallow } from "zustand/react/shallow";
-import { Action, Actions } from "../ai-elements/actions";
 import {
 	Conversation,
 	ConversationContent,
 	ConversationEmptyState,
 	ConversationScrollButton,
 } from "../ai-elements/conversation";
-import { Message, MessageContent } from "../ai-elements/message";
-import { Response } from "../ai-elements/response";
+import type { PromptInputMessage } from "../ai-elements/prompt-input";
 import { useSidebar } from "../ui/sidebar";
+import { Spinner } from "../ui/spinner";
+import AiMessages from "./ai-messages";
 import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
-const AiConversation = memo(() => {
-	const isMobile = useIsMobile();
+interface AiConversationContentProps {
+	inputRef: React.RefObject<HTMLDivElement | null>;
+	inputHeight: number;
+	setInputHeight: (height: number) => void;
+}
+
+const AiConversationContent = memo((props: AiConversationContentProps) => {
+	const { inputRef, inputHeight, setInputHeight } = props;
+
 	const {
 		open: sidebarOpen,
 		setOpen: setSidebarOpen,
@@ -48,17 +58,39 @@ const AiConversation = memo(() => {
 			removeCanvas,
 		})),
 	);
+	const { isIntersecting, ref } = useIntersectionObserver({
+		threshold: 0.5,
+	});
+	const { isAtBottom, scrollRef } = useStickToBottomContext();
 
-	const inputRef = useRef<HTMLDivElement>(null);
+	const [isReadyToShow, setIsReadyToShow] = useState(false);
+	const prevRoomIdRef = useRef<string | null>(null);
+	const prevScrollHeightRef = useRef<number>(0);
+	const prevScrollTopRef = useRef<number>(0);
+	const isLoadingMoreRef = useRef(false);
+	const prevMessagesLengthRef = useRef<number>(0);
 
-	const [inputHeight, setInputHeight] = useState(0);
-	const [hoveredId, setHoveredId] = useState<string>("");
-
-	const handleInputReady = useCallback(() => {
-		if (inputRef.current) {
-			setInputHeight(inputRef.current.offsetHeight);
-		}
-	}, []);
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data: chat } = useQuery(
+		convexQuery(
+			api.chat.getChat,
+			!!user?._id?.toString() && !!roomId
+				? {
+						userId: user?._id?.toString() ?? "",
+						uuid: roomId,
+					}
+				: "skip",
+		),
+	);
+	const {
+		results: messages,
+		status,
+		loadMore,
+	} = useUIMessages(
+		api.chat.listThreadMessages,
+		chat?.threadId ? { threadId: chat?.threadId ?? "" } : "skip",
+		{ initialNumItems: 20, stream: true },
+	);
 
 	const handleOpenCanvas = ({
 		type,
@@ -91,6 +123,15 @@ const AiConversation = memo(() => {
 		setSidebarOpenMobile(false);
 	};
 
+	// Reset state when roomId changes
+	useEffect(() => {
+		if (prevRoomIdRef.current !== roomId) {
+			setIsReadyToShow(false);
+			prevRoomIdRef.current = roomId;
+		}
+	}, [roomId]);
+
+	// Handle input height tracking
 	useEffect(() => {
 		const input = inputRef.current;
 		if (!input) return;
@@ -108,7 +149,178 @@ const AiConversation = memo(() => {
 			ro.disconnect();
 			window.removeEventListener("resize", updateHeight);
 		};
+	}, [inputRef, setInputHeight]);
+
+	// Wait for scroll to reach bottom before showing messages
+	useEffect(() => {
+		if (isReadyToShow) return;
+		if (status === "LoadingFirstPage") return;
+		if (!isAtBottom) return;
+
+		// Add a small delay to ensure scroll is complete
+		const timer = setTimeout(() => {
+			setIsReadyToShow(true);
+		}, 100);
+
+		return () => clearTimeout(timer);
+	}, [isAtBottom, status, isReadyToShow]);
+
+	// Track messages length and preserve scroll position
+	useLayoutEffect(() => {
+		const container = scrollRef.current;
+		if (!container) return;
+
+		// If loading more and messages increased
+		if (
+			isLoadingMoreRef.current &&
+			messages.length > prevMessagesLengthRef.current
+		) {
+			const heightDiff = container.scrollHeight - prevScrollHeightRef.current;
+
+			// Adjust scroll position to maintain visual position
+			if (heightDiff > 0) {
+				container.scrollTop = prevScrollTopRef.current + heightDiff;
+			}
+
+			isLoadingMoreRef.current = false;
+		}
+
+		prevMessagesLengthRef.current = messages.length;
+	}, [messages, scrollRef]);
+
+	// Load more messages when scrolling to top
+	useEffect(() => {
+		if (!isReadyToShow) return;
+		if (status !== "CanLoadMore") return;
+		if (!isIntersecting) return;
+		if (isLoadingMoreRef.current) return;
+
+		const container = scrollRef.current;
+		if (!container) return;
+
+		// Store current scroll state before loading
+		prevScrollHeightRef.current = container.scrollHeight;
+		prevScrollTopRef.current = container.scrollTop;
+		isLoadingMoreRef.current = true;
+
+		loadMore(10);
+	}, [isIntersecting, status, isReadyToShow, loadMore, scrollRef]);
+
+	return (
+		<>
+			<ConversationContent className="px-0">
+				<ContainerWithMargin
+					asContent
+					style={{
+						paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 8rem)`,
+					}}
+				>
+					<ContainerWithMaxWidth className="w-full">
+						{status !== "LoadingFirstPage" && !messages.length ? (
+							// Show empty state when no messages and not loading
+							<ConversationEmptyState
+								icon={<SharedIcon icon={Message01Icon} size={48} />}
+								title="Start a conversation"
+								description="Type a message below to begin chatting"
+							/>
+						) : (
+							// Render messages but hide them until scroll is complete
+							<div className={cn(!isReadyToShow && "invisible")}>
+								{(status === "CanLoadMore" || status === "LoadingMore") &&
+									isReadyToShow && (
+										<div
+											ref={ref}
+											className="flex items-center justify-center flex-1 h-12"
+										>
+											<div className="rounded-tlarge px-2.5 py-1.5 flex items-center gap-1 outline-1 outline-gray-400">
+												<Spinner />
+												<span className="text-sm text-gray-600">
+													Loading more
+												</span>
+											</div>
+										</div>
+									)}
+								{messages.map((message) => {
+									return (
+										<AiMessages
+											key={`${message.id}`}
+											message={message}
+											handleOpenCanvas={handleOpenCanvas}
+										/>
+									);
+								})}
+							</div>
+						)}
+					</ContainerWithMaxWidth>
+				</ContainerWithMargin>
+			</ConversationContent>
+			<ConversationScrollButton
+				style={{
+					bottom: `calc(${inputHeight}px + 1.5rem)`,
+				}}
+			/>
+		</>
+	);
+});
+
+const AiConversation = () => {
+	const roomId = useGetRoomId();
+
+	const inputRef = useRef<HTMLDivElement>(null);
+
+	const [inputHeight, setInputHeight] = useState(0);
+
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data: chat } = useQuery(
+		convexQuery(
+			api.chat.getChat,
+			!!user?._id?.toString() && !!roomId
+				? {
+						userId: user?._id?.toString() ?? "",
+						uuid: roomId,
+					}
+				: "skip",
+		),
+	);
+
+	const passableProps = useMemo(
+		() => ({
+			inputRef,
+			inputHeight,
+			setInputHeight,
+		}),
+		[inputHeight],
+	);
+
+	const sendChatMessage = useMutation({
+		mutationKey: ["sendChatMessage"],
+		mutationFn: useConvexMutation(
+			api.chat.sendChatMessage,
+		).withOptimisticUpdate(
+			optimisticallySendMessage(api.chat.listThreadMessages),
+		),
+	});
+
+	const handleInputReady = useCallback(() => {
+		if (inputRef.current) {
+			setInputHeight(inputRef.current.offsetHeight);
+		}
 	}, []);
+
+	const handleSubmit = async (
+		message: PromptInputMessage,
+		event: FormEvent<HTMLFormElement>,
+	) => {
+		if (!chat?.threadId || !user?._id?.toString() || !roomId) return;
+		sendChatMessage.mutate({
+			threadId: chat?.threadId ?? "",
+			roomId: roomId,
+			prompt: message.text ?? "",
+			modelKey: "x-ai/grok-4-fast",
+			userId: user?._id?.toString() ?? "",
+		});
+		event.preventDefault();
+	};
 
 	return (
 		<>
@@ -118,167 +330,19 @@ const AiConversation = memo(() => {
 					"[&>div]:[scrollbar-gutter:stable_both-edges]",
 				)}
 			>
-				<ConversationContent className="px-0">
-					<ContainerWithMargin
-						asContent
-						style={{
-							paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 8rem)`,
-						}}
-					>
-						<ContainerWithMaxWidth className="w-full">
-							{!MESSAGES.length ? (
-								<ConversationEmptyState
-									icon={<SharedIcon icon={Message01Icon} size={48} />}
-									title="Start a conversation"
-									description="Type a message below to begin chatting"
-								/>
-							) : (
-								MESSAGES.map((message) => {
-									const textPart = message.parts.find(
-										(part) => part.type === MessageType.TEXT,
-									);
-									const deepDiscussion = MESSAGES_THREAD.find(
-										(msg) => msg.id === message.id,
-									);
-
-									return (
-										<div
-											key={message.id}
-											className={cn(
-												"cursor-default",
-												message.role === "user" ? "first:mt-0 mt-12" : "",
-											)}
-											onMouseEnter={() => {
-												if (isMobile) return;
-												setHoveredId(message.id);
-											}}
-											onMouseLeave={() => {
-												if (isMobile) return;
-												setHoveredId("");
-											}}
-										>
-											{message.parts.map((part, i) => {
-												switch (part.type) {
-													case MessageType.TEXT:
-														return (
-															<Fragment key={`${message.id}-${i}`}>
-																<Message from={message.role}>
-																	<MessageContent variant="flat">
-																		<Response>{part.text}</Response>
-																	</MessageContent>
-																</Message>
-															</Fragment>
-														);
-
-													case MessageType.CANVAS:
-														return (
-															<div
-																role="button"
-																tabIndex={0}
-																className="flex flex-col gap-1 rounded-2-5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
-																onClick={() =>
-																	handleOpenCanvas({
-																		type: CanvasType.CONTENT,
-																		threadId: message.id,
-																	})
-																}
-															>
-																<h1 className="text-base font-semibold">
-																	{part.title}
-																</h1>
-																<p className="text-sm text-gray-400">
-																	Interactive canvas
-																</p>
-															</div>
-														);
-
-													default:
-														return null;
-												}
-											})}
-
-											<Actions
-												role={message.role}
-												showOnHover
-												hovered={hoveredId === message.id}
-											>
-												{message.role === "user" && (
-													<Action onClick={() => {}} label="Retry">
-														<SharedIcon icon={RefreshIcon} />
-													</Action>
-												)}
-
-												{message.role === "assistant" && (
-													<Action onClick={() => {}} label="Retry">
-														<SharedIcon icon={RefreshIcon} />
-													</Action>
-												)}
-
-												<Action
-													onClick={() => {
-														if (!textPart) return;
-														navigator.clipboard.writeText(textPart.text);
-													}}
-													label="Copy"
-												>
-													<SharedIcon icon={Copy01Icon} />
-												</Action>
-
-												<Action
-													label={
-														deepDiscussion?.messages?.length
-															? "Deep Discussion"
-															: "New Deep Discussion"
-													}
-													className={cn(
-														deepDiscussion?.messages?.length &&
-															"rounded-tlarge px-2.5 w-fit border border-ring",
-													)}
-													onClick={() => {
-														handleOpenCanvas({
-															type: CanvasType.THREAD,
-															threadId: message.id,
-														});
-													}}
-												>
-													<SharedIcon
-														icon={
-															deepDiscussion?.messages?.length
-																? Comment01Icon
-																: CommentAdd02Icon
-														}
-													/>
-													{deepDiscussion?.messages?.length && (
-														<span className="text-sm font-medium">
-															{deepDiscussion?.messages?.length}
-														</span>
-													)}
-												</Action>
-											</Actions>
-										</div>
-									);
-								})
-							)}
-						</ContainerWithMaxWidth>
-					</ContainerWithMargin>
-				</ConversationContent>
-				<ConversationScrollButton
-					style={{
-						bottom: `calc(${inputHeight}px + 1.5rem)`,
-					}}
-				/>
+				<AiConversationContent {...passableProps} />
 			</Conversation>
 
 			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth className={cn("pb-2 bg-white flex-1")}>
-						<AiPromptInput onReady={handleInputReady} />
+						<AiPromptInput onReady={handleInputReady} onSubmit={handleSubmit} />
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</div>
 		</>
 	);
-});
+};
 
 AiConversation.displayName = "AiConversation";
 

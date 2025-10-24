@@ -6,8 +6,14 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { convexQuery } from "@convex-dev/react-query";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { api } from "convex/_generated/api";
+import type { Doc } from "convex/_generated/dataModel";
+import { usePaginatedQuery } from "convex/react";
+import { Suspense } from "react";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -15,7 +21,7 @@ import {
 } from "../ui/collapsible";
 import SharedIcon from "./shared-icon";
 
-const NavChatItem = () => {
+const NavChatItem = ({ chat }: { chat: Doc<"chats"> }) => {
 	const navigate = useNavigate();
 
 	return (
@@ -27,18 +33,29 @@ const NavChatItem = () => {
 					navigate({
 						to: "/c/{-$chatId}",
 						params: {
-							chatId: "123",
+							chatId: chat?.uuid,
 						},
 					});
 				}}
 			>
-				<span>Chat</span>
+				<span>{chat?.title}</span>
 			</SidebarMenuButton>
 		</SidebarMenuItem>
 	);
 };
 
 export function NavChat() {
+	const { data: user } = useSuspenseQuery(
+		convexQuery(api.auth.getCurrentUser, {}),
+	);
+	const { results: chats } = usePaginatedQuery(
+		api.chat.getChats,
+		{
+			userId: user?._id?.toString() ?? "",
+		},
+		{ initialNumItems: 20 },
+	);
+
 	return (
 		<Collapsible defaultOpen className="group/collapsible">
 			<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
@@ -54,10 +71,11 @@ export function NavChat() {
 				<CollapsibleContent>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							<NavChatItem />
-							<NavChatItem />
-							<NavChatItem />
-							<NavChatItem />
+							<Suspense fallback={<div>Loading...</div>}>
+								{chats?.map((chat) => (
+									<NavChatItem key={chat.uuid} chat={chat} />
+								))}
+							</Suspense>
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</CollapsibleContent>

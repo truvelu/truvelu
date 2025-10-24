@@ -5,13 +5,17 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import BtnLoginOrChild from "./btn-login-or-child";
 import { Search01Icon, TabletPenIcon } from "@hugeicons/core-free-icons";
+import { useNavigate } from "@tanstack/react-router";
+import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
-import { useConvexAuth } from "convex/react";
 
 export function NavMain() {
-	const { isAuthenticated, isLoading } = useConvexAuth();
+	const navigate = useNavigate();
+
+	const handleNewChat = () => {
+		navigate({ to: "/" });
+	};
 
 	return (
 		<SidebarGroup>
@@ -20,21 +24,19 @@ export function NavMain() {
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<BtnLoginOrChild>
-								<SidebarMenuButton tooltip="New Chat">
+								<SidebarMenuButton tooltip="New Chat" onClick={handleNewChat}>
 									<SharedIcon icon={TabletPenIcon} />
 									<span>New Chat</span>
 								</SidebarMenuButton>
 							</BtnLoginOrChild>
 						</SidebarMenuItem>
 
-						{!isLoading && isAuthenticated && (
-							<SidebarMenuItem>
-								<SidebarMenuButton tooltip="Search">
-									<SharedIcon icon={Search01Icon} />
-									<span>Search</span>
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						)}
+						<SidebarMenuItem>
+							<SidebarMenuButton tooltip="Search">
+								<SharedIcon icon={Search01Icon} />
+								<span>Search</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
 			</SidebarMenu>

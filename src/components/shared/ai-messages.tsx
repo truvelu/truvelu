@@ -1,0 +1,101 @@
+import { MessageType } from "@/constants/messages";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import type { CanvasType } from "@/zustand/canvas";
+import type { UIMessage } from "@convex-dev/agent";
+import { useSmoothText } from "@convex-dev/agent/react";
+import type { TextUIPart } from "ai";
+import { Fragment, memo, useMemo, useState } from "react";
+import { Message, MessageContent } from "../ai-elements/message";
+import { Response } from "../ai-elements/response";
+import AiActions from "./ai-actions";
+
+interface AiMessagesProps {
+	message: UIMessage;
+	handleOpenCanvas: ({
+		type,
+		threadId,
+	}: { type: CanvasType; threadId: string }) => void;
+}
+
+const AiMessageText = memo(
+	({ message, partText }: { message: UIMessage; partText: TextUIPart }) => {
+		const [text] = useSmoothText(partText?.text ?? "");
+		const memoizedText = useMemo(() => text, [text]);
+		return (
+			<Message from={message.role}>
+				<MessageContent variant="flat">
+					<Response>{memoizedText}</Response>
+				</MessageContent>
+			</Message>
+		);
+	},
+);
+
+const AiMessages = memo((props: AiMessagesProps) => {
+	const { message, handleOpenCanvas } = props;
+
+	const isMobile = useIsMobile();
+	const [hoveredId, setHoveredId] = useState<string>("");
+
+	const isUser = useMemo(() => message.role === "user", [message.role]);
+
+	return (
+		<div
+			className={cn("cursor-default", isUser ? "first:mt-0 mt-12" : "")}
+			onMouseEnter={() => {
+				if (isMobile || !isUser) return;
+				setHoveredId(message.id);
+			}}
+			onMouseLeave={() => {
+				if (isMobile || !isUser) return;
+				setHoveredId("");
+			}}
+		>
+			{message.parts.map((part, i) => {
+				switch (part.type) {
+					case MessageType.TEXT:
+						return (
+							<Fragment key={`text_${i}-${message.id}`}>
+								<AiMessageText message={message} partText={part} />
+							</Fragment>
+						);
+
+					// case MessageType.CANVAS:
+					// 	return (
+					// 		<div
+					// 			role="button"
+					// 			tabIndex={0}
+					// 			className="flex flex-col gap-1 rounded-2-5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
+					// 			onClick={() =>
+					// 				handleOpenCanvas({
+					// 					type: CanvasType.CONTENT,
+					// 					threadId: message.id,
+					// 				})
+					// 			}
+					// 		>
+					// 			<h1 className="text-base font-semibold">
+					// 				{part.title}
+					// 			</h1>
+					// 			<p className="text-sm text-gray-400">
+					// 				Interactive canvas
+					// 			</p>
+					// 		</div>
+					// 	);
+
+					default:
+						return null;
+				}
+			})}
+
+			{/* actions */}
+			<AiActions
+				message={message}
+				hoveredId={hoveredId}
+				handleOpenCanvas={handleOpenCanvas}
+			/>
+		</div>
+	);
+});
+
+export default AiMessages;

@@ -7,6 +7,8 @@ import {
 	PromptInputAttachment,
 	PromptInputAttachments,
 	PromptInputBody,
+	type PromptInputMessage,
+	type PromptInputProps,
 	PromptInputSubmit,
 	PromptInputTextarea,
 	PromptInputToolbar,
@@ -15,6 +17,8 @@ import {
 import { ShapeCollectionIcon } from "@hugeicons/core-free-icons";
 import {
 	type ChangeEvent,
+	type FormEvent,
+	memo,
 	useCallback,
 	useEffect,
 	useRef,
@@ -25,58 +29,74 @@ import { Separator } from "../ui/separator";
 import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
-export const AiPromptInput = ({ onReady }: { onReady: () => void }) => {
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
+interface AiPromptInputProps extends PromptInputProps {
+	onReady?: () => void;
+}
 
-	const [value, setValue] = useState("");
+export const AiPromptInput = memo(
+	({ onReady, onSubmit, onChange, ...props }: AiPromptInputProps) => {
+		const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-	useEffect(() => {
-		onReady?.();
-	}, []);
+		const [value, setValue] = useState("");
 
-	const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-		const { value } = e.target;
+		useEffect(() => {
+			if (!onReady) return;
+			onReady();
+		}, [onReady]);
 
-		setValue(value);
-	}, []);
+		const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+			const { value } = e.target;
 
-	return (
-		<PromptInput onSubmit={() => {}}>
-			<PromptInputBody className="border-none px-2.5 min-h-14 justify-center">
-				<PromptInputAttachments>
-					{(attachment) => <PromptInputAttachment data={attachment} />}
-				</PromptInputAttachments>
+			setValue(value);
+		}, []);
 
-				<PromptInputTextarea
-					ref={textareaRef}
-					onChange={handleChange}
-					value={value}
-					className="p-2.5 text-base"
-				/>
-			</PromptInputBody>
+		const handleSubmit = useCallback(
+			(message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
+				if (!onSubmit) return;
+				onSubmit(message, event);
+				setValue("");
+			},
+			[onSubmit],
+		);
 
-			<PromptInputToolbar className="p-2.5 pt-0">
-				<PromptInputTools>
-					<PromptInputActionMenu>
-						<PromptInputActionMenuTrigger className="!rounded-full cursor-pointer" />
-						<PromptInputActionMenuContent className="rounded-tmedium p-1.5">
-							<PromptInputActionAddAttachments className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer" />
-							<Separator className="my-1.5" />
-							<DropdownMenuItem className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer">
-								<SharedIcon icon={ShapeCollectionIcon} className="mr-2" />
-								Change composition
-							</DropdownMenuItem>
-						</PromptInputActionMenuContent>
-					</PromptInputActionMenu>
-				</PromptInputTools>
-				<BtnLoginOrChild>
-					<PromptInputSubmit
-						disabled={false}
-						status={"ready"}
-						className="rounded-full cursor-pointer"
+		return (
+			<PromptInput {...props} onSubmit={handleSubmit}>
+				<PromptInputBody className="border-none px-2.5 min-h-14 justify-center">
+					<PromptInputAttachments>
+						{(attachment) => <PromptInputAttachment data={attachment} />}
+					</PromptInputAttachments>
+
+					<PromptInputTextarea
+						ref={textareaRef}
+						onChange={handleChange}
+						value={value}
+						className="p-2.5 text-base"
 					/>
-				</BtnLoginOrChild>
-			</PromptInputToolbar>
-		</PromptInput>
-	);
-};
+				</PromptInputBody>
+
+				<PromptInputToolbar className="p-2.5 pt-0">
+					<PromptInputTools>
+						<PromptInputActionMenu>
+							<PromptInputActionMenuTrigger className="!rounded-full cursor-pointer" />
+							<PromptInputActionMenuContent className="rounded-tmedium p-1.5">
+								<PromptInputActionAddAttachments className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer" />
+								<Separator className="my-1.5" />
+								<DropdownMenuItem className="rounded-lg py-1.5 px-2.5 text-sm cursor-pointer">
+									<SharedIcon icon={ShapeCollectionIcon} className="mr-2" />
+									Change composition
+								</DropdownMenuItem>
+							</PromptInputActionMenuContent>
+						</PromptInputActionMenu>
+					</PromptInputTools>
+					<BtnLoginOrChild>
+						<PromptInputSubmit
+							disabled={false}
+							status={"ready"}
+							className="rounded-full cursor-pointer"
+						/>
+					</BtnLoginOrChild>
+				</PromptInputToolbar>
+			</PromptInput>
+		);
+	},
+);
