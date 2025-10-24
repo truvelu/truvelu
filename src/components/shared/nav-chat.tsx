@@ -3,21 +3,34 @@ import {
 	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { convexQuery } from "@convex-dev/react-query";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+	ArrowRight01Icon,
+	Delete02Icon,
+	Edit03Icon,
+	MoreHorizontalIcon,
+} from "@hugeicons/core-free-icons";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
-import { usePaginatedQuery } from "convex/react";
-import { Suspense } from "react";
+import { useAction, usePaginatedQuery } from "convex/react";
+import { useCallback, useRef, useState } from "react";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "../ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import SharedIcon from "./shared-icon";
 
 const NavChatItem = ({
@@ -25,12 +38,119 @@ const NavChatItem = ({
 }: { chat: (typeof api.chat.getChats._returnType)["page"][number] }) => {
 	const navigate = useNavigate();
 
+	const editableRef = useRef<HTMLSpanElement | null>(null);
+	const [isEditing, setIsEditing] = useState(false);
+	const [originalTitle, setOriginalTitle] = useState("");
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+
+	const updateChatTitle = useAction(api.chatAction.updateChatTitle);
+
+	const startEditing = useCallback(() => {
+		const el = editableRef.current;
+		if (!el) return;
+		if (!chat?._id) return;
+
+		// Store original title for cancel
+		setOriginalTitle(el.textContent ?? "");
+
+		// Close dropdown first
+		setDropdownOpen(false);
+
+		// Delay to ensure dropdown menu closes and loses focus
+		if (!editableRef.current) return;
+
+		// Make element editable
+		editableRef.current.role = "textbox";
+		editableRef.current.tabIndex = 0;
+		editableRef.current.contentEditable = "true";
+
+		// Focus the element
+		setTimeout(() => {
+			if (!editableRef.current) return;
+			editableRef.current.focus();
+
+			// Select all text
+			const range = document.createRange();
+			range.selectNodeContents(editableRef.current);
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
+			setIsEditing(true);
+		}, 200);
+
+		// Set editing state after everything is set up
+	}, [chat?._id]);
+
+	const saveEdit = useCallback(() => {
+		const el = editableRef.current;
+		if (!el || !chat?._id) return;
+
+		const newTitle = el.textContent?.trim() ?? "";
+
+		// If empty or unchanged, revert to original
+		if (!newTitle || newTitle === originalTitle) {
+			el.textContent = originalTitle;
+		} else if (newTitle !== originalTitle) {
+			// Update title
+			updateChatTitle({
+				threadId: chat._id,
+				title: newTitle,
+			});
+		}
+
+		// Exit edit mode
+		el.contentEditable = "false";
+		el.removeAttribute("role");
+		el.removeAttribute("tabIndex");
+		setIsEditing(false);
+	}, [chat?._id, originalTitle, updateChatTitle]);
+
+	const cancelEdit = useCallback(() => {
+		const el = editableRef.current;
+		if (!el) return;
+
+		// Revert to original title
+		el.textContent = originalTitle;
+
+		// Exit edit mode
+		el.contentEditable = "false";
+		el.removeAttribute("role");
+		el.removeAttribute("tabIndex");
+		setIsEditing(false);
+	}, [originalTitle]);
+
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLSpanElement>) => {
+			if (!isEditing) return;
+
+			if (e.key === "Enter") {
+				e.preventDefault();
+				saveEdit();
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				cancelEdit();
+			}
+		},
+		[isEditing, saveEdit, cancelEdit],
+	);
+
+	const handleBlur = useCallback(() => {
+		if (!isEditing) return;
+		saveEdit();
+	}, [isEditing, saveEdit]);
+
 	return (
 		<SidebarMenuItem>
 			<SidebarMenuButton
 				tooltip="Chat"
 				className="cursor-pointer rounded-tlarge"
-				onClick={() => {
+				onClick={(e) => {
+					// Prevent navigation when editing
+					if (isEditing) {
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
 					navigate({
 						to: "/c/{-$chatId}",
 						params: {
@@ -39,21 +159,53 @@ const NavChatItem = ({
 					});
 				}}
 			>
-				<span>{chat?.title}</span>
+				<span
+					ref={editableRef}
+					onKeyDown={handleKeyDown}
+					onBlur={handleBlur}
+					className={isEditing ? "outline-none" : ""}
+				>
+					{chat?.title}
+				</span>
 			</SidebarMenuButton>
+
+			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+				<DropdownMenuTrigger asChild>
+					<SidebarMenuAction showOnHover>
+						<SharedIcon icon={MoreHorizontalIcon} />
+					</SidebarMenuAction>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent
+					side="right"
+					align="start"
+					className="rounded-tmedium"
+				>
+					<DropdownMenuItem className="p-2.5 rounded-xl" onClick={startEditing}>
+						<SharedIcon icon={Edit03Icon} />
+						<span>Rename</span>
+					</DropdownMenuItem>
+
+					<DropdownMenuSeparator />
+
+					<DropdownMenuItem className="!text-destructive p-2.5 rounded-xl">
+						<SharedIcon icon={Delete02Icon} className="text-destructive" />
+						<span>Delete</span>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</SidebarMenuItem>
 	);
 };
 
 export function NavChat() {
-	const { data: user } = useSuspenseQuery(
-		convexQuery(api.auth.getCurrentUser, {}),
-	);
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { results: chats } = usePaginatedQuery(
 		api.chat.getChats,
-		{
-			userId: user?._id?.toString() ?? "",
-		},
+		user?._id?.toString()
+			? {
+					userId: user?._id?.toString() ?? "",
+				}
+			: "skip",
 		{ initialNumItems: 20 },
 	);
 
@@ -74,14 +226,12 @@ export function NavChat() {
 				<CollapsibleContent>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							<Suspense fallback={<div>Loading...</div>}>
-								{chats?.map((chat) => (
-									<NavChatItem
-										key={chat?.additionalData?.uuid ?? ""}
-										chat={chat}
-									/>
-								))}
-							</Suspense>
+							{chats?.map((chat) => (
+								<NavChatItem
+									key={chat?.additionalData?.uuid ?? ""}
+									chat={chat}
+								/>
+							))}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</CollapsibleContent>

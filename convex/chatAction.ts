@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import z from "zod";
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
 import { modelOptionsValidator } from "./schema";
 
@@ -53,5 +53,19 @@ export const updateThreadTitle = internalAction({
 			{ storageOptions: { saveMessages: "none" } },
 		);
 		await thread.updateMetadata({ title, summary });
+	},
+});
+
+export const updateChatTitle = action({
+	args: {
+		threadId: v.string(),
+		title: v.string(),
+	},
+	handler: async (ctx, { threadId, title }) => {
+		const agent = createChatAgentWithModel({
+			modelId: "google/gemma-3n-e4b-it",
+		});
+		const { thread } = await agent.continueThread(ctx, { threadId });
+		await thread.updateMetadata({ title });
 	},
 });

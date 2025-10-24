@@ -16,7 +16,6 @@ import {
 	useCallback,
 	useEffect,
 	useLayoutEffect,
-	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -196,7 +195,7 @@ const AiConversationContent = memo(() => {
 		// Add a small delay to ensure scroll is complete
 		const timer = setTimeout(() => {
 			setIsReadyToShow(true);
-		}, 250);
+		}, 200);
 
 		return () => clearTimeout(timer);
 	}, [isAtBottom, status, isReadyToShow]);
