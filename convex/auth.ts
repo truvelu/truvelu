@@ -1,6 +1,7 @@
 import { type GenericCtx, createClient } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
+import { v } from "convex/values";
 import { components } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
@@ -42,8 +43,17 @@ export const createAuth = (
 };
 
 export const getCurrentUser = query({
-	args: {},
-	handler: async (ctx) => {
-		return authComponent.getAuthUser(ctx);
+	args: {
+		userId: v.optional(v.string()),
+	},
+	handler: async (ctx, args) => {
+		const user = await authComponent.getAuthUser(ctx);
+		if (
+			!user?._id ||
+			(args.userId ? user?._id?.toString() !== args.userId : false)
+		) {
+			throw new Error("UNAUTHORIZED");
+		}
+		return user;
 	},
 });

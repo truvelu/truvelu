@@ -1,12 +1,10 @@
-import { modelOptionsValidator } from "convex/schema";
-import { type Infer, v } from "convex/values";
+import { type ModelOptionsKey, modelOptionsValidator } from "convex/schema";
+import { v } from "convex/values";
 
 export const withOptionalModelOptionsValidator = v.union(
 	modelOptionsValidator,
 	v.string(),
 );
-
-export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
 
 export const MODELS: ReadonlyMap<
 	ModelOptionsKey,
@@ -16,6 +14,14 @@ export const MODELS: ReadonlyMap<
 		isReasoning: boolean;
 	}
 > = new Map([
+	[
+		"google/gemma-3n-e4b-it",
+		{
+			value: "google/gemma-3n-e4b-it",
+			label: "Google: Gemma 3N E4B IT",
+			isReasoning: false,
+		},
+	],
 	[
 		"z-ai/glm-4.6",
 		{

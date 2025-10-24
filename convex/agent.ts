@@ -6,9 +6,10 @@ import {
 import type { CallSettings } from "ai";
 import { jina } from "jina-ai-provider";
 import { components } from "./_generated/api";
+import type { ModelOptionsKey } from "./schema";
 
 export interface AgentProps {
-	modelId: string;
+	modelId: ModelOptionsKey;
 	openrouterSettings?: Parameters<OpenRouterProvider["chat"]>[1];
 	settings?: CallSettings;
 }

@@ -1,7 +1,7 @@
 import { listUIMessages, syncStreams, vStreamArgs } from "@convex-dev/agent";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { components, internal } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
 import { modelOptionsValidator } from "./schema";
@@ -20,7 +20,6 @@ export const createChat = mutation({
 			title: firstTitle,
 		});
 		await ctx.db.insert("chats", {
-			title: firstTitle,
 			userId,
 			threadId,
 			...args,
@@ -35,11 +34,29 @@ export const getChats = query({
 		paginationOpts: paginationOptsValidator,
 	},
 	handler: async (ctx, args) => {
-		return await ctx.db
-			.query("chats")
-			.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-			.order("desc")
-			.paginate(args.paginationOpts);
+		const allThreads = await ctx.runQuery(
+			components.agent.threads.listThreadsByUserId,
+			{
+				userId: args.userId,
+				paginationOpts: args.paginationOpts,
+			},
+		);
+		const allThreadsWithChatsPage = await Promise.all(
+			allThreads.page.map(async (thread) => {
+				const chat = await ctx.db
+					.query("chats")
+					.withIndex("by_threadId_and_userId", (q) =>
+						q.eq("threadId", thread._id).eq("userId", args.userId),
+					)
+					.unique();
+
+				return {
+					...thread,
+					additionalData: chat,
+				};
+			}),
+		);
+		return { ...allThreads, page: allThreadsWithChatsPage };
 	},
 });
 
@@ -96,11 +113,16 @@ export const sendChatMessage = mutation({
 			skipEmbeddings: true,
 		});
 
-		await ctx.scheduler.runAfter(0, internal.chatAction.streamAsync, {
-			threadId,
-			modelKey,
-			promptMessageId: messageId,
-		});
+		await Promise.all([
+			ctx.scheduler.runAfter(0, internal.chatAction.streamAsync, {
+				threadId,
+				modelKey,
+				promptMessageId: messageId,
+			}),
+			ctx.scheduler.runAfter(0, internal.chatAction.updateThreadTitle, {
+				threadId,
+			}),
+		]);
 
 		return { threadId, messageId, roomId };
 	},
