@@ -17,8 +17,9 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 				to: "/",
 			});
 		}
-
-		await context.context.queryClient.prefetchQuery(
+	},
+	loader: async (context) => {
+		context.context.queryClient.prefetchQuery(
 			convexQuery(api.auth.getCurrentUser, {}),
 		);
 	},

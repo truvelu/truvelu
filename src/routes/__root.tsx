@@ -25,6 +25,7 @@ import {
 	getCookieName,
 } from "@convex-dev/better-auth/react-start";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
+import { Outlet } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, getRequest } from "@tanstack/react-start/server";
 import type { ConvexReactClient } from "convex/react";
@@ -83,12 +84,34 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		return { userId, token };
 	},
 
-	shellComponent: RootDocument,
+	shellComponent: RootShell,
 
-	notFoundComponent: () => <div>Not Found</div>,
+	component: RootComponent,
+
+	pendingComponent: () => <div>Loading...</div>,
+
+	errorComponent: () => <div>Error</div>,
+
+	notFoundComponent: () => <div>Not found</div>,
+
+	ssr: false,
 });
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootShell({ children }: { children: React.ReactNode }) {
+	return (
+		<html lang="en">
+			<head>
+				<HeadContent />
+			</head>
+			<body>
+				{children}
+				<Scripts />
+			</body>
+		</html>
+	);
+}
+
+function RootComponent() {
 	const context = useRouteContext({ from: Route.id });
 
 	useEffect(() => {
@@ -99,35 +122,27 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	return (
-		<html lang="en">
-			<head>
-				<HeadContent />
-			</head>
-			<body>
-				<ConvexBetterAuthProvider
-					client={context.convexClient}
-					authClient={authClient}
-				>
-					<ConvexProvider>
-						{children}
-						<Toaster position="top-center" />
-						<AuthModal />
-						<TanstackDevtools
-							config={{
-								position: "bottom-right",
-							}}
-							plugins={[
-								{
-									name: "Tanstack Router",
-									render: <TanStackRouterDevtoolsPanel />,
-								},
-								TanStackQueryDevtools,
-							]}
-						/>
-					</ConvexProvider>
-				</ConvexBetterAuthProvider>
-				<Scripts />
-			</body>
-		</html>
+		<ConvexBetterAuthProvider
+			client={context.convexClient}
+			authClient={authClient}
+		>
+			<ConvexProvider>
+				<Outlet />
+				<Toaster position="top-center" />
+				<AuthModal />
+				<TanstackDevtools
+					config={{
+						position: "bottom-right",
+					}}
+					plugins={[
+						{
+							name: "Tanstack Router",
+							render: <TanStackRouterDevtoolsPanel />,
+						},
+						TanStackQueryDevtools,
+					]}
+				/>
+			</ConvexProvider>
+		</ConvexBetterAuthProvider>
 	);
 }

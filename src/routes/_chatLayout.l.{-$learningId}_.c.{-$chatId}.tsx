@@ -25,10 +25,24 @@ export const Route = createFileRoute(
 				to: "/",
 			});
 		}
+	},
+	loader: async (context) => {
+		const userId = context.context.userId;
+		const chatId = context.params.chatId;
 
-		await context.context.queryClient.prefetchQuery(
-			convexQuery(api.auth.getCurrentUser, {}),
-		);
+		if (!userId || !chatId) return;
+
+		await Promise.all([
+			context.context.queryClient.prefetchQuery(
+				convexQuery(api.auth.getCurrentUser, {}),
+			),
+			context.context.queryClient.prefetchQuery(
+				convexQuery(api.chat.getChat, {
+					userId,
+					uuid: chatId,
+				}),
+			),
+		]);
 	},
 });
 
