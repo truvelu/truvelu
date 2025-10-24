@@ -15,7 +15,7 @@ import { v7 as uuid } from "uuid";
 export const Route = createFileRoute("/_chatLayout/")({
 	component: App,
 	beforeLoad: async (context) => {
-		await context.context.queryClient.ensureQueryData(
+		await context.context.queryClient.prefetchQuery(
 			convexQuery(api.auth.getCurrentUser, {}),
 		);
 	},

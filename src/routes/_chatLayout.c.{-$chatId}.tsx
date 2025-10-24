@@ -19,10 +19,10 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 		}
 
 		await Promise.all([
-			context.context.queryClient.ensureQueryData(
+			context.context.queryClient.prefetchQuery(
 				convexQuery(api.auth.getCurrentUser, {}),
 			),
-			context.context.queryClient.ensureQueryData(
+			context.context.queryClient.prefetchQuery(
 				convexQuery(api.chat.getChat, {
 					userId: context.context.userId,
 					uuid: context.params.chatId,

@@ -1,9 +1,11 @@
 import AiLearning from "@/components/shared/ai-learning";
+import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { api } from "convex/_generated/api";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 	component: RouteComponent,
-	beforeLoad: (context) => {
+	beforeLoad: async (context) => {
 		if (!context.context.userId) {
 			throw redirect({
 				to: "/auth",
@@ -15,6 +17,10 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 				to: "/",
 			});
 		}
+
+		await context.context.queryClient.prefetchQuery(
+			convexQuery(api.auth.getCurrentUser, {}),
+		);
 	},
 });
 
