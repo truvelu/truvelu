@@ -13,6 +13,7 @@ export const Conversation = memo(
 		<StickToBottom
 			className={cn(
 				"relative flex-1 overflow-y-auto [overflow-anchor:none]",
+				"[transform:translateZ(0)] [will-change:scroll-position]",
 				className,
 			)}
 			initial="instant"

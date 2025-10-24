@@ -92,36 +92,47 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 		{ initialNumItems: 20, stream: true },
 	);
 
-	const handleOpenCanvas = ({
-		type,
-		threadId,
-	}: {
-		type: CanvasType;
-		threadId: string;
-	}) => {
-		const existingCanvas = getCanvas({
-			roomId,
-			threadId,
+	const handleOpenCanvas = useCallback(
+		({
 			type,
-		});
-
-		if (existingCanvas.length > 0) {
-			removeCanvas({
-				type,
+			threadId,
+		}: {
+			type: CanvasType;
+			threadId: string;
+		}) => {
+			const existingCanvas = getCanvas({
 				roomId,
 				threadId,
-			});
-		} else {
-			upsertCanvas({
 				type,
-				data: { threadId, roomId },
 			});
-		}
 
-		if (existingCanvas.length > 0 && sidebarOpen) return;
-		setSidebarOpen(false);
-		setSidebarOpenMobile(false);
-	};
+			if (existingCanvas.length > 0) {
+				removeCanvas({
+					type,
+					roomId,
+					threadId,
+				});
+			} else {
+				upsertCanvas({
+					type,
+					data: { threadId, roomId },
+				});
+			}
+
+			if (existingCanvas.length > 0 && sidebarOpen) return;
+			setSidebarOpen(false);
+			setSidebarOpenMobile(false);
+		},
+		[
+			roomId,
+			getCanvas,
+			removeCanvas,
+			upsertCanvas,
+			sidebarOpen,
+			setSidebarOpen,
+			setSidebarOpenMobile,
+		],
+	);
 
 	// Reset state when roomId changes
 	useEffect(() => {
@@ -186,9 +197,9 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 		}
 
 		prevMessagesLengthRef.current = messages.length;
-	}, [messages, scrollRef]);
+	}, [messages.length, scrollRef]);
 
-	// Load more messages when scrolling to top
+	// Load more messages when scrolling to top (with debounce)
 	useEffect(() => {
 		if (!isReadyToShow) return;
 		if (status !== "CanLoadMore") return;
@@ -198,12 +209,19 @@ const AiConversationContent = memo((props: AiConversationContentProps) => {
 		const container = scrollRef.current;
 		if (!container) return;
 
-		// Store current scroll state before loading
-		prevScrollHeightRef.current = container.scrollHeight;
-		prevScrollTopRef.current = container.scrollTop;
-		isLoadingMoreRef.current = true;
+		// Debounce to prevent aggressive loading on scroll
+		const timer = setTimeout(() => {
+			if (!scrollRef.current) return;
 
-		loadMore(10);
+			// Store current scroll state before loading
+			prevScrollHeightRef.current = container.scrollHeight;
+			prevScrollTopRef.current = container.scrollTop;
+			isLoadingMoreRef.current = true;
+
+			loadMore(10);
+		}, 150);
+
+		return () => clearTimeout(timer);
 	}, [isIntersecting, status, isReadyToShow, loadMore, scrollRef]);
 
 	return (

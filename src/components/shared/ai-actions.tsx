@@ -8,7 +8,7 @@ import {
 	Copy01Icon,
 	RefreshIcon,
 } from "@hugeicons/core-free-icons";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Action, Actions } from "../ai-elements/actions";
 import SharedIcon from "./shared-icon";
 
@@ -24,8 +24,16 @@ interface AiActionsProps {
 const AiActions = memo((props: AiActionsProps) => {
 	const { message, hoveredId, handleOpenCanvas } = props;
 
-	const textPart = message.parts.find((part) => part.type === MessageType.TEXT);
-	const deepDiscussion = MESSAGES_THREAD.find((msg) => msg.id === message.id);
+	const textPart = useMemo(
+		() => message.parts.find((part) => part.type === MessageType.TEXT),
+		[message.parts],
+	);
+
+	const deepDiscussion = useMemo(
+		() => MESSAGES_THREAD.find((msg) => msg.id === message.id),
+		[message.id],
+	);
+
 	return (
 		<Actions role={message.role} showOnHover hovered={hoveredId === message.id}>
 			{message.role === "user" && (

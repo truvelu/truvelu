@@ -5,7 +5,7 @@ import type { CanvasType } from "@/zustand/canvas";
 import type { UIMessage } from "@convex-dev/agent";
 import { useSmoothText } from "@convex-dev/agent/react";
 import type { TextUIPart } from "ai";
-import { Fragment, memo, useMemo, useState } from "react";
+import { Fragment, memo, useCallback, useMemo, useState } from "react";
 import { Message, MessageContent } from "../ai-elements/message";
 import { Response } from "../ai-elements/response";
 import AiActions from "./ai-actions";
@@ -20,7 +20,9 @@ interface AiMessagesProps {
 
 const AiMessageText = memo(
 	({ message, partText }: { message: UIMessage; partText: TextUIPart }) => {
-		const [text] = useSmoothText(partText?.text ?? "");
+		const [text] = useSmoothText(partText?.text ?? "", {
+			startStreaming: message.status === "streaming",
+		});
 		const memoizedText = useMemo(() => text, [text]);
 		return (
 			<Message from={message.role}>
@@ -40,17 +42,24 @@ const AiMessages = memo((props: AiMessagesProps) => {
 
 	const isUser = useMemo(() => message.role === "user", [message.role]);
 
+	const handleMouseEnter = useCallback(() => {
+		if (isMobile || !isUser) return;
+		setHoveredId(message.id);
+	}, [isMobile, isUser, message.id]);
+
+	const handleMouseLeave = useCallback(() => {
+		if (isMobile || !isUser) return;
+		setHoveredId("");
+	}, [isMobile, isUser]);
+
 	return (
 		<div
-			className={cn("cursor-default", isUser ? "first:mt-0 mt-12" : "")}
-			onMouseEnter={() => {
-				if (isMobile || !isUser) return;
-				setHoveredId(message.id);
-			}}
-			onMouseLeave={() => {
-				if (isMobile || !isUser) return;
-				setHoveredId("");
-			}}
+			className={cn(
+				"cursor-default [content-visibility:auto]",
+				isUser ? "first:mt-0 mt-12" : "",
+			)}
+			onMouseEnter={handleMouseEnter}
+			onMouseLeave={handleMouseLeave}
 		>
 			{message.parts.map((part, i) => {
 				switch (part.type) {
@@ -89,11 +98,13 @@ const AiMessages = memo((props: AiMessagesProps) => {
 			})}
 
 			{/* actions */}
-			<AiActions
-				message={message}
-				hoveredId={hoveredId}
-				handleOpenCanvas={handleOpenCanvas}
-			/>
+			{message?.text.length > 0 && (
+				<AiActions
+					message={message}
+					hoveredId={hoveredId}
+					handleOpenCanvas={handleOpenCanvas}
+				/>
+			)}
 		</div>
 	);
 });
