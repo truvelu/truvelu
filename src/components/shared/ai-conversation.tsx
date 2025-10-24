@@ -9,6 +9,7 @@ import {
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Message01Icon } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import {
 	type FormEvent,
@@ -19,6 +20,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { toast } from "sonner";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -36,6 +38,7 @@ import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
 const AiConversationContent = memo(() => {
+	const navigate = useNavigate();
 	const roomId = useGetRoomId();
 	const {
 		open: sidebarOpen,
@@ -247,6 +250,20 @@ const AiConversationContent = memo(() => {
 
 		return () => clearTimeout(timer);
 	}, [isIntersecting, status, isReadyToShow, loadMore, scrollRef]);
+
+	useEffect(() => {
+		if (!chat) {
+			navigate({
+				to: "/",
+			})
+				.then(() => {
+					toast.error("Chat not found");
+				})
+				.catch(() => {
+					toast.error("Failed to navigate to home");
+				});
+		}
+	}, [chat, navigate]);
 
 	return (
 		<>

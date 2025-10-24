@@ -69,3 +69,28 @@ export const updateChatTitle = action({
 		await thread.updateMetadata({ title });
 	},
 });
+
+export const archiveChat = action({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, { threadId }) => {
+		const agent = createChatAgentWithModel({
+			modelId: "google/gemma-3n-e4b-it",
+		});
+		const { thread } = await agent.continueThread(ctx, { threadId });
+		await thread.updateMetadata({ status: "archived" });
+	},
+});
+
+export const deleteChat = action({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, { threadId }) => {
+		const agent = createChatAgentWithModel({
+			modelId: "google/gemma-3n-e4b-it",
+		});
+		await agent.deleteThreadSync(ctx, { threadId });
+	},
+});

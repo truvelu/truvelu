@@ -41,8 +41,12 @@ export const getChats = query({
 				paginationOpts: args.paginationOpts,
 			},
 		);
-		const allThreadsWithChatsPage = await Promise.all(
-			allThreads.page.map(async (thread) => {
+		const activeThreads = {
+			...allThreads,
+			page: allThreads.page.filter((thread) => thread.status === "active"),
+		};
+		const allActiveThreadsWithChatsPage = await Promise.all(
+			activeThreads.page.map(async (thread) => {
 				const chat = await ctx.db
 					.query("chats")
 					.withIndex("by_threadId_and_userId", (q) =>
@@ -56,7 +60,7 @@ export const getChats = query({
 				};
 			}),
 		);
-		return { ...allThreads, page: allThreadsWithChatsPage };
+		return { ...allThreads, page: allActiveThreadsWithChatsPage };
 	},
 });
 

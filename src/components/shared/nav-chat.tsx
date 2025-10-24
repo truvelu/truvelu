@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { convexQuery } from "@convex-dev/react-query";
 import {
+	Archive03Icon,
 	ArrowRight01Icon,
 	Delete02Icon,
 	Edit03Icon,
@@ -19,6 +20,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction, usePaginatedQuery } from "convex/react";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -44,6 +46,8 @@ const NavChatItem = ({
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
 	const updateChatTitle = useAction(api.chatAction.updateChatTitle);
+	const archiveChat = useAction(api.chatAction.archiveChat);
+	const deleteChat = useAction(api.chatAction.deleteChat);
 
 	const startEditing = useCallback(() => {
 		const el = editableRef.current;
@@ -187,7 +191,42 @@ const NavChatItem = ({
 
 					<DropdownMenuSeparator />
 
-					<DropdownMenuItem className="!text-destructive p-2.5 rounded-xl">
+					<DropdownMenuItem
+						className="p-2.5 rounded-xl"
+						onClick={() => {
+							if (!chat?._id) return;
+							archiveChat({ threadId: chat._id });
+							navigate({
+								to: "/",
+							})
+								.then(() => {
+									toast.success("Chat archived successfully");
+								})
+								.catch(() => {
+									toast.error("Failed to archive chat");
+								});
+						}}
+					>
+						<SharedIcon icon={Archive03Icon} />
+						<span>Archive</span>
+					</DropdownMenuItem>
+
+					<DropdownMenuItem
+						className="!text-destructive p-2.5 rounded-xl"
+						onClick={() => {
+							if (!chat?._id) return;
+							deleteChat({ threadId: chat._id });
+							navigate({
+								to: "/",
+							})
+								.then(() => {
+									toast.success("Chat deleted successfully");
+								})
+								.catch(() => {
+									toast.error("Failed to delete chat");
+								});
+						}}
+					>
 						<SharedIcon icon={Delete02Icon} className="text-destructive" />
 						<span>Delete</span>
 					</DropdownMenuItem>
