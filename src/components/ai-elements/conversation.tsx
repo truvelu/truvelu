@@ -16,8 +16,8 @@ export const Conversation = memo(
 				"[transform:translateZ(0)] [will-change:scroll-position]",
 				className,
 			)}
-			initial="smooth"
-			resize="smooth"
+			initial="instant"
+			resize="instant"
 			role="log"
 			{...props}
 		/>

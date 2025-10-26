@@ -24,6 +24,13 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 
 		if (!userId || !chatId) return;
 
+		const chat = await context.context.queryClient.fetchQuery(
+			convexQuery(api.chat.getChat, {
+				userId,
+				uuid: chatId,
+			}),
+		);
+
 		await Promise.all([
 			context.context.queryClient.prefetchQuery(
 				convexQuery(api.auth.getCurrentUser, {}),
@@ -32,6 +39,15 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 				convexQuery(api.chat.getChat, {
 					userId,
 					uuid: chatId,
+				}),
+			),
+			context.context.queryClient.prefetchQuery(
+				convexQuery(api.chat.listThreadMessages, {
+					threadId: chat?.threadId ?? "",
+					paginationOpts: {
+						numItems: 20,
+						cursor: null,
+					},
 				}),
 			),
 		]);

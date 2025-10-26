@@ -18,7 +18,10 @@ import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
+import { convexQuery } from "@convex-dev/react-query";
 import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { api } from "convex/_generated/api";
+import { Authenticated } from "convex/react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -26,18 +29,31 @@ import { useShallow } from "zustand/react/shallow";
 
 export const Route = createFileRoute("/_chatLayout")({
 	component: ChatLayout,
+	loader: async (context) => {
+		await Promise.all([
+			context.context.queryClient.prefetchQuery(
+				convexQuery(api.auth.getCurrentUser, {}),
+			),
+			context.context.queryClient.prefetchQuery(
+				convexQuery(api.chat.getChats, {
+					userId: context.context.userId ?? "",
+					paginationOpts: {
+						numItems: 20,
+						cursor: null,
+					},
+				}),
+			),
+		]);
+	},
 });
 
 function ResponsiveLayout({ children }: { children: ReactNode }) {
-	const { token } = Route.useRouteContext();
 	const roomId = useGetRoomId();
 	const isMobile = useIsMobile();
 	const closeCanvas = useCanvasStore(useShallow((state) => state.closeCanvas));
 	const openCanvas = useCanvasOpenStatus();
 
 	const rightPanelRef = useRef<ImperativePanelHandle>(null);
-
-	const isAuthenticated = !!token;
 
 	// Animate panel size based on canvasOpenedId
 	useEffect(() => {
@@ -53,7 +69,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 	if (isMobile) {
 		return (
 			<>
-				<Header isAuthenticated={isAuthenticated} />
+				<Header />
 				<div
 					className={cn(
 						"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))]",
@@ -88,7 +104,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 				defaultSize={50}
 				minSize={35}
 			>
-				<Header isAuthenticated={isAuthenticated} />
+				<Header />
 
 				{children}
 			</ResizablePanel>
@@ -117,11 +133,12 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 }
 
 function ChatLayout() {
-	const { token } = Route.useRouteContext();
 	return (
 		<>
 			<SidebarProvider defaultOpen={false}>
-				{!!token && <AppSidebar />}
+				<Authenticated>
+					<AppSidebar />
+				</Authenticated>
 				<SidebarInset className="overflow-x-hidden">
 					<ResponsiveLayout>
 						<Outlet />

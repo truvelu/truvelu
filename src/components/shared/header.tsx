@@ -1,12 +1,14 @@
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
+import { Unauthenticated, useConvexAuth } from "convex/react";
 import { memo } from "react";
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
 
-export const Header = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
+export const Header = () => {
 	const navigate = useNavigate();
 	const { isMobile } = useSidebar();
+	const { isAuthenticated } = useConvexAuth();
 
 	return (
 		<div
@@ -16,7 +18,7 @@ export const Header = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 			)}
 		>
 			{isMobile && <SidebarTrigger className="p-2 cursor-pointer" />}
-			{!isAuthenticated && (
+			<Unauthenticated>
 				<Button
 					onClick={() => {
 						navigate({ to: "/auth" });
@@ -25,7 +27,7 @@ export const Header = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
 				>
 					Log in
 				</Button>
-			)}
+			</Unauthenticated>
 		</div>
 	);
 };

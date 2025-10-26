@@ -9,7 +9,7 @@ import {
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Message01Icon } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import {
 	type FormEvent,
@@ -17,6 +17,7 @@ import {
 	useCallback,
 	useEffect,
 	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -38,6 +39,12 @@ import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
 const AiConversationContent = memo(() => {
+	const matchRoute = useMatchRoute();
+	const isIndexRoute = matchRoute({ to: "/", pending: true });
+	const isLearningRoute = matchRoute({
+		to: "/l/{-$learningId}",
+		pending: true,
+	});
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
 	const {
@@ -58,17 +65,17 @@ const AiConversationContent = memo(() => {
 	const { isAtBottom, scrollRef, scrollToBottom } = useStickToBottomContext();
 
 	const prevRoomIdRef = useRef<string | null>(null);
-	const prevScrollHeightRef = useRef<number>(0);
-	const prevScrollTopRef = useRef<number>(0);
+	const sentinelMessageIdRef = useRef<string | null>(null);
 	const isLoadingMoreRef = useRef(false);
 	const prevMessagesLengthRef = useRef<number>(0);
 	const inputRef = useRef<HTMLDivElement>(null);
 
 	const [isReadyToShow, setIsReadyToShow] = useState(false);
 	const [inputHeight, setInputHeight] = useState(0);
+	const [isSubmitted, setIsSubmitted] = useState(false);
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat } = useQuery(
+	const { data: chat, isLoading: isChatLoading } = useQuery(
 		convexQuery(
 			api.chat.getChat,
 			!!user?._id?.toString() && !!roomId
@@ -96,6 +103,31 @@ const AiConversationContent = memo(() => {
 			optimisticallySendMessage(api.chat.listThreadMessages),
 		),
 	});
+	const abortStreamByOrder = useMutation({
+		mutationKey: ["abortStreamByOrder"],
+		mutationFn: useConvexMutation(api.chat.abortStreamByOrder),
+	});
+
+	const messageThatIsStreaming = useMemo(
+		() => messages.find((message) => message?.status === "streaming"),
+		[messages],
+	);
+	const messageOrderThatIsStreaming = useMemo(
+		() => messageThatIsStreaming?.order ?? 0,
+		[messageThatIsStreaming],
+	);
+	const isMessageStatusStreaming = useMemo(
+		() => !!messageThatIsStreaming,
+		[messageThatIsStreaming],
+	);
+	const isMessageStatusPending = useMemo(
+		() => !!messages.find((message) => message?.status === "pending"),
+		[messages],
+	);
+	const isInputStatusLoading = useMemo(
+		() => isMessageStatusStreaming || isMessageStatusPending || isSubmitted,
+		[isMessageStatusStreaming, isMessageStatusPending, isSubmitted],
+	);
 
 	const handleInputReady = useCallback(() => {
 		if (inputRef.current) {
@@ -106,17 +138,41 @@ const AiConversationContent = memo(() => {
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
 			if (!chat?.threadId || !user?._id?.toString() || !roomId) return;
-			sendChatMessage.mutate({
-				threadId: chat?.threadId ?? "",
-				roomId: roomId,
-				prompt: message.text ?? "",
-				modelKey: "x-ai/grok-4-fast",
-				userId: user?._id?.toString() ?? "",
-			});
+			if (isMessageStatusStreaming) {
+				abortStreamByOrder.mutate({
+					threadId: chat?.threadId ?? "",
+					order: messageOrderThatIsStreaming,
+				});
+				return;
+			}
+
+			sendChatMessage.mutate(
+				{
+					threadId: chat?.threadId ?? "",
+					roomId: roomId,
+					prompt: message.text ?? "",
+					modelKey: "minimax/minimax-m2:free",
+					userId: user?._id?.toString() ?? "",
+				},
+				{
+					onSettled: () => {
+						setIsSubmitted(true);
+					},
+				},
+			);
 			scrollToBottom();
 			event.preventDefault();
 		},
-		[chat?.threadId, user?._id, roomId, sendChatMessage, scrollToBottom],
+		[
+			chat?.threadId,
+			user?._id,
+			roomId,
+			sendChatMessage,
+			scrollToBottom,
+			abortStreamByOrder,
+			messageOrderThatIsStreaming,
+			isMessageStatusStreaming,
+		],
 	);
 
 	const handleOpenCanvas = useCallback(
@@ -195,15 +251,26 @@ const AiConversationContent = memo(() => {
 		if (status === "LoadingFirstPage") return;
 		if (!isAtBottom) return;
 
-		// Add a small delay to ensure scroll is complete
-		const timer = setTimeout(() => {
-			setIsReadyToShow(true);
-		}, 200);
+		// Use RAF + timeout for reliable visual completion
+		let rafId: number;
+		let timerId: NodeJS.Timeout;
 
-		return () => clearTimeout(timer);
+		rafId = requestAnimationFrame(() => {
+			rafId = requestAnimationFrame(() => {
+				// Add small timeout to ensure scroll paint is complete
+				timerId = setTimeout(() => {
+					setIsReadyToShow(true);
+				}, 50);
+			});
+		});
+
+		return () => {
+			if (rafId) cancelAnimationFrame(rafId);
+			if (timerId) clearTimeout(timerId);
+		};
 	}, [isAtBottom, status, isReadyToShow]);
 
-	// Track messages length and preserve scroll position
+	// Track messages length and preserve scroll position using sentinel element
 	useLayoutEffect(() => {
 		const container = scrollRef.current;
 		if (!container) return;
@@ -211,16 +278,21 @@ const AiConversationContent = memo(() => {
 		// If loading more and messages increased
 		if (
 			isLoadingMoreRef.current &&
-			messages.length > prevMessagesLengthRef.current
+			messages.length > prevMessagesLengthRef.current &&
+			sentinelMessageIdRef.current
 		) {
-			const heightDiff = container.scrollHeight - prevScrollHeightRef.current;
+			// Find the sentinel element (the message we want to keep in view)
+			const sentinelElement = container.querySelector(
+				`[data-message-id="${sentinelMessageIdRef.current}"]`,
+			);
 
-			// Adjust scroll position to maintain visual position
-			if (heightDiff > 0) {
-				container.scrollTop = prevScrollTopRef.current + heightDiff;
+			if (sentinelElement) {
+				// Scroll to maintain the sentinel element's position
+				sentinelElement.scrollIntoView({ block: "start" });
 			}
 
 			isLoadingMoreRef.current = false;
+			sentinelMessageIdRef.current = null;
 		}
 
 		prevMessagesLengthRef.current = messages.length;
@@ -240,19 +312,23 @@ const AiConversationContent = memo(() => {
 		const timer = setTimeout(() => {
 			if (!scrollRef.current) return;
 
-			// Store current scroll state before loading
-			prevScrollHeightRef.current = container.scrollHeight;
-			prevScrollTopRef.current = container.scrollTop;
-			isLoadingMoreRef.current = true;
+			// Find the first currently visible message to use as sentinel
+			const firstVisibleMessage = messages[0];
+			if (firstVisibleMessage) {
+				sentinelMessageIdRef.current = firstVisibleMessage.id;
+			}
 
-			loadMore(10);
+			isLoadingMoreRef.current = true;
+			loadMore(20);
 		}, 150);
 
 		return () => clearTimeout(timer);
-	}, [isIntersecting, status, isReadyToShow, loadMore, scrollRef]);
+	}, [isIntersecting, status, isReadyToShow, loadMore, scrollRef, messages]);
 
 	useEffect(() => {
-		if (!chat) {
+		if (isIndexRoute || isLearningRoute) return;
+		if (!user?._id?.toString() || !roomId) return;
+		if (!chat && !isChatLoading) {
 			navigate({
 				to: "/",
 			})
@@ -263,11 +339,25 @@ const AiConversationContent = memo(() => {
 					toast.error("Failed to navigate to home");
 				});
 		}
-	}, [chat, navigate]);
+	}, [
+		chat,
+		navigate,
+		user?._id,
+		roomId,
+		isChatLoading,
+		isIndexRoute,
+		isLearningRoute,
+	]);
+
+	useEffect(() => {
+		if (isMessageStatusStreaming) {
+			setIsSubmitted(false);
+		}
+	}, [isMessageStatusStreaming]);
 
 	return (
 		<>
-			<ConversationContent className="px-0">
+			<ConversationContent className="px-0" key={roomId}>
 				<ContainerWithMargin
 					asContent
 					style={{
@@ -323,7 +413,11 @@ const AiConversationContent = memo(() => {
 			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth className={cn("pb-2 bg-white flex-1")}>
-						<AiPromptInput onReady={handleInputReady} onSubmit={handleSubmit} />
+						<AiPromptInput
+							onReady={handleInputReady}
+							onSubmit={handleSubmit}
+							isInputStatusLoading={isInputStatusLoading}
+						/>
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</div>
@@ -332,8 +426,10 @@ const AiConversationContent = memo(() => {
 });
 
 const AiConversation = memo(() => {
+	const roomId = useGetRoomId();
 	return (
 		<Conversation
+			key={roomId}
 			className={cn(
 				"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
 				"[&>div]:[scrollbar-gutter:stable_both-edges]",

@@ -1,7 +1,12 @@
-import { listUIMessages, syncStreams, vStreamArgs } from "@convex-dev/agent";
+import {
+	abortStream,
+	listUIMessages,
+	syncStreams,
+	vStreamArgs,
+} from "@convex-dev/agent";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { api, components, internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
 import { modelOptionsValidator } from "./schema";
@@ -133,5 +138,16 @@ export const sendChatMessage = mutation({
 		]);
 
 		return { threadId, messageId, roomId };
+	},
+});
+
+export const abortStreamByOrder = mutation({
+	args: { threadId: v.string(), order: v.number() },
+	handler: async (ctx, { threadId, order }) => {
+		return await abortStream(ctx, components.agent, {
+			threadId,
+			order,
+			reason: "Aborting explicitly",
+		});
 	},
 });

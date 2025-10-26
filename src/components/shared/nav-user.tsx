@@ -12,7 +12,6 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	useSidebar,
 } from "@/components/ui/sidebar";
 import { convexQuery } from "@convex-dev/react-query";
 import {
@@ -74,11 +73,7 @@ const ModalNavUserLogout = ({
 };
 
 export function NavUser() {
-	const { isMobile } = useSidebar();
-
 	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-
-	console.log({ data });
 
 	const [isOpenModalLogout, setIsOpenModalLogout] = useState(false);
 

@@ -54,6 +54,7 @@ const AiMessages = memo((props: AiMessagesProps) => {
 
 	return (
 		<div
+			data-message-id={message.id}
 			className={cn(
 				"cursor-default [content-visibility:auto]",
 				isUser ? "first:mt-0 mt-12" : "",
@@ -98,7 +99,7 @@ const AiMessages = memo((props: AiMessagesProps) => {
 			})}
 
 			{/* actions */}
-			{message?.text.length > 0 && (
+			{message?.status === "success" && (
 				<AiActions
 					message={message}
 					hoveredId={hoveredId}

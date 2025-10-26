@@ -20,6 +20,7 @@ export const modelOptionsValidator = v.union(
 	v.literal("z-ai/glm-4.6"),
 	v.literal("openai/gpt-5"),
 	v.literal("x-ai/grok-4-fast"),
+	v.literal("minimax/minimax-m2:free"),
 );
 
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
