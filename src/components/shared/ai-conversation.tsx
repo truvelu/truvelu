@@ -1,4 +1,5 @@
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useInputHeight } from "@/hooks/use-input-height";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { type CanvasType, useCanvasStore } from "@/zustand/canvas";
@@ -23,6 +24,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useStickToBottomContext } from "use-stick-to-bottom";
+import { v7 as uuid } from "uuid";
 import { useShallow } from "zustand/react/shallow";
 import {
 	Conversation,
@@ -45,11 +47,6 @@ interface AiConversationProps {
 
 const AiConversationContent = memo((props: AiConversationProps) => {
 	const matchRoute = useMatchRoute();
-	const isIndexRoute = matchRoute({ to: "/", pending: true });
-	const isLearningRoute = matchRoute({
-		to: "/l/{-$learningId}",
-		pending: true,
-	});
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
 	const {
@@ -73,13 +70,15 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const sentinelMessageIdRef = useRef<string | null>(null);
 	const isLoadingMoreRef = useRef(false);
 	const prevMessagesLengthRef = useRef<number>(0);
-	const inputRef = useRef<HTMLDivElement>(null);
 
 	const [isReadyToShow, setIsReadyToShow] = useState(false);
-	const [inputHeight, setInputHeight] = useState(0);
 	const [isSubmitted, setIsSubmitted] = useState(false);
 
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { inputRef, inputHeight, handleInputReady } = useInputHeight();
+
+	const { data: user, isPending: isUserPending } = useQuery(
+		convexQuery(api.auth.getCurrentUser, {}),
+	);
 	const { data: chat, isPending: isChatPending } = useQuery(
 		convexQuery(
 			api.chat.getChat,
@@ -93,6 +92,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	);
 
 	const threadId = props.threadId ?? chat?.threadId ?? "";
+	const indexRoute = matchRoute({ to: "/" });
+	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
+	const isIndexRoute = indexRoute !== false;
+	const isLearningRoute = learningRoute !== false;
 
 	const {
 		results: messages,
@@ -103,8 +106,12 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		threadId ? { threadId } : "skip",
 		{ initialNumItems: 10, stream: true },
 	);
+	const createChat = useMutation({
+		mutationKey: ["createChat", roomId],
+		mutationFn: useConvexMutation(api.chat.createChat),
+	});
 	const sendChatMessage = useMutation({
-		mutationKey: ["sendChatMessage"],
+		mutationKey: ["sendChatMessage", threadId],
 		mutationFn: useConvexMutation(
 			api.chat.sendChatMessage,
 		).withOptimisticUpdate(
@@ -112,7 +119,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		),
 	});
 	const abortStreamByOrder = useMutation({
-		mutationKey: ["abortStreamByOrder"],
+		mutationKey: ["abortStreamByOrder", threadId],
 		mutationFn: useConvexMutation(api.chat.abortStreamByOrder),
 	});
 
@@ -137,37 +144,72 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		[isMessageStatusStreaming, isMessageStatusPending, isSubmitted],
 	);
 
-	const handleInputReady = useCallback(() => {
-		if (inputRef.current) {
-			setInputHeight(inputRef.current.offsetHeight);
-		}
-	}, []);
+	const handleSubmitNewChat = useCallback(
+		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
+			const userId = user?._id?.toString();
+
+			if (!userId) return;
+
+			setIsSubmitted(true);
+			const prompt = message.text ?? "";
+			createChat.mutate(
+				{
+					modelKey: "minimax/minimax-m2:free",
+					uuid: uuid(),
+					userId,
+				},
+				{
+					onSuccess: ({ threadId, roomId }) => {
+						navigate({
+							to: "/c/{-$chatId}",
+							params: {
+								chatId: roomId.toString(),
+							},
+						});
+						sendChatMessage.mutate({
+							threadId,
+							roomId,
+							prompt,
+							modelKey: "minimax/minimax-m2:free",
+							userId,
+						});
+					},
+				},
+			);
+			event.preventDefault();
+		},
+		[user?._id, createChat, sendChatMessage, navigate],
+	);
 
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
-			if (!threadId || !user?._id?.toString() || !roomId) return;
+			const userId = user?._id?.toString();
+			if (!userId) return;
+
+			// Only create new chat if on index route
+			if (isIndexRoute) {
+				await handleSubmitNewChat(message, event);
+				return;
+			}
+
+			if (!threadId || !roomId) return;
+
 			if (isMessageStatusStreaming) {
 				abortStreamByOrder.mutate({
-					threadId: threadId ?? "",
+					threadId,
 					order: messageOrderThatIsStreaming,
 				});
 				return;
 			}
 
-			sendChatMessage.mutate(
-				{
-					threadId: threadId ?? "",
-					roomId: roomId,
-					prompt: message.text ?? "",
-					modelKey: "minimax/minimax-m2:free",
-					userId: user?._id?.toString() ?? "",
-				},
-				{
-					onSettled: () => {
-						setIsSubmitted(true);
-					},
-				},
-			);
+			setIsSubmitted(true);
+			sendChatMessage.mutate({
+				threadId,
+				roomId,
+				prompt: message.text ?? "",
+				modelKey: "minimax/minimax-m2:free",
+				userId,
+			});
 			scrollToBottom();
 			event.preventDefault();
 		},
@@ -176,10 +218,12 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			user?._id,
 			roomId,
 			sendChatMessage,
-			scrollToBottom,
 			abortStreamByOrder,
 			messageOrderThatIsStreaming,
 			isMessageStatusStreaming,
+			isIndexRoute,
+			scrollToBottom,
+			handleSubmitNewChat,
 		],
 	);
 
@@ -234,26 +278,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			prevRoomIdRef.current = roomId;
 		}
 	}, [roomId]);
-
-	// Handle input height tracking
-	useEffect(() => {
-		const input = inputRef.current;
-		if (!input) return;
-
-		const updateHeight = () => {
-			setInputHeight(input.offsetHeight);
-		};
-
-		const ro = new ResizeObserver(updateHeight);
-		ro.observe(input);
-
-		window.addEventListener("resize", updateHeight);
-
-		return () => {
-			ro.disconnect();
-			window.removeEventListener("resize", updateHeight);
-		};
-	}, []);
 
 	// Wait for scroll to reach bottom before showing messages
 	useEffect(() => {
@@ -337,23 +361,24 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	useEffect(() => {
 		if (isIndexRoute || isLearningRoute) return;
+		if (isUserPending || isChatPending) return;
 		if (!user?._id?.toString() || !roomId) return;
-		if (!chat && !isChatPending) {
-			navigate({
-				to: "/",
+		if (chat) return;
+
+		navigate({ to: "/" })
+			.then(() => {
+				toast.error("Chat not found");
 			})
-				.then(() => {
-					toast.error("Chat not found");
-				})
-				.catch(() => {
-					toast.error("Failed to navigate to home");
-				});
-		}
+			.catch((error) => {
+				console.error("Navigation error:", error);
+				toast.error("Failed to navigate to home");
+			});
 	}, [
 		chat,
 		navigate,
 		user?._id,
 		roomId,
+		isUserPending,
 		isChatPending,
 		isIndexRoute,
 		isLearningRoute,
@@ -375,7 +400,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 					}}
 				>
 					<ContainerWithMaxWidth className="w-full">
-						{status !== "LoadingFirstPage" && !messages.length ? (
+						{(isIndexRoute || status !== "LoadingFirstPage") &&
+						!messages?.length ? (
 							// Show empty state when no messages and not loading
 							<ConversationEmptyState
 								icon={<SharedIcon icon={Message01Icon} size={48} />}
@@ -423,7 +449,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
 				<ContainerWithMargin>
-					<ContainerWithMaxWidth className={cn("pb-2 bg-white flex-1")}>
+					<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
 						<AiPromptInput
 							onReady={handleInputReady}
 							onSubmit={handleSubmit}

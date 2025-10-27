@@ -18,9 +18,7 @@ import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
-import { convexQuery } from "@convex-dev/react-query";
-import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { api } from "convex/_generated/api";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { Authenticated } from "convex/react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
@@ -31,24 +29,19 @@ export const Route = createFileRoute("/_chatLayout")({
 	ssr: false,
 
 	component: ChatLayout,
-	loader: async (context) => {
-		const user = await context.context.queryClient.ensureQueryData(
-			convexQuery(api.auth.getCurrentUser, {}),
+
+	beforeLoad: async (context) => {
+		// Public routes that don't require authentication
+		const publicRoutes = ["/"] as const;
+		const requiresAuth = !publicRoutes.includes(
+			context.location.pathname as (typeof publicRoutes)[number],
 		);
-		await context.context.queryClient.ensureQueryData(
-			convexQuery(
-				api.chat.getChats,
-				user?._id?.toString()
-					? {
-							userId: user?._id?.toString() ?? "",
-							paginationOpts: {
-								numItems: 20,
-								cursor: null,
-							},
-						}
-					: "skip",
-			),
-		);
+
+		if (requiresAuth && !context.context.userId) {
+			throw redirect({
+				to: "/auth",
+			});
+		}
 	},
 });
 
@@ -106,7 +99,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 			<ResizablePanel
 				id="resizable-panel-left-panel"
 				className={cn("relative h-svh lg:h-dvh")}
-				defaultSize={50}
+				defaultSize={100}
 				minSize={35}
 			>
 				<Header />

@@ -42,12 +42,9 @@ const NavNewLearningItem = () => {
 			<SidebarMenuButton
 				tooltip="Learning"
 				className="cursor-pointer rounded-tlarge py-0"
-				asChild
 			>
-				<Link to={"/l"}>
-					<SharedIcon icon={FolderAddIcon} />
-					<span>New Learning</span>
-				</Link>
+				<SharedIcon icon={FolderAddIcon} />
+				<span>New Learning</span>
 			</SidebarMenuButton>
 		</SidebarMenuItem>
 	);
@@ -179,7 +176,6 @@ export function NavLearning() {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<NavNewLearningItem />
-							<NavLearningItem />
 							<NavLearningItem />
 						</SidebarMenu>
 					</SidebarGroupContent>

@@ -10,32 +10,18 @@ export const Route = createFileRoute(
 	ssr: false,
 
 	component: RouteComponent,
+
 	beforeLoad: async (context) => {
-		if (!context.context.userId) {
+		if (!context.params.chatId) {
 			throw redirect({
-				to: "/auth",
-			});
-		}
-
-		if (!!context.params.learningId && !context.params.chatId) {
-			throw redirect({
-				to: "/l/{-$learningId}",
-			});
-		}
-
-		if (!context.params.learningId && !context.params.chatId) {
-			throw redirect({
-				to: "/l",
+				to: "/",
 			});
 		}
 	},
+
 	loader: async (context) => {
 		const userId = context.context.userId;
 		const chatId = context.params.chatId;
-
-		await context.context.queryClient.ensureQueryData(
-			convexQuery(api.auth.getCurrentUser, {}),
-		);
 
 		if (!userId || !chatId) return;
 

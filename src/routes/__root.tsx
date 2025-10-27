@@ -91,8 +91,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	errorComponent: () => <div>Error</div>,
 
 	notFoundComponent: () => <div>Not found</div>,
-
-	ssr: false,
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {

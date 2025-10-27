@@ -30,8 +30,8 @@ import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
 interface AiPromptInputProps extends PromptInputProps {
-	isInputStatusLoading: boolean;
 	onReady?: () => void;
+	isInputStatusLoading: boolean;
 }
 
 export const AiPromptInput = memo(
@@ -60,10 +60,11 @@ export const AiPromptInput = memo(
 		const handleSubmit = useCallback(
 			(message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
 				if (!onSubmit) return;
+				if (!value.trim()) return;
 				onSubmit(message, event);
 				setValue("");
 			},
-			[onSubmit],
+			[onSubmit, value],
 		);
 
 		return (
@@ -97,7 +98,6 @@ export const AiPromptInput = memo(
 					</PromptInputTools>
 					<BtnLoginOrChild>
 						<PromptInputSubmit
-							disabled={!value.trim() && !isInputStatusLoading}
 							status={isInputStatusLoading ? "streaming" : "ready"}
 							className="rounded-full cursor-pointer"
 						/>
