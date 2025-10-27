@@ -444,8 +444,11 @@ const AiConversation = memo(
 			<Conversation
 				key={roomId}
 				className={cn(
-					"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
+					"relative lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
 					"[&>div]:[scrollbar-gutter:stable_both-edges]",
+					isCanvas
+						? "h-[calc(95svh-var(--spacing-header)-1.5rem)]"
+						: "h-[calc(100svh-var(--spacing-header))]",
 				)}
 			>
 				<AiConversationContent isCanvas={isCanvas} {...props} />

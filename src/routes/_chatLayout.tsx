@@ -90,7 +90,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 							}
 						}}
 					>
-						<DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90vh]">
+						<DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[95svh]">
 							<DrawerTitle />
 							<DrawerDescription />
 							<AiCanvas />
