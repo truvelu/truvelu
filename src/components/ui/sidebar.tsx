@@ -19,7 +19,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useCanvasCount } from "@/hooks/use-canvas";
+import { useCanvasOpenStatus } from "@/hooks/use-canvas";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Menu02Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
@@ -68,7 +68,7 @@ function SidebarProvider({
 	onOpenChange?: (open: boolean) => void;
 }) {
 	const isMobile = useIsMobile();
-	const canvasCount = useCanvasCount();
+	const canvasIsOpen = useCanvasOpenStatus();
 
 	const [openMobile, setOpenMobile] = React.useState(false);
 
@@ -91,7 +91,7 @@ function SidebarProvider({
 		[setOpenProp, open],
 	);
 
-	const pretendIsMobile = canvasCount > 0;
+	const pretendIsMobile = canvasIsOpen;
 
 	// Helper to toggle the sidebar.
 	const toggleSidebar = React.useCallback(() => {
@@ -115,6 +115,14 @@ function SidebarProvider({
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [toggleSidebar]);
+
+	React.useEffect(() => {
+		if (isMobile) return;
+		if (!canvasIsOpen) return;
+		if (open || openMobile) return;
+		setOpen(false);
+		setOpenMobile(false);
+	}, [isMobile, open, openMobile, canvasIsOpen, setOpen]);
 
 	// We add a state so that we can do data-state="expanded" or "collapsed".
 	// This makes it easier to style the sidebar with Tailwind classes.
