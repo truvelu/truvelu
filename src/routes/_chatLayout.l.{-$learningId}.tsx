@@ -14,12 +14,6 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 				to: "/auth",
 			});
 		}
-
-		if (!context.params.learningId) {
-			throw redirect({
-				to: "/",
-			});
-		}
 	},
 	loader: async (context) => {
 		await context.context.queryClient.ensureQueryData(

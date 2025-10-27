@@ -38,7 +38,8 @@ const ContainerWithMargin = memo(
 		return (
 			<div
 				className={cn(
-					"mx-auto px-(--thread-content-margin) [--thread-content-margin:--spacing(4)]",
+					"mx-auto px-(--thread-content-margin)",
+					asContent && "[--thread-content-margin:--spacing(4)]",
 					!canvasOpenStatus &&
 						(asContent
 							? "sm:[--thread-content-margin:--spacing(8)]"

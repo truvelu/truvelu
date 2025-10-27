@@ -80,7 +80,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const [isSubmitted, setIsSubmitted] = useState(false);
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat, isLoading: isChatLoading } = useQuery(
+	const { data: chat, isPending: isChatPending } = useQuery(
 		convexQuery(
 			api.chat.getChat,
 			!!user?._id?.toString() && !!roomId
@@ -338,7 +338,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	useEffect(() => {
 		if (isIndexRoute || isLearningRoute) return;
 		if (!user?._id?.toString() || !roomId) return;
-		if (!chat && !isChatLoading) {
+		if (!chat && !isChatPending) {
 			navigate({
 				to: "/",
 			})
@@ -354,7 +354,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		navigate,
 		user?._id,
 		roomId,
-		isChatLoading,
+		isChatPending,
 		isIndexRoute,
 		isLearningRoute,
 	]);
@@ -421,7 +421,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				}}
 			/>
 
-			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0")}>
+			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth className={cn("pb-2 bg-white flex-1")}>
 						<AiPromptInput

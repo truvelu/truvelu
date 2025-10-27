@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatLayoutRouteImport } from './routes/_chatLayout'
 import { Route as ChatLayoutIndexRouteImport } from './routes/_chatLayout.index'
+import { Route as ChatLayoutLIndexRouteImport } from './routes/_chatLayout.l.index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ChatLayoutLChar123LearningIdChar125RouteImport } from './routes/_chatLayout.l.{-$learningId}'
 import { Route as ChatLayoutCChar123ChatIdChar125RouteImport } from './routes/_chatLayout.c.{-$chatId}'
@@ -29,6 +30,11 @@ const ChatLayoutRoute = ChatLayoutRouteImport.update({
 const ChatLayoutIndexRoute = ChatLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ChatLayoutRoute,
+} as any)
+const ChatLayoutLIndexRoute = ChatLayoutLIndexRouteImport.update({
+  id: '/l/',
+  path: '/l/',
   getParentRoute: () => ChatLayoutRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/l': typeof ChatLayoutLIndexRoute
   '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/l': typeof ChatLayoutLIndexRoute
   '/l/{-$learningId}/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/_chatLayout/c/{-$chatId}': typeof ChatLayoutCChar123ChatIdChar125Route
   '/_chatLayout/l/{-$learningId}': typeof ChatLayoutLChar123LearningIdChar125Route
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_chatLayout/l/': typeof ChatLayoutLIndexRoute
   '/_chatLayout/l/{-$learningId}_/c/{-$chatId}': typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 export interface FileRouteTypes {
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/c/{-$chatId}'
     | '/l/{-$learningId}'
     | '/api/auth/$'
+    | '/l'
     | '/l/{-$learningId}/c/{-$chatId}'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/c/{-$chatId}'
     | '/l/{-$learningId}'
     | '/api/auth/$'
+    | '/l'
     | '/l/{-$learningId}/c/{-$chatId}'
   id:
     | '__root__'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/_chatLayout/c/{-$chatId}'
     | '/_chatLayout/l/{-$learningId}'
     | '/api/auth/$'
+    | '/_chatLayout/l/'
     | '/_chatLayout/l/{-$learningId}_/c/{-$chatId}'
   fileRoutesById: FileRoutesById
 }
@@ -136,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof ChatLayoutIndexRouteImport
+      parentRoute: typeof ChatLayoutRoute
+    }
+    '/_chatLayout/l/': {
+      id: '/_chatLayout/l/'
+      path: '/l'
+      fullPath: '/l'
+      preLoaderRoute: typeof ChatLayoutLIndexRouteImport
       parentRoute: typeof ChatLayoutRoute
     }
     '/api/auth/$': {
@@ -173,6 +192,7 @@ interface ChatLayoutRouteChildren {
   ChatLayoutIndexRoute: typeof ChatLayoutIndexRoute
   ChatLayoutCChar123ChatIdChar125Route: typeof ChatLayoutCChar123ChatIdChar125Route
   ChatLayoutLChar123LearningIdChar125Route: typeof ChatLayoutLChar123LearningIdChar125Route
+  ChatLayoutLIndexRoute: typeof ChatLayoutLIndexRoute
   ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route: typeof ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route
 }
 
@@ -181,6 +201,7 @@ const ChatLayoutRouteChildren: ChatLayoutRouteChildren = {
   ChatLayoutCChar123ChatIdChar125Route: ChatLayoutCChar123ChatIdChar125Route,
   ChatLayoutLChar123LearningIdChar125Route:
     ChatLayoutLChar123LearningIdChar125Route,
+  ChatLayoutLIndexRoute: ChatLayoutLIndexRoute,
   ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route:
     ChatLayoutLChar123LearningIdChar125CChar123ChatIdChar125Route,
 }

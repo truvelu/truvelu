@@ -25,7 +25,7 @@ export const Route = createFileRoute(
 
 		if (!context.params.learningId && !context.params.chatId) {
 			throw redirect({
-				to: "/",
+				to: "/l",
 			});
 		}
 	},

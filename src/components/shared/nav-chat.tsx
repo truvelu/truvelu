@@ -14,6 +14,7 @@ import {
 	ArrowRight01Icon,
 	Delete02Icon,
 	Edit03Icon,
+	GridIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -66,7 +67,7 @@ const NavChatItem = ({
 		<SidebarMenuItem>
 			<SidebarMenuButton
 				tooltip="Chat"
-				className="cursor-pointer rounded-tlarge"
+				className="cursor-pointer rounded-tlarge py-0"
 				onClick={(e) => {
 					// Prevent navigation when editing
 					if (isEditing) {
@@ -77,7 +78,12 @@ const NavChatItem = ({
 				}}
 				asChild
 			>
-				<Link to={"/c/{-$chatId}"} params={{ chatId: chat?.data?.uuid ?? "" }}>
+				<Link
+					to={"/c/{-$chatId}"}
+					params={{ chatId: chat?.data?.uuid ?? "" }}
+					activeProps={{ className: "bg-sidebar-accent" }}
+				>
+					<SharedIcon icon={GridIcon} />
 					<span
 						ref={editableRef}
 						onKeyDown={handleKeyDown}
@@ -88,7 +94,6 @@ const NavChatItem = ({
 					</span>
 				</Link>
 			</SidebarMenuButton>
-
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<DropdownMenuTrigger asChild>
 					<SidebarMenuAction showOnHover>

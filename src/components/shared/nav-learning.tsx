@@ -41,10 +41,13 @@ const NavNewLearningItem = () => {
 		<SidebarMenuItem>
 			<SidebarMenuButton
 				tooltip="Learning"
-				className="cursor-pointer rounded-tlarge"
+				className="cursor-pointer rounded-tlarge py-0"
+				asChild
 			>
-				<SharedIcon icon={FolderAddIcon} />
-				<span>Learning</span>
+				<Link to={"/l"}>
+					<SharedIcon icon={FolderAddIcon} />
+					<span>New Learning</span>
+				</Link>
 			</SidebarMenuButton>
 		</SidebarMenuItem>
 	);
@@ -66,28 +69,32 @@ const NavLearningItem = () => {
 						to={"/l/{-$learningId}"}
 						params={{ learningId: "123" }}
 						className="flex-1"
+						activeProps={{ className: "bg-sidebar-accent" }}
 					>
 						<SidebarMenuButton
 							tooltip="Learning"
-							className="rounded-tlarge relative cursor-pointer"
+							className="rounded-tlarge relative cursor-pointer py-0"
+							asChild
 						>
-							<Button
-								variant="ghost"
-								className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
-								onClick={(e) => {
-									setIsOpen((prev) => !prev);
-									e.stopPropagation();
-									e.preventDefault();
-								}}
-							>
-								{isOpen ? (
-									<SharedIcon icon={FolderOpenIcon} />
-								) : (
-									<SharedIcon icon={Folder01Icon} />
-								)}
-							</Button>
+							<div>
+								<Button
+									variant="ghost"
+									className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
+									onClick={(e) => {
+										setIsOpen((prev) => !prev);
+										e.stopPropagation();
+										e.preventDefault();
+									}}
+								>
+									{isOpen ? (
+										<SharedIcon icon={FolderOpenIcon} />
+									) : (
+										<SharedIcon icon={Folder01Icon} />
+									)}
+								</Button>
 
-							<span className="pl-7">Learning</span>
+								<span className="pl-7">Learning</span>
+							</div>
 						</SidebarMenuButton>
 					</Link>
 				</div>
@@ -102,6 +109,7 @@ const NavLearningItem = () => {
 								<Link
 									to={"/l/{-$learningId}/c/{-$chatId}"}
 									params={{ learningId: "123", chatId: "123" }}
+									activeProps={{ className: "bg-sidebar-accent" }}
 								>
 									<span>Learning A</span>
 								</Link>
@@ -116,6 +124,7 @@ const NavLearningItem = () => {
 								<Link
 									to={"/l/{-$learningId}/c/{-$chatId}"}
 									params={{ learningId: "123", chatId: "123" }}
+									activeProps={{ className: "bg-sidebar-accent" }}
 								>
 									<span>Learning B</span>
 								</Link>

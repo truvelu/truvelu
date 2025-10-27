@@ -17,6 +17,7 @@ export function getContext() {
 			queries: {
 				queryKeyHashFn: convexQueryClient.hashFn(),
 				queryFn: convexQueryClient.queryFn(),
+				gcTime: 60 * 60 * 1000,
 			},
 		},
 	});
