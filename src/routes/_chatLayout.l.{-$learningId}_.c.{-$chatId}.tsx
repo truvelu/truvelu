@@ -2,6 +2,7 @@ import AiConversation from "@/components/shared/ai-conversation";
 import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { Authenticated } from "convex/react";
 
 export const Route = createFileRoute(
 	"/_chatLayout/l/{-$learningId}_/c/{-$chatId}",
@@ -48,5 +49,9 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
-	return <AiConversation />;
+	return (
+		<Authenticated>
+			<AiConversation />
+		</Authenticated>
+	);
 }

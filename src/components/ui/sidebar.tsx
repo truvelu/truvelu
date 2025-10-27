@@ -119,10 +119,9 @@ function SidebarProvider({
 	React.useEffect(() => {
 		if (isMobile) return;
 		if (!canvasIsOpen) return;
-		if (open || openMobile) return;
+		if (!open) return;
 		setOpen(false);
-		setOpenMobile(false);
-	}, [isMobile, open, openMobile, canvasIsOpen, setOpen]);
+	}, [isMobile, open, setOpen, canvasIsOpen]);
 
 	// We add a state so that we can do data-state="expanded" or "collapsed".
 	// This makes it easier to style the sidebar with Tailwind classes.
@@ -130,7 +129,6 @@ function SidebarProvider({
 
 	const contextValue = React.useMemo<SidebarContextProps>(
 		() => ({
-			pretendIsMobile,
 			state,
 			open,
 			setOpen,
@@ -138,6 +136,7 @@ function SidebarProvider({
 			openMobile,
 			setOpenMobile,
 			toggleSidebar,
+			pretendIsMobile,
 		}),
 		[
 			state,

@@ -2,6 +2,7 @@ import AiLearning from "@/components/shared/ai-learning";
 import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { Authenticated } from "convex/react";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 	ssr: false,
@@ -28,5 +29,9 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 });
 
 function RouteComponent() {
-	return <AiLearning />;
+	return (
+		<Authenticated>
+			<AiLearning />
+		</Authenticated>
+	);
 }

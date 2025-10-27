@@ -19,8 +19,9 @@ import {
 	FolderOpenIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Button } from "../ui/button";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -52,8 +53,6 @@ const NavNewLearningItem = () => {
 const NavLearningItem = () => {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const navigate = useNavigate();
-
 	return (
 		<Collapsible
 			asChild
@@ -63,33 +62,34 @@ const NavLearningItem = () => {
 		>
 			<SidebarMenuItem>
 				<div className="flex-1 justify-between flex flex-row items-center gap-1">
-					<SidebarMenuButton
-						tooltip="Learning"
-						className="rounded-tlarge relative cursor-pointer"
-						onClick={() => {
-							navigate({
-								to: "/l/{-$learningId}",
-								params: {
-									learningId: "123",
-								},
-							});
-						}}
+					<Link
+						to={"/l/{-$learningId}"}
+						params={{ learningId: "123" }}
+						className="flex-1"
 					>
-						<CollapsibleTrigger
-							className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
-							onClick={(e) => e.stopPropagation()}
-							asChild
+						<SidebarMenuButton
+							tooltip="Learning"
+							className="rounded-tlarge relative cursor-pointer"
 						>
-							<div>
+							<Button
+								variant="ghost"
+								className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
+								onClick={(e) => {
+									setIsOpen((prev) => !prev);
+									e.stopPropagation();
+									e.preventDefault();
+								}}
+							>
 								{isOpen ? (
 									<SharedIcon icon={FolderOpenIcon} />
 								) : (
 									<SharedIcon icon={Folder01Icon} />
 								)}
-							</div>
-						</CollapsibleTrigger>
-						<span className="pl-7">Learning</span>
-					</SidebarMenuButton>
+							</Button>
+
+							<span className="pl-7">Learning</span>
+						</SidebarMenuButton>
+					</Link>
 				</div>
 
 				<CollapsibleContent>
@@ -97,34 +97,28 @@ const NavLearningItem = () => {
 						<SidebarMenuSubItem>
 							<SidebarMenuSubButton
 								className="cursor-pointer rounded-tlarge"
-								onClick={() => {
-									navigate({
-										to: "/l/{-$learningId}/c/{-$chatId}",
-										params: {
-											learningId: crypto.randomUUID(),
-											chatId: crypto.randomUUID(),
-										},
-									});
-								}}
+								asChild
 							>
-								<span>Learning A</span>
+								<Link
+									to={"/l/{-$learningId}/c/{-$chatId}"}
+									params={{ learningId: "123", chatId: "123" }}
+								>
+									<span>Learning A</span>
+								</Link>
 							</SidebarMenuSubButton>
 						</SidebarMenuSubItem>
 
 						<SidebarMenuSubItem>
 							<SidebarMenuSubButton
 								className="cursor-pointer rounded-tlarge"
-								onClick={() => {
-									navigate({
-										to: "/l/{-$learningId}/c/{-$chatId}",
-										params: {
-											learningId: crypto.randomUUID(),
-											chatId: crypto.randomUUID(),
-										},
-									});
-								}}
+								asChild
 							>
-								<span>Learning B</span>
+								<Link
+									to={"/l/{-$learningId}/c/{-$chatId}"}
+									params={{ learningId: "123", chatId: "123" }}
+								>
+									<span>Learning B</span>
+								</Link>
 							</SidebarMenuSubButton>
 						</SidebarMenuSubItem>
 					</SidebarMenuSub>

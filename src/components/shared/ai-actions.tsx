@@ -34,8 +34,8 @@ const AiActions = memo((props: AiActionsProps) => {
 	const roomId = useGetRoomId();
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat } = useQuery(
-		convexQuery(
+	const { data: chat } = useQuery({
+		...convexQuery(
 			api.chat.getChat,
 			user?._id && roomId
 				? {
@@ -44,7 +44,8 @@ const AiActions = memo((props: AiActionsProps) => {
 					}
 				: "skip",
 		),
-	);
+		gcTime: Number.POSITIVE_INFINITY,
+	});
 	const { data: discussion } = useQuery(
 		convexQuery(
 			api.discussion.getDiscussionByMessageIdAndUserId,
