@@ -1,29 +1,51 @@
 import { MATH_MARKDOWN } from "@/constants/messages";
 import { useCanvasList } from "@/hooks/use-canvas";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useEditableTitle } from "@/hooks/use-editable-title";
 import { cn } from "@/lib/utils";
-import { CanvasType, useCanvasStore } from "@/zustand/canvas";
+import {
+	type CanvasPayload,
+	CanvasType,
+	useCanvasStore,
+} from "@/zustand/canvas";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import {
 	Cancel01Icon,
-	Comment02Icon,
+	Delete02Icon,
+	Edit03Icon,
 	File01Icon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { memo, useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "convex/_generated/api";
+import { useAction } from "convex/react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Response } from "../ai-elements/response";
 import { Button } from "../ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import AiConversation from "./ai-conversation";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
+interface CanvasTabTriggerProps {
+	canvas: CanvasPayload & { icon?: typeof File01Icon; title?: string };
+	isActive: boolean;
+	canvasArray: (CanvasPayload & { icon?: typeof File01Icon; title?: string })[];
+}
+
 const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-1 h-header px-1 bg-white w-full justify-between",
+				"flex items-center gap-1 h-header pb-0.5 px-1 bg-white w-full justify-between  border-b border-sidebar-border",
 			)}
 		>
 			<div className="flex-1 w-[calc(100%-9.5rem)]">{children}</div>
@@ -35,25 +57,190 @@ const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
 	);
 });
 
+const CanvasTabTrigger = memo(
+	({ canvas, isActive, canvasArray }: CanvasTabTriggerProps) => {
+		const { upsertCanvas, removeCanvas, setActiveCanvasId } = useCanvasStore(
+			useShallow(({ upsertCanvas, removeCanvas, setActiveCanvasId }) => ({
+				upsertCanvas,
+				removeCanvas,
+				setActiveCanvasId,
+			})),
+		);
+
+		const updateChatTitle = useAction(api.chatAction.updateChatTitle);
+		const deleteDiscussion = useMutation({
+			mutationKey: ["deleteDiscussion"],
+			mutationFn: useConvexMutation(api.discussion.deleteDiscussion),
+		});
+
+		const threadId = canvas?.data?.threadId ?? "";
+		const roomId = canvas?.data?.roomId ?? "";
+
+		const { data: chatDiscussionMetadata } = useQuery(
+			convexQuery(api.chat.getMetadata, threadId ? { threadId } : "skip"),
+		);
+
+		const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =
+			useEditableTitle({
+				onSave: (newTitle) => {
+					if (!threadId) return;
+					updateChatTitle({
+						threadId,
+						title: newTitle,
+					});
+					upsertCanvas({
+						...canvas,
+						data: canvas.data
+							? {
+									...canvas.data,
+									title: newTitle,
+								}
+							: null,
+					});
+				},
+			});
+
+		const handleRemoveCanvas = useCallback(() => {
+			removeCanvas({
+				type: canvas.type,
+				threadId,
+				roomId,
+			});
+
+			if (canvasArray.length) {
+				setActiveCanvasId(canvasArray[0]?.id ?? "");
+			}
+		}, [
+			canvas.type,
+			threadId,
+			roomId,
+			canvasArray,
+			removeCanvas,
+			setActiveCanvasId,
+		]);
+
+		useEffect(() => {
+			if (!chatDiscussionMetadata?.title) return;
+			if (chatDiscussionMetadata?.title === canvas?.data?.title) return;
+			upsertCanvas({
+				id: canvas.id,
+				type: CanvasType.THREAD,
+				data: {
+					title: chatDiscussionMetadata?.title ?? "",
+					threadId,
+					roomId,
+				},
+			});
+		}, [
+			chatDiscussionMetadata?.title,
+			threadId,
+			roomId,
+			canvas.id,
+			canvas?.data?.title,
+			upsertCanvas,
+		]);
+
+		return (
+			<>
+				<div data-tab-id={canvas.id} className="relative">
+					<TabsTrigger
+						value={canvas.id}
+						className={cn(
+							"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
+							"pl-4 rounded-tlarge",
+							!isActive ? "pr-4" : "pr-7",
+						)}
+					>
+						{canvas.icon ? (
+							<SharedIcon icon={canvas.icon} />
+						) : (
+							<span
+								ref={editableRef}
+								onKeyDown={handleKeyDown}
+								onBlur={handleBlur}
+								className={isEditing ? "outline-none" : ""}
+							>
+								{canvas?.title}
+							</span>
+						)}
+					</TabsTrigger>
+
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className={cn(
+									"absolute right-1 top-1/2 -translate-y-1/2 rounded-full size-fit cursor-pointer p-0.5 z-10",
+									!isActive && "hidden",
+								)}
+							>
+								<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							side="bottom"
+							align="end"
+							className="rounded-tmedium"
+						>
+							<DropdownMenuItem
+								className="p-2.5 rounded-xl"
+								onClick={handleRemoveCanvas}
+							>
+								<SharedIcon icon={Cancel01Icon} />
+								<span>Close</span>
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="p-2.5 rounded-xl"
+								onClick={startEditing}
+							>
+								<SharedIcon icon={Edit03Icon} />
+								<span>Rename</span>
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="p-2.5 rounded-xl"
+								onClick={() => {
+									if (!threadId) return;
+									deleteDiscussion.mutate(
+										{ threadId },
+										{
+											onSuccess: () => {
+												handleRemoveCanvas();
+											},
+										},
+									);
+								}}
+							>
+								<SharedIcon icon={Delete02Icon} className="text-destructive" />
+								<span>Delete</span>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			</>
+		);
+	},
+);
+
 const AiCanvas = () => {
-	const isMobile = useIsMobile();
 	const canvasList = useCanvasList();
-	const { activeCanvasId, setActiveCanvasId, removeCanvas } = useCanvasStore(
-		useShallow(({ activeCanvasId, setActiveCanvasId, removeCanvas }) => ({
+	const { activeCanvasId, setActiveCanvasId } = useCanvasStore(
+		useShallow(({ activeCanvasId, setActiveCanvasId }) => ({
 			activeCanvasId,
 			setActiveCanvasId,
-			removeCanvas,
 		})),
 	);
 
-	const [isHovered, setIsHovered] = useState<string>("");
+	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const typeMap = {
 		[CanvasType.CONTENT]: { icon: File01Icon },
-		[CanvasType.THREAD]: { icon: Comment02Icon },
+		[CanvasType.THREAD]: { icon: undefined },
 	};
 
-	const componentMapper = (type: CanvasType) => {
+	const componentMapper = (payload: CanvasPayload) => {
+		const { type, data } = payload;
 		switch (type) {
 			case CanvasType.CONTENT:
 				return (
@@ -64,7 +251,7 @@ const AiCanvas = () => {
 					</ContainerWithMargin>
 				);
 			case CanvasType.THREAD:
-				return <AiConversation />;
+				return <AiConversation threadId={data?.threadId ?? ""} isCanvas />;
 			default:
 				return null;
 		}
@@ -74,15 +261,33 @@ const AiCanvas = () => {
 		return {
 			...canvas,
 			icon: typeMap[canvas.type]?.icon,
-			component: componentMapper(canvas.type),
+			title: canvas?.data?.title,
+			component: componentMapper(canvas),
 		};
 	});
 
 	const lastCanvas = canvasList[canvasList.length - 1];
 
+	const sentinelScroll = useCallback((id: string) => {
+		const container = scrollRef.current;
+		if (!container) return;
+		const sentinelElement = container.querySelector(`[data-tab-id="${id}"]`);
+		if (sentinelElement) {
+			sentinelElement.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+				inline: "start",
+			});
+		}
+	}, []);
+
 	useEffect(() => {
 		setActiveCanvasId(lastCanvas?.id);
-	}, [lastCanvas]);
+	}, [lastCanvas, setActiveCanvasId]);
+
+	useEffect(() => {
+		sentinelScroll(activeCanvasId);
+	}, [sentinelScroll, activeCanvasId]);
 
 	return (
 		<Tabs
@@ -91,50 +296,18 @@ const AiCanvas = () => {
 			className="gap-0"
 		>
 			<AiCanvasHeader>
-				<ScrollArea className="w-full p-0">
-					<TabsList className="bg-transparent">
+				<ScrollArea
+					ref={scrollRef}
+					className="w-full p-0 h-[calc(var(--header-height)-(var(--spacing)*0.5))]"
+				>
+					<TabsList className="flex items-center bg-transparent h-[calc(var(--header-height)-(var(--spacing)*0.5))]">
 						{canvasTabs?.map((trigger) => (
-							<div
+							<CanvasTabTrigger
 								key={trigger.id}
-								className="relative"
-								onMouseEnter={() => {
-									if (isMobile) return;
-									setIsHovered(trigger.id);
-								}}
-								onMouseLeave={() => {
-									if (isMobile) return;
-									setIsHovered("");
-								}}
-							>
-								<TabsTrigger
-									value={trigger.id}
-									className={cn(
-										"cursor-pointer data-[state=active]:border data-[state=active]:border-ring",
-										"pl-1 pr-8",
-									)}
-								>
-									<SharedIcon icon={trigger.icon} />
-								</TabsTrigger>
-								<Button
-									variant="secondary"
-									size="icon"
-									className={cn(
-										"absolute top-1/2 -translate-y-1/2 right-1 rounded-full p-1 size-fit cursor-pointer transition-opacity",
-										isMobile || isHovered === trigger.id
-											? "opacity-100"
-											: "opacity-0",
-									)}
-									onClick={() =>
-										removeCanvas({
-											type: trigger.type,
-											threadId: trigger.data?.threadId,
-											roomId: trigger.data?.roomId,
-										})
-									}
-								>
-									<SharedIcon icon={Cancel01Icon} className="size-3" />
-								</Button>
-							</div>
+								canvas={trigger}
+								isActive={activeCanvasId === trigger.id}
+								canvasArray={canvasTabs}
+							/>
 						))}
 					</TabsList>
 					<ScrollBar orientation="horizontal" />

@@ -36,4 +36,16 @@ export default defineSchema({
 		.index("by_userId", ["userId"])
 		.index("by_threadId_and_userId", ["threadId", "userId"])
 		.index("by_uuid_and_userId", ["uuid", "userId"]),
+
+	discussions: defineTable({
+		chatId: v.id("chats"),
+		messageId: v.string(),
+		uuid: v.string(),
+		threadId: v.string(),
+		userId: v.string(),
+	})
+		.index("by_messageId", ["messageId"])
+		.index("by_userId", ["userId"])
+		.index("by_threadId", ["threadId"])
+		.index("by_messageId_and_userId", ["messageId", "userId"]),
 });

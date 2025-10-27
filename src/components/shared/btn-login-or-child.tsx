@@ -5,10 +5,10 @@ import SignInButton from "./sign-in-button";
 const BtnLoginOrChild = ({ children }: { children: ReactNode }) => {
 	return (
 		<>
-			<Authenticated>
+			<Authenticated>{children}</Authenticated>
+			<Unauthenticated>
 				<SignInButton mode="modal">{children}</SignInButton>
-			</Authenticated>
-			<Unauthenticated>{children}</Unauthenticated>
+			</Unauthenticated>
 		</>
 	);
 };

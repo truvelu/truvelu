@@ -15,6 +15,30 @@ export function compositeKeyCreator(payload: CanvasPayload): string {
 }
 
 /**
+ * Extracts type, roomId, and threadId from a composite key
+ * Parses the composite key format: type_{type}:room_{roomId}:thread_{threadId}
+ */
+export function compositeKeyExtractor(compositeKey: string): {
+	type: CanvasType;
+	roomId: string;
+	threadId: string;
+} | null {
+	const pattern = /^type_([^:]+):room_([^:]+):thread_(.+)$/;
+	const match = compositeKey.match(pattern);
+
+	if (!match) {
+		return null;
+	}
+
+	const [, type, roomId, threadId] = match;
+	return {
+		type: type as CanvasType,
+		roomId,
+		threadId,
+	};
+}
+
+/**
  * External finder utilities for canvasMap operations
  * These can be used both inside the store and externally
  */

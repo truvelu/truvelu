@@ -4,6 +4,8 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
+	ssr: false,
+
 	component: RouteComponent,
 	beforeLoad: async (context) => {
 		if (!context.context.userId) {
@@ -19,7 +21,7 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 		}
 	},
 	loader: async (context) => {
-		context.context.queryClient.prefetchQuery(
+		await context.context.queryClient.ensureQueryData(
 			convexQuery(api.auth.getCurrentUser, {}),
 		);
 	},

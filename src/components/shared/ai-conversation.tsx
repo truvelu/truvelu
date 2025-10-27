@@ -38,7 +38,12 @@ import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
-const AiConversationContent = memo(() => {
+interface AiConversationProps {
+	threadId?: string;
+	isCanvas?: boolean;
+}
+
+const AiConversationContent = memo((props: AiConversationProps) => {
 	const matchRoute = useMatchRoute();
 	const isIndexRoute = matchRoute({ to: "/", pending: true });
 	const isLearningRoute = matchRoute({
@@ -86,14 +91,17 @@ const AiConversationContent = memo(() => {
 				: "skip",
 		),
 	);
+
+	const threadId = props.threadId ?? chat?.threadId ?? "";
+
 	const {
 		results: messages,
 		status,
 		loadMore,
 	} = useUIMessages(
 		api.chat.listThreadMessages,
-		chat?.threadId ? { threadId: chat?.threadId ?? "" } : "skip",
-		{ initialNumItems: 20, stream: true },
+		threadId ? { threadId } : "skip",
+		{ initialNumItems: 10, stream: true },
 	);
 	const sendChatMessage = useMutation({
 		mutationKey: ["sendChatMessage"],
@@ -137,10 +145,10 @@ const AiConversationContent = memo(() => {
 
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
-			if (!chat?.threadId || !user?._id?.toString() || !roomId) return;
+			if (!threadId || !user?._id?.toString() || !roomId) return;
 			if (isMessageStatusStreaming) {
 				abortStreamByOrder.mutate({
-					threadId: chat?.threadId ?? "",
+					threadId: threadId ?? "",
 					order: messageOrderThatIsStreaming,
 				});
 				return;
@@ -148,7 +156,7 @@ const AiConversationContent = memo(() => {
 
 			sendChatMessage.mutate(
 				{
-					threadId: chat?.threadId ?? "",
+					threadId: threadId ?? "",
 					roomId: roomId,
 					prompt: message.text ?? "",
 					modelKey: "minimax/minimax-m2:free",
@@ -164,7 +172,7 @@ const AiConversationContent = memo(() => {
 			event.preventDefault();
 		},
 		[
-			chat?.threadId,
+			threadId,
 			user?._id,
 			roomId,
 			sendChatMessage,
@@ -179,9 +187,11 @@ const AiConversationContent = memo(() => {
 		({
 			type,
 			threadId,
+			title,
 		}: {
 			type: CanvasType;
 			threadId: string;
+			title?: string;
 		}) => {
 			const existingCanvas = getCanvas({
 				roomId,
@@ -198,7 +208,7 @@ const AiConversationContent = memo(() => {
 			} else {
 				upsertCanvas({
 					type,
-					data: { threadId, roomId },
+					data: { threadId, roomId, title },
 				});
 			}
 
@@ -260,7 +270,7 @@ const AiConversationContent = memo(() => {
 				// Add small timeout to ensure scroll paint is complete
 				timerId = setTimeout(() => {
 					setIsReadyToShow(true);
-				}, 50);
+				}, 0);
 			});
 		});
 
@@ -395,6 +405,7 @@ const AiConversationContent = memo(() => {
 											key={`${message.id}`}
 											message={message}
 											handleOpenCanvas={handleOpenCanvas}
+											isCanvas={props.isCanvas}
 										/>
 									);
 								})}
@@ -425,20 +436,23 @@ const AiConversationContent = memo(() => {
 	);
 });
 
-const AiConversation = memo(() => {
-	const roomId = useGetRoomId();
-	return (
-		<Conversation
-			key={roomId}
-			className={cn(
-				"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
-				"[&>div]:[scrollbar-gutter:stable_both-edges]",
-			)}
-		>
-			<AiConversationContent />
-		</Conversation>
-	);
-});
+const AiConversation = memo(
+	({ isCanvas = false, ...props }: AiConversationProps) => {
+		const roomId = useGetRoomId();
+
+		return (
+			<Conversation
+				key={roomId}
+				className={cn(
+					"relative h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
+					"[&>div]:[scrollbar-gutter:stable_both-edges]",
+				)}
+			>
+				<AiConversationContent isCanvas={isCanvas} {...props} />
+			</Conversation>
+		);
+	},
+);
 
 AiConversation.displayName = "AiConversation";
 

@@ -28,22 +28,27 @@ import type { ImperativePanelHandle } from "react-resizable-panels";
 import { useShallow } from "zustand/react/shallow";
 
 export const Route = createFileRoute("/_chatLayout")({
+	ssr: false,
+
 	component: ChatLayout,
 	loader: async (context) => {
-		await Promise.all([
-			context.context.queryClient.prefetchQuery(
-				convexQuery(api.auth.getCurrentUser, {}),
+		const user = await context.context.queryClient.ensureQueryData(
+			convexQuery(api.auth.getCurrentUser, {}),
+		);
+		await context.context.queryClient.ensureQueryData(
+			convexQuery(
+				api.chat.getChats,
+				user?._id?.toString()
+					? {
+							userId: user?._id?.toString() ?? "",
+							paginationOpts: {
+								numItems: 20,
+								cursor: null,
+							},
+						}
+					: "skip",
 			),
-			context.context.queryClient.prefetchQuery(
-				convexQuery(api.chat.getChats, {
-					userId: context.context.userId ?? "",
-					paginationOpts: {
-						numItems: 20,
-						cursor: null,
-					},
-				}),
-			),
-		]);
+		);
 	},
 });
 
@@ -122,7 +127,7 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 				collapsible
 				minSize={35}
 				className={cn(
-					"flex flex-col relative h-svh lg:h-dvh pb-3 transition-all duration-75 ease-in-out overflow-hidden",
+					"flex flex-col relative h-svh lg:h-dvh transition-all duration-75 ease-in-out overflow-hidden",
 					"shadow-[0_0_18px_rgba(0,0,0,0.12)] dark:shadow-[0_0_18px_rgba(0,0,0,0.48)] z-30",
 				)}
 			>

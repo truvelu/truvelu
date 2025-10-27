@@ -14,9 +14,11 @@ import { type FormEvent, useState } from "react";
 import { v7 as uuid } from "uuid";
 
 export const Route = createFileRoute("/_chatLayout/")({
+	ssr: false,
+
 	component: App,
 	loader: async (context) => {
-		await context.context.queryClient.prefetchQuery(
+		await context.context.queryClient.ensureQueryData(
 			convexQuery(api.auth.getCurrentUser, {}),
 		);
 	},

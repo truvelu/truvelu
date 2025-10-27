@@ -1,12 +1,11 @@
 import { cn } from "@/lib/utils";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Unauthenticated, useConvexAuth } from "convex/react";
 import { memo } from "react";
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
 
 export const Header = () => {
-	const navigate = useNavigate();
 	const { isMobile } = useSidebar();
 	const { isAuthenticated } = useConvexAuth();
 
@@ -19,13 +18,8 @@ export const Header = () => {
 		>
 			{isMobile && <SidebarTrigger className="p-2 cursor-pointer" />}
 			<Unauthenticated>
-				<Button
-					onClick={() => {
-						navigate({ to: "/auth" });
-					}}
-					className="rounded-tlarge px-3 h-9 cursor-pointer"
-				>
-					Log in
+				<Button className="rounded-tlarge px-3 h-9 cursor-pointer" asChild>
+					<Link to="/auth">Log in</Link>
 				</Button>
 			</Unauthenticated>
 		</div>

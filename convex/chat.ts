@@ -1,5 +1,6 @@
 import {
 	abortStream,
+	getThreadMetadata,
 	listUIMessages,
 	syncStreams,
 	vStreamArgs,
@@ -39,18 +40,30 @@ export const getChats = query({
 		paginationOpts: paginationOptsValidator,
 	},
 	handler: async (ctx, args) => {
-		const allThreads = await ctx.runQuery(
-			components.agent.threads.listThreadsByUserId,
-			{
+		const [threads, discussions] = await Promise.all([
+			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
 				userId: args.userId,
 				paginationOpts: args.paginationOpts,
-			},
-		);
+			}),
+			ctx.db
+				.query("discussions")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
+		]);
+
+		const { page, ...allThreads } = threads;
+
+		const discussionFilter = (threadId: string) =>
+			discussions?.find((discussion) => discussion.threadId === threadId);
+
 		const activeThreads = {
 			...allThreads,
-			page: allThreads.page.filter((thread) => thread.status === "active"),
+			page: page
+				.filter((thread) => thread.status === "active")
+				.filter((thread) => !discussionFilter(thread._id)),
 		};
-		const allActiveThreadsWithChatsPage = await Promise.all(
+
+		const allActiveThreadsWithChatPage = await Promise.all(
 			activeThreads.page.map(async (thread) => {
 				const chat = await ctx.db
 					.query("chats")
@@ -61,11 +74,20 @@ export const getChats = query({
 
 				return {
 					...thread,
-					additionalData: chat,
+					data: chat,
 				};
 			}),
 		);
-		return { ...allThreads, page: allActiveThreadsWithChatsPage };
+
+		const filterAllActiveThreadsWithChatHaveDataPage =
+			allActiveThreadsWithChatPage.filter((thread) => !!thread.data);
+
+		const result = {
+			...allThreads,
+			page: filterAllActiveThreadsWithChatHaveDataPage,
+		};
+
+		return result;
 	},
 });
 
@@ -148,6 +170,17 @@ export const abortStreamByOrder = mutation({
 			threadId,
 			order,
 			reason: "Aborting explicitly",
+		});
+	},
+});
+
+export const getMetadata = query({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, { threadId }) => {
+		return await getThreadMetadata(ctx, components.agent, {
+			threadId,
 		});
 	},
 });

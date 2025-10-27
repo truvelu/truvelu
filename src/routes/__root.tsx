@@ -88,8 +88,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 	component: RootComponent,
 
-	pendingComponent: () => <div>Loading...</div>,
-
 	errorComponent: () => <div>Error</div>,
 
 	notFoundComponent: () => <div>Not found</div>,

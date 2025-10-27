@@ -11,11 +11,12 @@ import { Response } from "../ai-elements/response";
 import AiActions from "./ai-actions";
 
 interface AiMessagesProps {
+	isCanvas?: boolean;
 	message: UIMessage;
 	handleOpenCanvas: ({
 		type,
 		threadId,
-	}: { type: CanvasType; threadId: string }) => void;
+	}: { type: CanvasType; threadId: string; title?: string }) => void;
 }
 
 const AiMessageText = memo(
@@ -35,7 +36,7 @@ const AiMessageText = memo(
 );
 
 const AiMessages = memo((props: AiMessagesProps) => {
-	const { message, handleOpenCanvas } = props;
+	const { isCanvas, message, handleOpenCanvas } = props;
 
 	const isMobile = useIsMobile();
 	const [hoveredId, setHoveredId] = useState<string>("");
@@ -101,6 +102,7 @@ const AiMessages = memo((props: AiMessagesProps) => {
 			{/* actions */}
 			{message?.status === "success" && (
 				<AiActions
+					isCanvas={isCanvas}
 					message={message}
 					hoveredId={hoveredId}
 					handleOpenCanvas={handleOpenCanvas}

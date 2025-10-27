@@ -12,6 +12,7 @@ import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as chatAction from "../chatAction.js";
+import type * as discussion from "../discussion.js";
 import type * as http from "../http.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   chat: typeof chat;
   chatAction: typeof chatAction;
+  discussion: typeof discussion;
   http: typeof http;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
