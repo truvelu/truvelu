@@ -251,7 +251,12 @@ const AiCanvas = () => {
 					</ContainerWithMargin>
 				);
 			case CanvasType.THREAD:
-				return <AiConversation threadId={data?.threadId ?? ""} isCanvas />;
+				return (
+					<AiConversation
+						additionalThreadId={data?.threadId ?? ""}
+						type="discussion"
+					/>
+				);
 			default:
 				return null;
 		}

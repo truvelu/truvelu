@@ -13,6 +13,8 @@ import { Message01Icon } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import type { streamSectionValidator } from "convex/schema";
+import type { Infer } from "convex/values";
 import {
 	type FormEvent,
 	Fragment,
@@ -43,11 +45,13 @@ import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
 interface AiConversationProps {
-	threadId?: string;
-	isCanvas?: boolean;
+	additionalThreadId?: string;
+	type?: Infer<typeof streamSectionValidator>;
 }
 
 const AiConversationContent = memo((props: AiConversationProps) => {
+	const { additionalThreadId, type = "thread" } = props;
+
 	const matchRoute = useMatchRoute();
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
@@ -91,23 +95,25 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				: "skip",
 		),
 	);
+
+	const threadId = additionalThreadId ?? chat?.threadId ?? "";
+	const isMainThread = type === "thread";
+
 	const { data: discussion, isPending: isDiscussionPending } = useQuery(
 		convexQuery(
-			api.discussion.getDiscussionByUUIDAndUserId,
-			props.isCanvas && !!user?._id?.toString() && !!roomId
+			api.discussion.getDiscussionByTreadIdAndUserId,
+			!isMainThread && !!user?._id?.toString() && !!threadId
 				? {
 						userId: user?._id?.toString() ?? "",
-						uuid: roomId,
+						threadId,
 					}
 				: "skip",
 		),
 	);
 
-	console.log({ isChatPending, isDiscussionPending });
-
-	const threadId = props.threadId ?? chat?.threadId ?? "";
 	const indexRoute = matchRoute({ to: "/" });
 	const learningRoute = matchRoute({ to: "/l/{-$learningId}", pending: true });
+
 	const isIndexRoute = indexRoute !== false && !roomId;
 	const isLearningRoute = learningRoute !== false;
 
@@ -143,14 +149,13 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		[discussion],
 	);
 	const roomStatus = useMemo(
-		() => (props.isCanvas ? discussionStatus : chatStatus),
-		[props.isCanvas, discussionStatus, chatStatus],
+		() => (isMainThread ? chatStatus : discussionStatus),
+		[isMainThread, discussionStatus, chatStatus],
 	);
 
 	const roomIsPending = useMemo(
-		() =>
-			isUserPending || props.isCanvas ? isDiscussionPending : isChatPending,
-		[isUserPending, isChatPending, isDiscussionPending, props.isCanvas],
+		() => (isUserPending || isMainThread ? isChatPending : isDiscussionPending),
+		[isUserPending, isChatPending, isDiscussionPending, isMainThread],
 	);
 
 	const messageThatIsStreaming = useMemo(
@@ -200,26 +205,19 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							prompt,
 							modelKey: "minimax/minimax-m2:free",
 							userId,
-							streamSection: props.isCanvas ? "discussion" : "thread",
+							streamSection: type,
 						});
 					},
 				},
 			);
 			event.preventDefault();
 		},
-		[user?._id, createChat, sendChatMessage, navigate, props.isCanvas],
+		[user?._id, createChat, sendChatMessage, navigate, type],
 	);
 
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
 			const userId = user?._id?.toString();
-			console.log({
-				isInputStatusLoading,
-				isIndexRoute,
-				userId,
-				threadId,
-				roomId,
-			});
 
 			if (!userId) return;
 
@@ -232,11 +230,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			if (!threadId || !roomId) return;
 
 			if (isInputStatusLoading) {
-				console.log("abort nih");
-
 				abortStreamByOrder.mutate({
 					threadId,
 					order: messageOrderThatIsStreaming,
+					streamSection: type,
 				});
 				return;
 			}
@@ -247,7 +244,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				prompt: message.text ?? "",
 				modelKey: "minimax/minimax-m2:free",
 				userId,
-				streamSection: props.isCanvas ? "discussion" : "thread",
+				streamSection: type,
 			});
 			scrollToBottom();
 			event.preventDefault();
@@ -262,8 +259,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			isIndexRoute,
 			scrollToBottom,
 			handleSubmitNewChat,
-			props.isCanvas,
 			isInputStatusLoading,
+			type,
 		],
 	);
 
@@ -425,6 +422,15 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		isLearningRoute,
 	]);
 
+	console.log({
+		isMainThread,
+		chatStatus,
+		discussionStatus,
+		realDS: discussion?.status,
+		roomStatus,
+		messageThatIsStreamingTextPartHasValue,
+	});
+
 	return (
 		<>
 			<ConversationContent className="px-0" key={roomId}>
@@ -466,7 +472,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 											<AiMessages
 												message={message}
 												handleOpenCanvas={handleOpenCanvas}
-												isCanvas={props.isCanvas}
+												type={type}
 											/>
 											{roomStatus === "streaming" &&
 												!messageThatIsStreamingTextPartHasValue &&
@@ -506,21 +512,23 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 });
 
 const AiConversation = memo(
-	({ isCanvas = false, ...props }: AiConversationProps) => {
+	({ type = "thread", ...props }: AiConversationProps) => {
 		const roomId = useGetRoomId();
+
+		const isMainThread = type === "thread";
 
 		return (
 			<Conversation
 				key={roomId}
 				className={cn(
-					"relative lg:h-[calc(100lvh-var(--spacing-header))] flex-1",
+					"relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))]",
 					"[&>div]:[scrollbar-gutter:stable_both-edges]",
-					isCanvas
-						? "h-[calc(95svh-var(--spacing-header)-1.5rem)]"
-						: "h-[calc(100svh-var(--spacing-header))]",
+					isMainThread
+						? "h-[calc(100svh-var(--spacing-header))]"
+						: "h-[calc(95svh-var(--spacing-header)-1.5rem)]",
 				)}
 			>
-				<AiConversationContent isCanvas={isCanvas} {...props} />
+				<AiConversationContent type={type} {...props} />
 			</Conversation>
 		);
 	},

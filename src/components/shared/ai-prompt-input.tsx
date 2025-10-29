@@ -60,11 +60,11 @@ export const AiPromptInput = memo(
 		const handleSubmit = useCallback(
 			(message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
 				if (!onSubmit) return;
-				if (!value.trim()) return;
+				if (!value.trim() && !isInputStatusLoading) return;
 				onSubmit(message, event);
 				setValue("");
 			},
-			[onSubmit, value],
+			[onSubmit, value, isInputStatusLoading],
 		);
 
 		return (

@@ -13,13 +13,15 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
+import type { streamSectionValidator } from "convex/schema";
+import type { Infer } from "convex/values";
 import { memo, useMemo } from "react";
 import { v7 as uuid } from "uuid";
 import { Action, Actions } from "../ai-elements/actions";
 import SharedIcon from "./shared-icon";
 
 interface AiActionsProps {
-	isCanvas?: boolean;
+	type: Infer<typeof streamSectionValidator>;
 	message: UIMessage;
 	hoveredId: string;
 	handleOpenCanvas: ({
@@ -29,9 +31,11 @@ interface AiActionsProps {
 }
 
 const AiActions = memo((props: AiActionsProps) => {
-	const { isCanvas, message, hoveredId, handleOpenCanvas } = props;
+	const { type, message, hoveredId, handleOpenCanvas } = props;
 
 	const roomId = useGetRoomId();
+
+	const isMainThread = type === "thread";
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useQuery({
@@ -114,7 +118,7 @@ const AiActions = memo((props: AiActionsProps) => {
 				<SharedIcon icon={Copy01Icon} />
 			</Action>
 
-			{!isCanvas && (
+			{isMainThread && (
 				<Action
 					label={discussion ? "Deep Discussion" : "New Deep Discussion"}
 					className={cn(
@@ -125,7 +129,7 @@ const AiActions = memo((props: AiActionsProps) => {
 						if (!discussion) {
 							createDiscussion.mutate(
 								{
-									chatId: chat?._id,
+									parentChatId: chat?._id,
 									messageId: message.id,
 									messages: preDiscussionMessageFinal,
 									uuid: uuid(),

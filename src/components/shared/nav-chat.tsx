@@ -66,7 +66,7 @@ const NavChatItem = ({
 	return (
 		<SidebarMenuItem>
 			<SidebarMenuButton
-				tooltip="Chat"
+				tooltip={chat?.title}
 				className="cursor-pointer rounded-tlarge py-0"
 				onClick={(e) => {
 					// Prevent navigation when editing

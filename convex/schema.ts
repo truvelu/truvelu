@@ -28,6 +28,11 @@ export const chatStatusValidator = v.union(
 	v.literal("streaming"),
 );
 
+export const activeStatusValidator = v.union(
+	v.literal("active"),
+	v.literal("archived"),
+);
+
 export const streamSectionValidator = v.union(
 	v.literal("thread"),
 	v.literal("discussion"),
@@ -50,15 +55,35 @@ export default defineSchema({
 
 	discussions: defineTable({
 		chatId: v.id("chats"),
+		parentChatId: v.id("chats"),
 		messageId: v.string(),
-		uuid: v.string(),
-		threadId: v.string(),
-		userId: v.string(),
-		status: v.optional(chatStatusValidator),
+		userId: v.string(), // Owner (denormalized for performance/security)
 	})
+		.index("by_chatId", ["chatId"])
+		.index("by_parentChatId", ["parentChatId"])
 		.index("by_messageId", ["messageId"])
 		.index("by_userId", ["userId"])
-		.index("by_threadId", ["threadId"])
-		.index("by_messageId_and_userId", ["messageId", "userId"])
+		.index("by_parentChatId_and_messageId", ["parentChatId", "messageId"])
+		.index("by_parentChatId_and_userId", ["parentChatId", "userId"]),
+
+	learning: defineTable({
+		uuid: v.string(),
+		userId: v.string(),
+		title: v.string(),
+		activeStatus: v.optional(activeStatusValidator),
+	})
+		.index("by_uuid", ["uuid"])
+		.index("by_userId", ["userId"])
 		.index("by_uuid_and_userId", ["uuid", "userId"]),
+
+	learningHistories: defineTable({
+		learningId: v.id("learning"),
+		chatId: v.id("chats"),
+		userId: v.string(),
+	})
+		.index("by_learningId", ["learningId"])
+		.index("by_chatId", ["chatId"])
+		.index("by_userId", ["userId"])
+		.index("by_learningId_and_chatId", ["learningId", "chatId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 });

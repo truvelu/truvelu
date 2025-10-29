@@ -5,6 +5,7 @@ import {
 	syncStreams,
 	vStreamArgs,
 } from "@convex-dev/agent";
+import { getManyFrom } from "convex-helpers/server/relationships";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
@@ -70,10 +71,12 @@ export const getChats = query({
 				userId: args.userId,
 				paginationOpts: args.paginationOpts,
 			}),
+			// Get all discussion records for this user only (security & performance)
 			ctx.db
 				.query("discussions")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
 				.collect(),
+			// Get all chats for this user (includes both main chats and discussion chats)
 			ctx.db
 				.query("chats")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -82,9 +85,10 @@ export const getChats = query({
 
 		const { page, ...paginationInfo } = threads;
 
-		// Create a Set of discussion thread IDs for O(1) lookup
-		const discussionThreadIds = new Set(
-			discussions.map((discussion) => discussion.threadId),
+		// Create a Set of discussion chat IDs for O(1) lookup
+		// We exclude discussions from the main chat list since they appear in the canvas
+		const discussionChatIds = new Set(
+			discussions.map((discussion) => discussion.chatId),
 		);
 
 		// Create a Map of threadId -> chat for O(1) lookup
@@ -95,12 +99,16 @@ export const getChats = query({
 		// Filter and enrich threads in a single pass
 		const enrichedThreads = page
 			.filter((thread) => thread.status === "active")
-			.filter((thread) => !discussionThreadIds.has(thread._id))
 			.map((thread) => ({
 				...thread,
 				data: chatsByThreadId.get(thread._id),
 			}))
-			.filter((thread) => thread.data !== undefined);
+			.filter((thread) => {
+				// Exclude discussions (canvas chats) from main chat list
+				return (
+					thread.data !== undefined && !discussionChatIds.has(thread.data._id)
+				);
+			});
 
 		return {
 			...paginationInfo,
@@ -121,6 +129,41 @@ export const getChat = query({
 				q.eq("uuid", args.uuid).eq("userId", args.userId),
 			)
 			.unique();
+	},
+});
+
+export const getChatWithDiscussions = query({
+	args: {
+		chatId: v.id("chats"),
+	},
+	handler: async (ctx, args) => {
+		const chat = await ctx.db.get(args.chatId);
+		if (!chat) return null;
+
+		// Get all discussions for this chat using the one-to-many relationship
+		// discussions.parentChatId -> chats._id
+		const discussionRecords = await getManyFrom(
+			ctx.db,
+			"discussions",
+			"by_parentChatId",
+			args.chatId,
+		);
+
+		// Get the full chat data for each discussion
+		const discussions = await Promise.all(
+			discussionRecords.map(async (discussionRecord) => {
+				const discussionChat = await ctx.db.get(discussionRecord.chatId);
+				return {
+					...discussionChat,
+					discussionMeta: discussionRecord,
+				};
+			}),
+		);
+
+		return {
+			...chat,
+			discussions,
+		};
 	},
 });
 
@@ -187,13 +230,31 @@ export const sendChatMessage = mutation({
 });
 
 export const abortStreamByOrder = mutation({
-	args: { threadId: v.string(), order: v.number() },
-	handler: async (ctx, { threadId, order }) => {
-		return await abortStream(ctx, components.agent, {
+	args: {
+		threadId: v.string(),
+		order: v.number(),
+		streamSection: streamSectionValidator,
+	},
+	handler: async (ctx, { threadId, order, streamSection }) => {
+		const isAborted = await abortStream(ctx, components.agent, {
 			threadId,
 			order,
 			reason: "Aborting explicitly",
 		});
+
+		await Promise.all([
+			streamSection === "thread"
+				? ctx.runMutation(internal.chat.patchChatStatus, {
+						threadId,
+						status: "ready",
+					})
+				: ctx.runMutation(internal.discussion.patchDiscussionStatus, {
+						threadId,
+						status: "ready",
+					}),
+		]);
+
+		return isAborted;
 	},
 });
 
