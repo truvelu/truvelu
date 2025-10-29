@@ -8,9 +8,13 @@ import {
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
-import { modelOptionsValidator } from "./schema";
+import {
+	chatStatusValidator,
+	modelOptionsValidator,
+	streamSectionValidator,
+} from "./schema";
 
 export const createChat = mutation({
 	args: {
@@ -28,9 +32,29 @@ export const createChat = mutation({
 		await ctx.db.insert("chats", {
 			userId,
 			threadId,
+			status: "ready",
 			...args,
 		});
 		return { threadId, roomId: args.uuid };
+	},
+});
+
+export const patchChatStatus = internalMutation({
+	args: {
+		threadId: v.string(),
+		status: chatStatusValidator,
+	},
+	handler: async (ctx, { threadId, status }) => {
+		const chat = await ctx.db
+			.query("chats")
+			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+			.unique();
+
+		if (!chat) {
+			throw new Error("Chat not found");
+		}
+
+		await ctx.db.patch(chat._id, { status });
 	},
 });
 
@@ -40,7 +64,8 @@ export const getChats = query({
 		paginationOpts: paginationOptsValidator,
 	},
 	handler: async (ctx, args) => {
-		const [threads, discussions] = await Promise.all([
+		// Fetch threads, discussions, and all user chats in parallel
+		const [threads, discussions, allChats] = await Promise.all([
 			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
 				userId: args.userId,
 				paginationOpts: args.paginationOpts,
@@ -49,45 +74,38 @@ export const getChats = query({
 				.query("discussions")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
 				.collect(),
+			ctx.db
+				.query("chats")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
 		]);
 
-		const { page, ...allThreads } = threads;
+		const { page, ...paginationInfo } = threads;
 
-		const discussionFilter = (threadId: string) =>
-			discussions?.find((discussion) => discussion.threadId === threadId);
-
-		const activeThreads = {
-			...allThreads,
-			page: page
-				.filter((thread) => thread.status === "active")
-				.filter((thread) => !discussionFilter(thread._id)),
-		};
-
-		const allActiveThreadsWithChatPage = await Promise.all(
-			activeThreads.page.map(async (thread) => {
-				const chat = await ctx.db
-					.query("chats")
-					.withIndex("by_threadId_and_userId", (q) =>
-						q.eq("threadId", thread._id).eq("userId", args.userId),
-					)
-					.unique();
-
-				return {
-					...thread,
-					data: chat,
-				};
-			}),
+		// Create a Set of discussion thread IDs for O(1) lookup
+		const discussionThreadIds = new Set(
+			discussions.map((discussion) => discussion.threadId),
 		);
 
-		const filterAllActiveThreadsWithChatHaveDataPage =
-			allActiveThreadsWithChatPage.filter((thread) => !!thread.data);
+		// Create a Map of threadId -> chat for O(1) lookup
+		const chatsByThreadId = new Map(
+			allChats.map((chat) => [chat.threadId, chat]),
+		);
 
-		const result = {
-			...allThreads,
-			page: filterAllActiveThreadsWithChatHaveDataPage,
+		// Filter and enrich threads in a single pass
+		const enrichedThreads = page
+			.filter((thread) => thread.status === "active")
+			.filter((thread) => !discussionThreadIds.has(thread._id))
+			.map((thread) => ({
+				...thread,
+				data: chatsByThreadId.get(thread._id),
+			}))
+			.filter((thread) => thread.data !== undefined);
+
+		return {
+			...paginationInfo,
+			page: enrichedThreads,
 		};
-
-		return result;
 	},
 });
 
@@ -133,8 +151,12 @@ export const sendChatMessage = mutation({
 		roomId: v.string(),
 		prompt: v.string(),
 		modelKey: modelOptionsValidator,
+		streamSection: streamSectionValidator,
 	},
-	handler: async (ctx, { userId, threadId, roomId, prompt, modelKey }) => {
+	handler: async (
+		ctx,
+		{ userId, threadId, roomId, prompt, modelKey, streamSection },
+	) => {
 		const { messageId, message } = await createChatAgentWithModel({
 			modelId: modelKey,
 		}).saveMessage(ctx, {
@@ -151,6 +173,7 @@ export const sendChatMessage = mutation({
 				threadId,
 				modelKey,
 				promptMessageId: messageId,
+				streamSection,
 			}),
 			orderMessage > 0
 				? Promise.resolve()

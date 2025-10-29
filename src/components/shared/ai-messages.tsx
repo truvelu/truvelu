@@ -20,15 +20,21 @@ interface AiMessagesProps {
 }
 
 const AiMessageText = memo(
-	({ message, partText }: { message: UIMessage; partText: TextUIPart }) => {
+	({
+		message,
+		partText,
+	}: {
+		message: UIMessage;
+		partText: TextUIPart;
+	}) => {
 		const [text] = useSmoothText(partText?.text ?? "", {
 			startStreaming: message.status === "streaming",
 		});
-		const memoizedText = useMemo(() => text, [text]);
+
 		return (
 			<Message from={message.role}>
 				<MessageContent variant="flat">
-					<Response>{memoizedText}</Response>
+					<Response>{text}</Response>
 				</MessageContent>
 			</Message>
 		);

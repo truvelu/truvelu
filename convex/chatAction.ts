@@ -1,32 +1,58 @@
 import { v } from "convex/values";
 import z from "zod";
+import { internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
-import { modelOptionsValidator } from "./schema";
+import { modelOptionsValidator, streamSectionValidator } from "./schema";
 
 export const streamAsync = internalAction({
 	args: {
 		promptMessageId: v.string(),
 		threadId: v.string(),
 		modelKey: modelOptionsValidator,
+		streamSection: streamSectionValidator,
 	},
-	handler: async (ctx, { promptMessageId, threadId, modelKey }) => {
-		const result = await createChatAgentWithModel({
-			modelId: modelKey,
-		}).streamText(
-			ctx,
-			{ threadId },
-			{ promptMessageId },
-			{
-				saveStreamDeltas: {
-					chunking: "word",
-					throttleMs: 100,
-					returnImmediately: true,
+	handler: async (
+		ctx,
+		{ promptMessageId, threadId, modelKey, streamSection },
+	) => {
+		const [result] = await Promise.all([
+			createChatAgentWithModel({
+				modelId: modelKey,
+			}).streamText(
+				ctx,
+				{ threadId },
+				{ promptMessageId },
+				{
+					saveStreamDeltas: {
+						chunking: "word",
+						throttleMs: 100,
+					},
 				},
-			},
-		);
+			),
+			streamSection === "thread"
+				? ctx.runMutation(internal.chat.patchChatStatus, {
+						threadId,
+						status: "streaming",
+					})
+				: ctx.runMutation(internal.discussion.patchDiscussionStatus, {
+						threadId,
+						status: "streaming",
+					}),
+		]);
 
-		await result.consumeStream();
+		await Promise.all([
+			streamSection === "thread"
+				? ctx.runMutation(internal.chat.patchChatStatus, {
+						threadId,
+						status: "ready",
+					})
+				: ctx.runMutation(internal.discussion.patchDiscussionStatus, {
+						threadId,
+						status: "ready",
+					}),
+			result.consumeStream(),
+		]);
 	},
 });
 

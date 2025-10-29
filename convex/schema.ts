@@ -23,6 +23,16 @@ export const modelOptionsValidator = v.union(
 	v.literal("minimax/minimax-m2:free"),
 );
 
+export const chatStatusValidator = v.union(
+	v.literal("ready"),
+	v.literal("streaming"),
+);
+
+export const streamSectionValidator = v.union(
+	v.literal("thread"),
+	v.literal("discussion"),
+);
+
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
 
 export default defineSchema({
@@ -30,6 +40,7 @@ export default defineSchema({
 		uuid: v.string(),
 		threadId: v.string(),
 		userId: v.string(),
+		status: v.optional(chatStatusValidator),
 	})
 		.index("by_uuid", ["uuid"])
 		.index("by_threadId", ["threadId"])
@@ -43,9 +54,11 @@ export default defineSchema({
 		uuid: v.string(),
 		threadId: v.string(),
 		userId: v.string(),
+		status: v.optional(chatStatusValidator),
 	})
 		.index("by_messageId", ["messageId"])
 		.index("by_userId", ["userId"])
 		.index("by_threadId", ["threadId"])
-		.index("by_messageId_and_userId", ["messageId", "userId"]),
+		.index("by_messageId_and_userId", ["messageId", "userId"])
+		.index("by_uuid_and_userId", ["uuid", "userId"]),
 });

@@ -1,6 +1,7 @@
 export enum MessageType {
 	TEXT = "text",
 	CANVAS = "canvas",
+	TOOL = "tool",
 }
 
 export type MessagePartText = {

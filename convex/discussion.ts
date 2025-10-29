@@ -1,9 +1,9 @@
 import { vMessage } from "@convex-dev/agent";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { createChatAgentWithModel } from "./agent";
-import { modelOptionsValidator } from "./schema";
+import { chatStatusValidator, modelOptionsValidator } from "./schema";
 
 export const createDiscussion = mutation({
 	args: {
@@ -41,10 +41,45 @@ export const createDiscussion = mutation({
 				uuid,
 				threadId,
 				userId,
+				status: "ready",
 			}),
 		]);
 
 		return { threadId };
+	},
+});
+
+export const patchDiscussionStatus = internalMutation({
+	args: {
+		threadId: v.string(),
+		status: chatStatusValidator,
+	},
+	handler: async (ctx, { threadId, status }) => {
+		const discussion = await ctx.db
+			.query("discussions")
+			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
+			.unique();
+
+		if (!discussion) {
+			throw new Error("Discussion not found");
+		}
+
+		await ctx.db.patch(discussion._id, { status });
+	},
+});
+
+export const getDiscussionByUUIDAndUserId = query({
+	args: {
+		userId: v.string(),
+		uuid: v.string(),
+	},
+	handler: async (ctx, { userId, uuid }) => {
+		return await ctx.db
+			.query("discussions")
+			.withIndex("by_uuid_and_userId", (q) =>
+				q.eq("uuid", uuid).eq("userId", userId),
+			)
+			.unique();
 	},
 });
 

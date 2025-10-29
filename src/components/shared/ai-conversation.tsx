@@ -1,3 +1,4 @@
+import { MessageType } from "@/constants/messages";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useInputHeight } from "@/hooks/use-input-height";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -14,6 +15,7 @@ import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import {
 	type FormEvent,
+	Fragment,
 	memo,
 	useCallback,
 	useEffect,
@@ -72,7 +74,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const prevMessagesLengthRef = useRef<number>(0);
 
 	const [isReadyToShow, setIsReadyToShow] = useState(false);
-	const [isSubmitted, setIsSubmitted] = useState(false);
 
 	const { inputRef, inputHeight, handleInputReady } = useInputHeight();
 
@@ -90,11 +91,24 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				: "skip",
 		),
 	);
+	const { data: discussion, isPending: isDiscussionPending } = useQuery(
+		convexQuery(
+			api.discussion.getDiscussionByUUIDAndUserId,
+			props.isCanvas && !!user?._id?.toString() && !!roomId
+				? {
+						userId: user?._id?.toString() ?? "",
+						uuid: roomId,
+					}
+				: "skip",
+		),
+	);
+
+	console.log({ isChatPending, isDiscussionPending });
 
 	const threadId = props.threadId ?? chat?.threadId ?? "";
 	const indexRoute = matchRoute({ to: "/" });
-	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
-	const isIndexRoute = indexRoute !== false;
+	const learningRoute = matchRoute({ to: "/l/{-$learningId}", pending: true });
+	const isIndexRoute = indexRoute !== false && !roomId;
 	const isLearningRoute = learningRoute !== false;
 
 	const {
@@ -123,6 +137,22 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		mutationFn: useConvexMutation(api.chat.abortStreamByOrder),
 	});
 
+	const chatStatus = useMemo(() => chat?.status ?? "ready", [chat]);
+	const discussionStatus = useMemo(
+		() => discussion?.status ?? "ready",
+		[discussion],
+	);
+	const roomStatus = useMemo(
+		() => (props.isCanvas ? discussionStatus : chatStatus),
+		[props.isCanvas, discussionStatus, chatStatus],
+	);
+
+	const roomIsPending = useMemo(
+		() =>
+			isUserPending || props.isCanvas ? isDiscussionPending : isChatPending,
+		[isUserPending, isChatPending, isDiscussionPending, props.isCanvas],
+	);
+
 	const messageThatIsStreaming = useMemo(
 		() => messages.find((message) => message?.status === "streaming"),
 		[messages],
@@ -131,17 +161,16 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		() => messageThatIsStreaming?.order ?? 0,
 		[messageThatIsStreaming],
 	);
-	const isMessageStatusStreaming = useMemo(
-		() => !!messageThatIsStreaming,
-		[messageThatIsStreaming],
-	);
-	const isMessageStatusPending = useMemo(
-		() => !!messages.find((message) => message?.status === "pending"),
-		[messages],
-	);
 	const isInputStatusLoading = useMemo(
-		() => isMessageStatusStreaming || isMessageStatusPending || isSubmitted,
-		[isMessageStatusStreaming, isMessageStatusPending, isSubmitted],
+		() => roomStatus === "streaming" || !!messageThatIsStreaming,
+		[roomStatus, messageThatIsStreaming],
+	);
+	const messageThatIsStreamingTextPartHasValue = useMemo(
+		() =>
+			messageThatIsStreaming?.parts
+				?.filter((part) => part.type === MessageType.TEXT)
+				?.some((part) => !!part.text) ?? false,
+		[messageThatIsStreaming],
 	);
 
 	const handleSubmitNewChat = useCallback(
@@ -150,7 +179,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 			if (!userId) return;
 
-			setIsSubmitted(true);
 			const prompt = message.text ?? "";
 			createChat.mutate(
 				{
@@ -172,18 +200,27 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							prompt,
 							modelKey: "minimax/minimax-m2:free",
 							userId,
+							streamSection: props.isCanvas ? "discussion" : "thread",
 						});
 					},
 				},
 			);
 			event.preventDefault();
 		},
-		[user?._id, createChat, sendChatMessage, navigate],
+		[user?._id, createChat, sendChatMessage, navigate, props.isCanvas],
 	);
 
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
 			const userId = user?._id?.toString();
+			console.log({
+				isInputStatusLoading,
+				isIndexRoute,
+				userId,
+				threadId,
+				roomId,
+			});
+
 			if (!userId) return;
 
 			// Only create new chat if on index route
@@ -194,7 +231,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 			if (!threadId || !roomId) return;
 
-			if (isMessageStatusStreaming) {
+			if (isInputStatusLoading) {
+				console.log("abort nih");
+
 				abortStreamByOrder.mutate({
 					threadId,
 					order: messageOrderThatIsStreaming,
@@ -202,13 +241,13 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				return;
 			}
 
-			setIsSubmitted(true);
 			sendChatMessage.mutate({
 				threadId,
 				roomId,
 				prompt: message.text ?? "",
 				modelKey: "minimax/minimax-m2:free",
 				userId,
+				streamSection: props.isCanvas ? "discussion" : "thread",
 			});
 			scrollToBottom();
 			event.preventDefault();
@@ -220,10 +259,11 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			sendChatMessage,
 			abortStreamByOrder,
 			messageOrderThatIsStreaming,
-			isMessageStatusStreaming,
 			isIndexRoute,
 			scrollToBottom,
 			handleSubmitNewChat,
+			props.isCanvas,
+			isInputStatusLoading,
 		],
 	);
 
@@ -361,7 +401,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	useEffect(() => {
 		if (isIndexRoute || isLearningRoute) return;
-		if (isUserPending || isChatPending) return;
+		if (isUserPending || roomIsPending || isChatPending) return;
 		if (!user?._id?.toString() || !roomId) return;
 		if (chat) return;
 
@@ -379,16 +419,11 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		user?._id,
 		roomId,
 		isUserPending,
+		roomIsPending,
 		isChatPending,
 		isIndexRoute,
 		isLearningRoute,
 	]);
-
-	useEffect(() => {
-		if (isMessageStatusStreaming) {
-			setIsSubmitted(false);
-		}
-	}, [isMessageStatusStreaming]);
 
 	return (
 		<>
@@ -425,14 +460,22 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 											</div>
 										</div>
 									)}
-								{messages.map((message) => {
+								{messages.map((message, index, messageArray) => {
 									return (
-										<AiMessages
-											key={`${message.id}`}
-											message={message}
-											handleOpenCanvas={handleOpenCanvas}
-											isCanvas={props.isCanvas}
-										/>
+										<Fragment key={`${message.id}`}>
+											<AiMessages
+												message={message}
+												handleOpenCanvas={handleOpenCanvas}
+												isCanvas={props.isCanvas}
+											/>
+											{roomStatus === "streaming" &&
+												!messageThatIsStreamingTextPartHasValue &&
+												messageArray.length - 1 === index && (
+													<div className="flex items-center justify-start flex-1 h-9 px-4">
+														<div className="size-4 rounded-full bg-gray-400 animate-ping" />
+													</div>
+												)}
+										</Fragment>
 									);
 								})}
 							</div>
