@@ -1,7 +1,6 @@
 import { MessageType } from "@/constants/messages";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import type { CanvasType } from "@/zustand/canvas";
 import type { UIMessage } from "@convex-dev/agent";
 import { useSmoothText } from "@convex-dev/agent/react";
 import type { TextUIPart } from "ai";
@@ -15,10 +14,6 @@ import AiActions from "./ai-actions";
 interface AiMessagesProps {
 	type: Infer<typeof streamSectionValidator>;
 	message: UIMessage;
-	handleOpenCanvas: ({
-		type,
-		threadId,
-	}: { type: CanvasType; threadId: string; title?: string }) => void;
 }
 
 const AiMessageText = memo(
@@ -44,7 +39,7 @@ const AiMessageText = memo(
 );
 
 const AiMessages = memo((props: AiMessagesProps) => {
-	const { type, message, handleOpenCanvas } = props;
+	const { type, message } = props;
 
 	const isMobile = useIsMobile();
 	const [hoveredId, setHoveredId] = useState<string>("");
@@ -109,12 +104,7 @@ const AiMessages = memo((props: AiMessagesProps) => {
 
 			{/* actions */}
 			{message?.status !== "pending" && message?.status !== "streaming" && (
-				<AiActions
-					type={type}
-					message={message}
-					hoveredId={hoveredId}
-					handleOpenCanvas={handleOpenCanvas}
-				/>
+				<AiActions type={type} message={message} hoveredId={hoveredId} />
 			)}
 		</div>
 	);

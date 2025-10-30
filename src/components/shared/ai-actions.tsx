@@ -1,7 +1,7 @@
 import { MessageType } from "@/constants/messages";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
-import { CanvasType } from "@/zustand/canvas";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import type { Message, UIMessage } from "@convex-dev/agent";
 import { useUIMessages } from "@convex-dev/agent/react";
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
@@ -15,25 +15,36 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
 import type { streamSectionValidator } from "convex/schema";
 import type { Infer } from "convex/values";
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { v7 as uuid } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import { Action, Actions } from "../ai-elements/actions";
+import { useSidebar } from "../ui/sidebar";
 import SharedIcon from "./shared-icon";
 
 interface AiActionsProps {
 	type: Infer<typeof streamSectionValidator>;
 	message: UIMessage;
 	hoveredId: string;
-	handleOpenCanvas: ({
-		type,
-		threadId,
-	}: { type: CanvasType; threadId: string; title?: string }) => void;
 }
 
 const AiActions = memo((props: AiActionsProps) => {
-	const { type, message, hoveredId, handleOpenCanvas } = props;
+	const { type, message, hoveredId } = props;
 
 	const roomId = useGetRoomId();
+
+	const {
+		open: sidebarOpen,
+		setOpen: setSidebarOpen,
+		setOpenMobile: setSidebarOpenMobile,
+	} = useSidebar();
+	const { upsertCanvas, getCanvas, removeCanvas } = useCanvasStore(
+		useShallow(({ upsertCanvas, getCanvas, removeCanvas }) => ({
+			upsertCanvas,
+			getCanvas,
+			removeCanvas,
+		})),
+	);
 
 	const isMainThread = type === "thread";
 
@@ -93,6 +104,50 @@ const AiActions = memo((props: AiActionsProps) => {
 			},
 		];
 	}, [message]);
+
+	const handleOpenCanvas = useCallback(
+		({
+			type,
+			threadId,
+			title,
+		}: {
+			type: CanvasType;
+			threadId: string;
+			title?: string;
+		}) => {
+			const existingCanvas = getCanvas({
+				roomId,
+				threadId,
+				type,
+			});
+
+			if (existingCanvas.length > 0) {
+				removeCanvas({
+					type,
+					roomId,
+					threadId,
+				});
+			} else {
+				upsertCanvas({
+					type,
+					data: { threadId, roomId, title },
+				});
+			}
+
+			if (existingCanvas.length > 0 && sidebarOpen) return;
+			setSidebarOpen(false);
+			setSidebarOpenMobile(false);
+		},
+		[
+			roomId,
+			getCanvas,
+			removeCanvas,
+			upsertCanvas,
+			sidebarOpen,
+			setSidebarOpen,
+			setSidebarOpenMobile,
+		],
+	);
 
 	return (
 		<Actions role={message.role} showOnHover hovered={hoveredId === message.id}>
@@ -160,8 +215,8 @@ const AiActions = memo((props: AiActionsProps) => {
 					{!!discussion && discussionMessages?.length && (
 						<span className="text-sm font-medium">
 							{discussionMessages?.length === 5
-								? "Messages 5+"
-								: `Messages ${discussionMessages?.length}`}
+								? "5+ Messages"
+								: `${discussionMessages?.length} Messages`}
 						</span>
 					)}
 				</Action>

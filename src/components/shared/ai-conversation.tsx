@@ -3,7 +3,6 @@ import { useGetComponentSize } from "@/hooks/use-get-component-size";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
-import { type CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
 	optimisticallySendMessage,
 	useUIMessages,
@@ -29,7 +28,6 @@ import {
 import { toast } from "sonner";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { v7 as uuid } from "uuid";
-import { useShallow } from "zustand/react/shallow";
 import {
 	Conversation,
 	ConversationContent,
@@ -37,7 +35,6 @@ import {
 	ConversationScrollButton,
 } from "../ai-elements/conversation";
 import type { PromptInputMessage } from "../ai-elements/prompt-input";
-import { useSidebar } from "../ui/sidebar";
 import { Spinner } from "../ui/spinner";
 import AiMessages from "./ai-messages";
 import { AiPromptInput } from "./ai-prompt-input";
@@ -55,18 +52,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const matchRoute = useMatchRoute();
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
-	const {
-		open: sidebarOpen,
-		setOpen: setSidebarOpen,
-		setOpenMobile: setSidebarOpenMobile,
-	} = useSidebar();
-	const { upsertCanvas, getCanvas, removeCanvas } = useCanvasStore(
-		useShallow(({ upsertCanvas, getCanvas, removeCanvas }) => ({
-			upsertCanvas,
-			getCanvas,
-			removeCanvas,
-		})),
-	);
 	const { isIntersecting, ref } = useIntersectionObserver({
 		threshold: 0.5,
 	});
@@ -265,50 +250,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		],
 	);
 
-	const handleOpenCanvas = useCallback(
-		({
-			type,
-			threadId,
-			title,
-		}: {
-			type: CanvasType;
-			threadId: string;
-			title?: string;
-		}) => {
-			const existingCanvas = getCanvas({
-				roomId,
-				threadId,
-				type,
-			});
-
-			if (existingCanvas.length > 0) {
-				removeCanvas({
-					type,
-					roomId,
-					threadId,
-				});
-			} else {
-				upsertCanvas({
-					type,
-					data: { threadId, roomId, title },
-				});
-			}
-
-			if (existingCanvas.length > 0 && sidebarOpen) return;
-			setSidebarOpen(false);
-			setSidebarOpenMobile(false);
-		},
-		[
-			roomId,
-			getCanvas,
-			removeCanvas,
-			upsertCanvas,
-			sidebarOpen,
-			setSidebarOpen,
-			setSidebarOpenMobile,
-		],
-	);
-
 	// Reset state when roomId changes
 	useEffect(() => {
 		if (prevRoomIdRef.current !== roomId) {
@@ -423,15 +364,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		isLearningRoute,
 	]);
 
-	console.log({
-		isMainThread,
-		chatStatus,
-		discussionStatus,
-		realDS: discussion?.status,
-		roomStatus,
-		messageThatIsStreamingTextPartHasValue,
-	});
-
 	return (
 		<>
 			<ConversationContent className="px-0" key={roomId}>
@@ -470,11 +402,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 								{messages.map((message, index, messageArray) => {
 									return (
 										<Fragment key={`${message.id}`}>
-											<AiMessages
-												message={message}
-												handleOpenCanvas={handleOpenCanvas}
-												type={type}
-											/>
+											<AiMessages message={message} type={type} />
 											{roomStatus === "streaming" &&
 												!messageThatIsStreamingTextPartHasValue &&
 												messageArray.length - 1 === index && (

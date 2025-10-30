@@ -19,6 +19,19 @@ export function useCanvasCount() {
 }
 
 export function useCanvasOpenStatus() {
-	const count = useCanvasCount();
-	return count > 0;
+	const roomId = useGetRoomId();
+	const { openCanvas } = useCanvasStore(
+		useShallow(({ openCanvas }) => ({ openCanvas })),
+	);
+	const openCanvasStatus = openCanvas.get(roomId) ?? false;
+	return openCanvasStatus;
+}
+
+export function useActiveCanvasId() {
+	const roomId = useGetRoomId();
+	const { activeCanvasId } = useCanvasStore(
+		useShallow(({ activeCanvasId }) => ({ activeCanvasId })),
+	);
+	const activeCanvasIdByRoomId = activeCanvasId.get(roomId) ?? "";
+	return activeCanvasIdByRoomId;
 }
