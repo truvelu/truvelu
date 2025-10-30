@@ -1,15 +1,11 @@
-import { useInputHeight } from "@/hooks/use-input-height";
 import { cn } from "@/lib/utils";
 import { Folder01Icon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import { Button } from "../ui/button";
-import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
 function AiLearning() {
-	const { inputRef, inputHeight, handleInputReady } = useInputHeight();
-
 	return (
 		<div className="relative flex">
 			<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] [overflow-anchor:none] [transform:translateZ(0)] [will-change:scroll-position]">
@@ -19,13 +15,8 @@ function AiLearning() {
 							"flex-1 grid h-full grid-rows-[auto_min-content_min-content]",
 						)}
 					>
-						<div
-							className="flex min-w-0 flex-col gap-8 self-start px-4 sm:px-0"
-							style={{
-								paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 2rem)`,
-							}}
-						>
-							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col max-md:gap-4 pt-13 max-md:pt-4 bg-white pb-2">
+						<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
+							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col max-md:gap-4 py-7 max-md:pt-4 bg-white">
 								<div className="flex items-center gap-1.5 max-md:-translate-x-1">
 									<SharedIcon
 										icon={Folder01Icon}
@@ -43,7 +34,7 @@ function AiLearning() {
 								</Button>
 							</div>
 
-							<section className="">
+							<section className="pb-13">
 								<ol
 									className="divide-token-bg-tertiary group divide-y"
 									aria-busy="false"
@@ -197,21 +188,6 @@ function AiLearning() {
 								</ol>
 							</section>
 						</div>
-					</ContainerWithMaxWidth>
-				</ContainerWithMargin>
-			</div>
-
-			<div
-				ref={inputRef}
-				className={cn("absolute inset-x-0 bottom-0 mx-4 z-10")}
-			>
-				<ContainerWithMargin>
-					<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
-						<AiPromptInput
-							onReady={handleInputReady}
-							onSubmit={() => {}}
-							isInputStatusLoading={false}
-						/>
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</div>

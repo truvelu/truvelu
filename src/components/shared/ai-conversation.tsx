@@ -1,6 +1,6 @@
 import { MessageType } from "@/constants/messages";
+import { useGetComponentSize } from "@/hooks/use-get-component-size";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { useInputHeight } from "@/hooks/use-input-height";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { type CanvasType, useCanvasStore } from "@/zustand/canvas";
@@ -79,7 +79,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const [isReadyToShow, setIsReadyToShow] = useState(false);
 
-	const { inputRef, inputHeight, handleInputReady } = useInputHeight();
+	const { ref: inputRef, height: inputHeight } =
+		useGetComponentSize<HTMLDivElement>();
 
 	const { data: user, isPending: isUserPending } = useQuery(
 		convexQuery(api.auth.getCurrentUser, {}),
@@ -500,7 +501,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
 						<AiPromptInput
-							onReady={handleInputReady}
 							onSubmit={handleSubmit}
 							isInputStatusLoading={isInputStatusLoading}
 						/>

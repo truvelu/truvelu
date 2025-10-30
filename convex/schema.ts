@@ -70,6 +70,8 @@ export default defineSchema({
 		uuid: v.string(),
 		userId: v.string(),
 		title: v.string(),
+		description: v.optional(v.string()),
+		icon: v.optional(v.string()),
 		activeStatus: v.optional(activeStatusValidator),
 	})
 		.index("by_uuid", ["uuid"])

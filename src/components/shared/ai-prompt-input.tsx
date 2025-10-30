@@ -20,7 +20,6 @@ import {
 	type FormEvent,
 	memo,
 	useCallback,
-	useEffect,
 	useRef,
 	useState,
 } from "react";
@@ -30,13 +29,11 @@ import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
 interface AiPromptInputProps extends PromptInputProps {
-	onReady?: () => void;
 	isInputStatusLoading: boolean;
 }
 
 export const AiPromptInput = memo(
 	({
-		onReady,
 		onSubmit,
 		onChange,
 		isInputStatusLoading,
@@ -45,11 +42,6 @@ export const AiPromptInput = memo(
 		const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 		const [value, setValue] = useState("");
-
-		useEffect(() => {
-			if (!onReady) return;
-			onReady();
-		}, [onReady]);
 
 		const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
 			const { value } = e.target;

@@ -5,31 +5,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Uses ResizeObserver to monitor height changes and window resize events.
  *
  * @returns {Object} An object containing:
- *   - inputRef: Ref to attach to the input element
- *   - inputHeight: Current height of the input element in pixels
+ *   - ref: Ref to attach to the input element
+ *   - width: Current height of the input element in pixels
  *   - handleInputReady: Callback to manually trigger height calculation
  */
-export function useInputHeight() {
-	const inputRef = useRef<HTMLDivElement>(null);
-	const [inputHeight, setInputHeight] = useState(0);
+// export function useInputHeight() {
+export function useGetComponentSize<T extends HTMLElement>() {
+	const ref = useRef<T>(null);
+	const [width, setWidth] = useState(0);
+	const [height, setHeight] = useState(0);
 
 	const handleInputReady = useCallback(() => {
-		if (inputRef.current) {
-			setInputHeight(inputRef.current.offsetHeight);
+		if (ref.current) {
+			setHeight(ref.current.offsetHeight);
+			setWidth(ref.current.offsetWidth);
 		}
 	}, []);
 
 	// Handle input height tracking with ResizeObserver and window resize
 	useEffect(() => {
-		const input = inputRef.current;
-		if (!input) return;
+		const component = ref.current;
+		if (!component) return;
 
 		const updateHeight = () => {
-			setInputHeight(input.offsetHeight);
+			setHeight(component.offsetHeight);
+			setWidth(component.offsetWidth);
 		};
 
 		const ro = new ResizeObserver(updateHeight);
-		ro.observe(input);
+		ro.observe(component);
 
 		window.addEventListener("resize", updateHeight);
 
@@ -39,9 +43,14 @@ export function useInputHeight() {
 		};
 	}, []);
 
+	useEffect(() => {
+		handleInputReady();
+	}, [handleInputReady]);
+
 	return {
-		inputRef,
-		inputHeight,
+		ref,
+		width,
+		height,
 		handleInputReady,
 	};
 }

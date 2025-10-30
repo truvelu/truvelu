@@ -1,6 +1,7 @@
 import { MATH_MARKDOWN } from "@/constants/messages";
 import { useCanvasList } from "@/hooks/use-canvas";
 import { useEditableTitle } from "@/hooks/use-editable-title";
+import { useGetComponentSize } from "@/hooks/use-get-component-size";
 import { cn } from "@/lib/utils";
 import {
 	type CanvasPayload,
@@ -9,13 +10,17 @@ import {
 } from "@/zustand/canvas";
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import {
+	Add01Icon,
 	Cancel01Icon,
+	Clock02Icon,
 	Delete02Icon,
 	Edit03Icon,
 	File01Icon,
+	GridIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMatchRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction } from "convex/react";
 import { memo, useCallback, useEffect, useRef } from "react";
@@ -42,17 +47,57 @@ interface CanvasTabTriggerProps {
 }
 
 const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
+	const matchRoute = useMatchRoute();
+	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
+	const isLearningRoute = learningRoute !== false;
+
+	const { ref: headerActionsRef, width: headerActionsWidth } =
+		useGetComponentSize<HTMLDivElement>();
+
 	return (
 		<div
 			className={cn(
 				"flex items-center gap-1 h-header pb-0.5 px-1 bg-white w-full justify-between  border-b border-sidebar-border",
 			)}
 		>
-			<div className="flex-1 w-[calc(100%-9.5rem)]">{children}</div>
+			<div
+				className="flex-1"
+				style={{
+					width: `calc(100% - ${headerActionsWidth}px)`,
+				}}
+			>
+				{children}
+			</div>
 
-			<Button variant="ghost" size="icon" className="cursor-pointer rounded-md">
-				<SharedIcon icon={MoreHorizontalIcon} />
-			</Button>
+			<div ref={headerActionsRef} className="h-7 flex gap-0.5">
+				{isLearningRoute && (
+					<>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="cursor-pointer rounded-md size-7"
+						>
+							<SharedIcon icon={Add01Icon} className="size-4" />
+						</Button>
+
+						<Button
+							variant="ghost"
+							size="icon"
+							className="cursor-pointer rounded-md size-7"
+						>
+							<SharedIcon icon={Clock02Icon} className="size-3.5" />
+						</Button>
+					</>
+				)}
+
+				<Button
+					variant="ghost"
+					size="icon"
+					className="cursor-pointer rounded-md size-7"
+				>
+					<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
+				</Button>
+			</div>
 		</div>
 	);
 });
@@ -147,21 +192,27 @@ const CanvasTabTrigger = memo(
 						value={canvas.id}
 						className={cn(
 							"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
-							"pl-4 rounded-tlarge",
+							"pl-1.5 rounded-tlarge gap-0.5 h-7 py-0",
 							!isActive ? "pr-4" : "pr-7",
 						)}
 					>
 						{canvas.icon ? (
 							<SharedIcon icon={canvas.icon} />
 						) : (
-							<span
-								ref={editableRef}
-								onKeyDown={handleKeyDown}
-								onBlur={handleBlur}
-								className={isEditing ? "outline-none" : ""}
-							>
-								{canvas?.title}
-							</span>
+							<>
+								<div className="size-5 flex items-center justify-center">
+									<SharedIcon icon={GridIcon} className="size-3.5" />
+								</div>
+
+								<span
+									ref={editableRef}
+									onKeyDown={handleKeyDown}
+									onBlur={handleBlur}
+									className={isEditing ? "outline-none" : ""}
+								>
+									{canvas?.title}
+								</span>
+							</>
 						)}
 					</TabsTrigger>
 
