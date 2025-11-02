@@ -1,4 +1,5 @@
 import { MessageType } from "@/constants/messages";
+import { useCanvasOpenStatus } from "@/hooks/use-canvas";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
@@ -16,7 +17,6 @@ import { api } from "convex/_generated/api";
 import type { streamSectionValidator } from "convex/schema";
 import type { Infer } from "convex/values";
 import { memo, useCallback, useMemo } from "react";
-import { v7 as uuid } from "uuid";
 import { useShallow } from "zustand/react/shallow";
 import { Action, Actions } from "../ai-elements/actions";
 import { useSidebar } from "../ui/sidebar";
@@ -32,19 +32,24 @@ const AiActions = memo((props: AiActionsProps) => {
 	const { type, message, hoveredId } = props;
 
 	const roomId = useGetRoomId();
+	const openCanvas = useCanvasOpenStatus();
 
 	const {
 		open: sidebarOpen,
 		setOpen: setSidebarOpen,
 		setOpenMobile: setSidebarOpenMobile,
 	} = useSidebar();
-	const { upsertCanvas, getCanvas, removeCanvas } = useCanvasStore(
-		useShallow(({ upsertCanvas, getCanvas, removeCanvas }) => ({
-			upsertCanvas,
-			getCanvas,
-			removeCanvas,
-		})),
-	);
+	const { upsertCanvas, getCanvas, removeCanvas, setOpenCanvas } =
+		useCanvasStore(
+			useShallow(
+				({ upsertCanvas, getCanvas, removeCanvas, setOpenCanvas }) => ({
+					upsertCanvas,
+					getCanvas,
+					removeCanvas,
+					setOpenCanvas,
+				}),
+			),
+		);
 
 	const isMainThread = type === "thread";
 
@@ -121,7 +126,9 @@ const AiActions = memo((props: AiActionsProps) => {
 				type,
 			});
 
-			if (existingCanvas.length > 0) {
+			if (!!existingCanvas?.length && !openCanvas) {
+				setOpenCanvas(roomId, true);
+			} else if (!!existingCanvas?.length && openCanvas) {
 				removeCanvas({
 					type,
 					roomId,
@@ -140,10 +147,11 @@ const AiActions = memo((props: AiActionsProps) => {
 		},
 		[
 			roomId,
+			sidebarOpen,
+			openCanvas,
 			getCanvas,
 			removeCanvas,
 			upsertCanvas,
-			sidebarOpen,
 			setSidebarOpen,
 			setSidebarOpenMobile,
 		],
@@ -187,8 +195,7 @@ const AiActions = memo((props: AiActionsProps) => {
 									parentChatId: chat?._id,
 									messageId: message.id,
 									messages: preDiscussionMessageFinal,
-									uuid: uuid(),
-									modelKey: "minimax/minimax-m2:free",
+									agentType: "question-answering",
 									userId: user?._id?.toString() ?? "",
 								},
 								{

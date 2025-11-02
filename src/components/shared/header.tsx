@@ -1,4 +1,7 @@
+import { useActiveCanvasId } from "@/hooks/use-canvas";
+import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
+import { useCanvasStore } from "@/zustand/canvas";
 import {
 	MoreHorizontalIcon,
 	Share03Icon,
@@ -7,15 +10,25 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useMatchRoute } from "@tanstack/react-router";
 import { Authenticated, Unauthenticated } from "convex/react";
-import { memo } from "react";
+import { memo, useCallback } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
 import SharedIcon from "./shared-icon";
 
 export const Header = () => {
+	const roomId = useGetRoomId();
 	const matchRoute = useMatchRoute();
 	const { isMobile } = useSidebar();
+	const activeCanvasId = useActiveCanvasId();
+
+	const { toggleCanvas, setActiveCanvasId } = useCanvasStore(
+		useShallow(({ toggleCanvas, setActiveCanvasId }) => ({
+			toggleCanvas,
+			setActiveCanvasId,
+		})),
+	);
 
 	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
@@ -23,6 +36,15 @@ export const Header = () => {
 	const isLearningRoute = learningRoute !== false;
 	const isChatRoute = chatRoute !== false;
 	const isIndexRoute = !isLearningRoute && !isChatRoute;
+
+	const onOpenCanvas = useCallback(() => {
+		if (!roomId) return;
+		if (!activeCanvasId) {
+			setActiveCanvasId(roomId, "list");
+		}
+
+		toggleCanvas(roomId);
+	}, [roomId, activeCanvasId, setActiveCanvasId, toggleCanvas]);
 
 	return (
 		<div
@@ -58,6 +80,7 @@ export const Header = () => {
 						<Button
 							variant="ghost"
 							className="rounded-full has-[>svg]:p-0 size-7 cursor-pointer"
+							onClick={onOpenCanvas}
 						>
 							<SharedIcon icon={SidebarRightIcon} className="size-4" />
 						</Button>

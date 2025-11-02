@@ -14,6 +14,8 @@ import type * as chat from "../chat.js";
 import type * as chatAction from "../chatAction.js";
 import type * as discussion from "../discussion.js";
 import type * as http from "../http.js";
+import type * as learning from "../learning.js";
+import type * as learningAction from "../learningAction.js";
 import type * as migrations from "../migrations.js";
 
 import type {
@@ -37,6 +39,8 @@ declare const fullApi: ApiFromModules<{
   chatAction: typeof chatAction;
   discussion: typeof discussion;
   http: typeof http;
+  learning: typeof learning;
+  learningAction: typeof learningAction;
   migrations: typeof migrations;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

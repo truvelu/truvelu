@@ -1,25 +1,26 @@
 import { vMessage } from "@convex-dev/agent";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
-import { createChatAgentWithModel } from "./agent";
-import { chatStatusValidator, modelOptionsValidator } from "./schema";
+import { v7 as uuidv7 } from "uuid";
+import { api, components, internal } from "./_generated/api";
+import { mutation, query } from "./_generated/server";
+import { createAgent } from "./agent";
+import { agentTypeValidator } from "./schema";
 
 export const createDiscussion = mutation({
 	args: {
 		parentChatId: v.id("chats"),
 		messageId: v.string(),
-		uuid: v.string(),
-		modelKey: modelOptionsValidator,
+		agentType: agentTypeValidator,
 		userId: v.string(),
 		messages: v.array(vMessage),
 	},
 	handler: async (
 		ctx,
-		{ parentChatId, messageId, messages, uuid, modelKey, userId },
+		{ parentChatId, messageId, messages, agentType, userId },
 	) => {
 		const firstTitle = "New Discussion";
-		const agent = createChatAgentWithModel({ modelId: modelKey });
+		const agent = createAgent({ agentType });
 		const { threadId } = await agent.createThread(ctx, {
 			userId,
 			title: firstTitle,
@@ -27,7 +28,7 @@ export const createDiscussion = mutation({
 
 		// Create a chat record for this discussion
 		const discussionChatId = await ctx.db.insert("chats", {
-			uuid,
+			uuid: uuidv7(),
 			threadId,
 			userId,
 			status: "ready",
@@ -52,27 +53,6 @@ export const createDiscussion = mutation({
 		]);
 
 		return { threadId };
-	},
-});
-
-export const patchDiscussionStatus = internalMutation({
-	args: {
-		threadId: v.string(),
-		status: chatStatusValidator,
-	},
-	handler: async (ctx, { threadId, status }) => {
-		// Find the discussion's chat record by threadId
-		const discussionChat = await ctx.db
-			.query("chats")
-			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
-			.unique();
-
-		if (!discussionChat) {
-			throw new Error("Discussion chat not found");
-		}
-
-		// Update the chat's status (not the discussion record)
-		await ctx.db.patch(discussionChat._id, { status });
 	},
 });
 
@@ -103,59 +83,6 @@ export const getDiscussionByTreadIdAndUserId = query({
 		return {
 			...discussionChat,
 			discussionMeta: discussion,
-		};
-	},
-});
-
-export const getDiscussionByUUIDAndUserId = query({
-	args: {
-		userId: v.string(),
-		uuid: v.string(),
-	},
-	handler: async (ctx, { userId, uuid }) => {
-		// Now we query chats for discussions (since discussions are also chats)
-		const discussionChat = await ctx.db
-			.query("chats")
-			.withIndex("by_uuid_and_userId", (q) =>
-				q.eq("uuid", uuid).eq("userId", userId),
-			)
-			.unique();
-
-		if (!discussionChat) return null;
-
-		// Get the discussion metadata
-		const discussion = await ctx.db
-			.query("discussions")
-			.withIndex("by_chatId", (q) => q.eq("chatId", discussionChat._id))
-			.unique();
-
-		if (!discussion) return null;
-
-		return {
-			...discussionChat,
-			discussionMeta: discussion,
-		};
-	},
-});
-
-export const getDiscussionWithParentChat = query({
-	args: {
-		discussionId: v.id("discussions"),
-	},
-	handler: async (ctx, { discussionId }) => {
-		const discussion = await ctx.db.get(discussionId);
-		if (!discussion) return null;
-
-		// Get the discussion's own chat record
-		const discussionChat = await ctx.db.get(discussion.chatId);
-
-		// Get the parent chat
-		const parentChat = await ctx.db.get(discussion.parentChatId);
-
-		return {
-			discussion,
-			discussionChat,
-			parentChat,
 		};
 	},
 });
@@ -223,5 +150,68 @@ export const deleteDiscussion = mutation({
 			// Delete the discussion's chat record
 			ctx.db.delete(discussionChat._id),
 		]);
+	},
+});
+
+export const getDiscussionsByRoomId = query({
+	args: {
+		userId: v.string(),
+		uuid: v.string(),
+		paginationOpts: paginationOptsValidator,
+	},
+	handler: async (ctx, args) => {
+		const [threads, allDiscussions, allChats] = await Promise.all([
+			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
+				userId: args.userId,
+				paginationOpts: args.paginationOpts,
+			}),
+			// Get all discussion records for this user only (security & performance)
+			ctx.db
+				.query("discussions")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
+			// Get all chats for this user (includes both main chats and discussion chats)
+			ctx.db
+				.query("chats")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
+		]);
+
+		const { page, ...paginationInfo } = threads;
+
+		// Create a Set of discussion chat IDs for O(1) lookup
+		// We exclude discussions from the main chat list since they appear in the canvas
+
+		const chatsByRoomId = allChats.find((chat) => chat.uuid === args.uuid);
+		const discussionChatIdFilterByParentChatId = new Set(
+			allDiscussions
+				.filter((discussion) => discussion.parentChatId === chatsByRoomId?._id)
+				.map((discussion) => discussion.chatId),
+		);
+
+		// Create a Map of threadId -> chat for O(1) lookup
+		const chatsByThreadId = new Map(
+			allChats.map((chat) => [chat.threadId, chat]),
+		);
+
+		// Filter and enrich threads in a single pass
+		const enrichedThreads = page
+			.filter((thread) => thread.status === "active")
+			.map((thread) => ({
+				...thread,
+				data: chatsByThreadId.get(thread._id),
+			}))
+			.filter((thread) => {
+				// Exclude discussions (canvas chats) from main chat list
+				return (
+					thread.data !== undefined &&
+					!!discussionChatIdFilterByParentChatId.has(thread.data._id)
+				);
+			});
+
+		return {
+			...paginationInfo,
+			page: enrichedThreads,
+		};
 	},
 });

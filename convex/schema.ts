@@ -23,6 +23,12 @@ export const modelOptionsValidator = v.union(
 	v.literal("minimax/minimax-m2:free"),
 );
 
+export const agentTypeValidator = v.union(
+	v.literal("question-answering"),
+	v.literal("title-generation"),
+	v.literal("learning-generation"),
+);
+
 export const chatStatusValidator = v.union(
 	v.literal("ready"),
 	v.literal("streaming"),
@@ -36,6 +42,7 @@ export const activeStatusValidator = v.union(
 export const streamSectionValidator = v.union(
 	v.literal("thread"),
 	v.literal("discussion"),
+	v.literal("learning-creation"),
 );
 
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
@@ -62,23 +69,22 @@ export default defineSchema({
 		.index("by_chatId", ["chatId"])
 		.index("by_parentChatId", ["parentChatId"])
 		.index("by_messageId", ["messageId"])
-		.index("by_userId", ["userId"])
-		.index("by_parentChatId_and_messageId", ["parentChatId", "messageId"])
-		.index("by_parentChatId_and_userId", ["parentChatId", "userId"]),
+		.index("by_userId", ["userId"]),
 
 	learning: defineTable({
 		uuid: v.string(),
 		userId: v.string(),
-		title: v.string(),
+		title: v.optional(v.string()),
 		description: v.optional(v.string()),
 		icon: v.optional(v.string()),
-		activeStatus: v.optional(activeStatusValidator),
+		activeStatus: activeStatusValidator,
 	})
 		.index("by_uuid", ["uuid"])
 		.index("by_userId", ["userId"])
+		.index("by_userId_and_activeStatus", ["userId", "activeStatus"])
 		.index("by_uuid_and_userId", ["uuid", "userId"]),
 
-	learningHistories: defineTable({
+	learningChats: defineTable({
 		learningId: v.id("learning"),
 		chatId: v.id("chats"),
 		userId: v.string(),

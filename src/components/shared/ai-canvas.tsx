@@ -1,5 +1,9 @@
 import { MATH_MARKDOWN } from "@/constants/messages";
-import { useActiveCanvasId, useCanvasList } from "@/hooks/use-canvas";
+import {
+	useActiveCanvasId,
+	useCanvasList,
+	useCanvasOpenStatus,
+} from "@/hooks/use-canvas";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetComponentSize } from "@/hooks/use-get-component-size";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
@@ -9,7 +13,11 @@ import {
 	CanvasType,
 	useCanvasStore,
 } from "@/zustand/canvas";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import {
+	convexQuery,
+	useConvexMutation,
+	useConvexPaginatedQuery,
+} from "@convex-dev/react-query";
 import {
 	Add01Icon,
 	Cancel01Icon,
@@ -19,6 +27,7 @@ import {
 	File01Icon,
 	GridIcon,
 	MoreHorizontalIcon,
+	TaskDaily02Icon,
 } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
@@ -46,150 +55,25 @@ interface CanvasTabTriggerProps {
 	isActive: boolean;
 }
 
-const AiCanvasHeader = memo(({ children }: { children: React.ReactNode }) => {
-	const roomId = useGetRoomId();
-	const matchRoute = useMatchRoute();
-	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
-	const canvasList = useCanvasList();
-	const activeCanvasId = useActiveCanvasId();
-
-	const { removeCanvas, clearCanvas, clearOtherCanvas } = useCanvasStore(
-		useShallow(({ removeCanvas, clearCanvas, clearOtherCanvas }) => ({
-			removeCanvas,
-			clearCanvas,
-			clearOtherCanvas,
-		})),
-	);
-
-	const { ref: headerActionsRef, width: headerActionsWidth } =
-		useGetComponentSize<HTMLDivElement>();
-
-	const [dropdownOpen, setDropdownOpen] = useState(false);
-
-	const isLearningRoute = learningRoute !== false;
-	const activeCanvas = canvasList.find(
-		(canvas) => canvas.id === activeCanvasId,
-	);
-
-	return (
-		<div
-			className={cn(
-				"flex items-center gap-1 h-header pb-0.5 px-1 bg-white w-full justify-between  border-b border-sidebar-border",
-			)}
-		>
-			<div
-				className="flex-1"
-				style={{
-					width: `calc(100% - ${headerActionsWidth}px - 0.25rem)`,
-				}}
+const CanvasTabTriggerWithActiveState = memo(
+	({
+		className,
+		children,
+		...otherProps
+	}: React.ComponentProps<typeof TabsTrigger>) => {
+		return (
+			<TabsTrigger
+				className={cn(
+					"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
+					className,
+				)}
+				{...otherProps}
 			>
 				{children}
-			</div>
-
-			<div ref={headerActionsRef} className="h-7 flex gap-0.5">
-				{isLearningRoute && (
-					<>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="cursor-pointer rounded-md size-7"
-						>
-							<SharedIcon icon={Add01Icon} className="size-4" />
-						</Button>
-
-						<Button
-							variant="ghost"
-							size="icon"
-							className="cursor-pointer rounded-md size-7"
-						>
-							<SharedIcon icon={Clock02Icon} className="size-3.5" />
-						</Button>
-					</>
-				)}
-
-				<DropdownMenu
-					modal={false}
-					open={dropdownOpen}
-					onOpenChange={setDropdownOpen}
-				>
-					<DropdownMenuTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="cursor-pointer rounded-md size-7"
-						>
-							<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						side="bottom"
-						align="end"
-						className="rounded-tmedium duration-75"
-					>
-						<DropdownMenuItem
-							className="cursor-pointer p-2.5 rounded-xl"
-							onSelect={(e) => {
-								e.preventDefault();
-								const { threadId } = activeCanvas?.data ?? {};
-								const type = activeCanvas?.type;
-								if (!threadId || !type) return;
-
-								setDropdownOpen(false);
-								// Wait for dropdown close animation before removing canvas
-								setTimeout(() => {
-									removeCanvas({
-										roomId,
-										threadId,
-										type,
-									});
-								}, 100);
-							}}
-						>
-							<span>Close Chat</span>
-						</DropdownMenuItem>
-
-						<DropdownMenuItem
-							className="cursor-pointer p-2.5 rounded-xl"
-							onSelect={(e) => {
-								e.preventDefault();
-								if (!activeCanvas) return;
-								setDropdownOpen(false);
-								setTimeout(() => {
-									clearCanvas(roomId);
-								}, 100);
-							}}
-						>
-							<span>Close All Chats</span>
-						</DropdownMenuItem>
-
-						<DropdownMenuItem
-							className="cursor-pointer p-2.5 rounded-xl"
-							onSelect={(e) => {
-								e.preventDefault();
-								if (!activeCanvas) return;
-								setDropdownOpen(false);
-								setTimeout(() => {
-									clearOtherCanvas(roomId);
-								}, 100);
-							}}
-						>
-							<span>Close Other Chats</span>
-						</DropdownMenuItem>
-
-						<DropdownMenuSeparator />
-
-						<DropdownMenuItem
-							className="cursor-pointer p-2.5 rounded-xl"
-							onSelect={() => {}}
-						>
-							<span>Open Chat in Main Thread</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-		</div>
-	);
-});
+			</TabsTrigger>
+		);
+	},
+);
 
 const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	const { upsertCanvas, removeCanvas } = useCanvasStore(
@@ -208,7 +92,7 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	const threadId = canvas?.data?.threadId ?? "";
 	const roomId = canvas?.data?.roomId ?? "";
 
-	const { data: chatDiscussionMetadata } = useQuery(
+	const { data: canvasMetadata } = useQuery(
 		convexQuery(api.chat.getMetadata, threadId ? { threadId } : "skip"),
 	);
 
@@ -241,30 +125,23 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	}, [canvas.type, threadId, roomId, removeCanvas]);
 
 	useEffect(() => {
-		if (!chatDiscussionMetadata?.title) return;
-		if (chatDiscussionMetadata?.title === canvas?.data?.title) return;
+		if (!canvasMetadata?.title) return;
+		if (canvasMetadata?.title === canvas?.data?.title) return;
 		upsertCanvas({
 			id: canvas.id,
-			type: CanvasType.THREAD,
+			type: canvas.type,
 			data: {
-				title: chatDiscussionMetadata?.title ?? "",
+				title: canvasMetadata?.title ?? "",
 				threadId,
 				roomId,
 			},
 		});
-	}, [
-		chatDiscussionMetadata?.title,
-		threadId,
-		roomId,
-		canvas.id,
-		canvas?.data?.title,
-		upsertCanvas,
-	]);
+	}, [canvasMetadata?.title, threadId, roomId, canvas, upsertCanvas]);
 
 	return (
 		<>
 			<div data-tab-id={canvas.id} className="relative">
-				<TabsTrigger
+				<CanvasTabTriggerWithActiveState
 					value={canvas.id}
 					className={cn(
 						"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
@@ -276,9 +153,17 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 						<SharedIcon icon={canvas.icon} />
 					) : (
 						<>
-							<div className="size-5 flex items-center justify-center">
-								<SharedIcon icon={GridIcon} className="size-3.5" />
-							</div>
+							{canvas.type === CanvasType.THREAD && (
+								<div className="size-5 flex items-center justify-center">
+									<SharedIcon icon={GridIcon} className="size-3.5" />
+								</div>
+							)}
+
+							{canvas.type === CanvasType.LEARNING_CREATION && (
+								<div className="size-5 flex items-center justify-center">
+									<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
+								</div>
+							)}
 
 							<span
 								ref={editableRef}
@@ -290,7 +175,7 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 							</span>
 						</>
 					)}
-				</TabsTrigger>
+				</CanvasTabTriggerWithActiveState>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
@@ -349,10 +234,323 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	);
 });
 
+const AiCanvasHeader = memo(
+	({ canvasTabs }: { canvasTabs: CanvasPayload[] }) => {
+		const roomId = useGetRoomId();
+		const matchRoute = useMatchRoute();
+		const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
+		const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
+		const canvasList = useCanvasList();
+		const activeCanvasId = useActiveCanvasId();
+
+		const { removeCanvas, clearCanvas, clearOtherCanvas, setOpenCanvas } =
+			useCanvasStore(
+				useShallow(
+					({ removeCanvas, clearCanvas, clearOtherCanvas, setOpenCanvas }) => ({
+						removeCanvas,
+						clearCanvas,
+						clearOtherCanvas,
+						setOpenCanvas,
+					}),
+				),
+			);
+
+		const { ref: headerActionsRef, width: headerActionsWidth } =
+			useGetComponentSize<HTMLDivElement>();
+		const scrollRef = useRef<HTMLDivElement>(null);
+
+		const [dropdownOpen, setDropdownOpen] = useState(false);
+
+		const isLearningRoute = learningRoute !== false;
+		const isChatRoute = chatRoute !== false;
+		const isIndexRoute = !isLearningRoute && !isChatRoute;
+
+		const isListActive = activeCanvasId === "list";
+
+		const activeCanvas = canvasList.find(
+			(canvas) => canvas.id === activeCanvasId,
+		);
+
+		const sentinelScroll = useCallback((id: string) => {
+			const container = scrollRef.current;
+			if (!container) return;
+			const sentinelElement = container.querySelector(`[data-tab-id="${id}"]`);
+			if (sentinelElement) {
+				sentinelElement.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+					inline: "start",
+				});
+			}
+		}, []);
+
+		useEffect(() => {
+			sentinelScroll(activeCanvasId);
+		}, [sentinelScroll, activeCanvasId]);
+
+		return (
+			<div
+				className={cn(
+					"flex items-center gap-1 h-header pb-0.5 px-1 bg-white w-full justify-between  border-b border-sidebar-border",
+				)}
+			>
+				<div
+					className="flex-1"
+					style={{
+						width: `calc(100% - ${headerActionsWidth}px - 0.25rem)`,
+					}}
+				>
+					<ScrollArea
+						ref={scrollRef}
+						className="w-full p-0 h-[calc(var(--header-height)-(var(--spacing)*0.5))]"
+					>
+						{/* <TabsList className="flex items-center bg-transparent h-[calc(var(--header-height)-(var(--spacing)*0.5))]"> */}
+						<div className="flex w-fit items-center h-[calc(var(--header-height)-(var(--spacing)*0.5))]">
+							{canvasTabs?.map((trigger) => (
+								<CanvasTabTrigger
+									key={trigger.id}
+									canvas={trigger}
+									isActive={activeCanvasId === trigger.id}
+								/>
+							))}
+						</div>
+						{/* </TabsList> */}
+						<ScrollBar orientation="horizontal" />
+					</ScrollArea>
+				</div>
+
+				<div ref={headerActionsRef} className="h-7 flex gap-0.5">
+					{isLearningRoute && (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="cursor-pointer rounded-md size-7"
+						>
+							<SharedIcon icon={Add01Icon} className="size-4" />
+						</Button>
+					)}
+
+					{!isIndexRoute && (
+						<CanvasTabTriggerWithActiveState value="list" asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="cursor-pointer rounded-md size-7"
+							>
+								<SharedIcon
+									icon={isLearningRoute ? Clock02Icon : GridIcon}
+									className="size-3.5"
+								/>
+							</Button>
+						</CanvasTabTriggerWithActiveState>
+					)}
+
+					{isListActive ? (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="cursor-pointer rounded-md size-7"
+							onClick={() => {
+								setOpenCanvas(roomId, false);
+							}}
+						>
+							<SharedIcon icon={Cancel01Icon} className="size-4" />
+						</Button>
+					) : (
+						<DropdownMenu
+							modal={false}
+							open={dropdownOpen}
+							onOpenChange={setDropdownOpen}
+						>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="cursor-pointer rounded-md size-7"
+								>
+									<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								side="bottom"
+								align="end"
+								className="rounded-tmedium duration-75"
+							>
+								<DropdownMenuItem
+									className="cursor-pointer p-2.5 rounded-xl"
+									onSelect={(e) => {
+										e.preventDefault();
+										const { threadId } = activeCanvas?.data ?? {};
+										const type = activeCanvas?.type;
+										if (!threadId || !type) return;
+
+										setDropdownOpen(false);
+										// Wait for dropdown close animation before removing canvas
+										setTimeout(() => {
+											removeCanvas({
+												roomId,
+												threadId,
+												type,
+											});
+										}, 100);
+									}}
+								>
+									<span>Close Chat</span>
+								</DropdownMenuItem>
+
+								<DropdownMenuItem
+									className="cursor-pointer p-2.5 rounded-xl"
+									onSelect={(e) => {
+										e.preventDefault();
+										if (!activeCanvas) return;
+										setDropdownOpen(false);
+										setTimeout(() => {
+											clearCanvas(roomId);
+										}, 100);
+									}}
+								>
+									<span>Close All Chats</span>
+								</DropdownMenuItem>
+
+								<DropdownMenuItem
+									className="cursor-pointer p-2.5 rounded-xl"
+									onSelect={(e) => {
+										e.preventDefault();
+										if (!activeCanvas) return;
+										setDropdownOpen(false);
+										setTimeout(() => {
+											clearOtherCanvas(roomId);
+										}, 100);
+									}}
+								>
+									<span>Close Other Chats</span>
+								</DropdownMenuItem>
+
+								<DropdownMenuSeparator />
+
+								<DropdownMenuItem
+									className="cursor-pointer p-2.5 rounded-xl"
+									onSelect={() => {}}
+								>
+									<span>Open Chat in Main Thread</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					)}
+				</div>
+			</div>
+		);
+	},
+);
+
+const AiCanvasTabListContent = memo(() => {
+	const roomId = useGetRoomId();
+	const matchRoute = useMatchRoute();
+
+	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
+	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
+
+	const { upsertCanvas } = useCanvasStore(
+		useShallow(({ upsertCanvas }) => ({
+			upsertCanvas,
+		})),
+	);
+
+	const isLearningRoute = learningRoute !== false;
+	const isChatRoute = chatRoute !== false;
+
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+
+	const { results: learningListByRoomId } = useConvexPaginatedQuery(
+		api.learning.getLearningsChatsByRoomId,
+		isLearningRoute && !!user?._id?.toString() && !!roomId
+			? {
+					userId: user?._id?.toString() ?? "",
+					uuid: roomId,
+				}
+			: "skip",
+		{ initialNumItems: 20 },
+	);
+
+	const { results: discussionListByRoomId } = useConvexPaginatedQuery(
+		api.discussion.getDiscussionsByRoomId,
+		isChatRoute && !!user?._id?.toString() && !!roomId
+			? {
+					userId: user?._id?.toString() ?? "",
+					uuid: roomId,
+				}
+			: "skip",
+		{ initialNumItems: 20 },
+	);
+
+	const handleOpenListItem = useCallback(
+		({
+			type,
+			data,
+		}: { type: CanvasType; data: { threadId: string; roomId: string } }) => {
+			upsertCanvas({
+				type,
+				data: {
+					roomId,
+					threadId: data.threadId,
+				},
+			});
+		},
+		[upsertCanvas, roomId],
+	);
+
+	return (
+		<TabsContent value="list" className="w-full px-1">
+			<div className="flex flex-col gap-1 py-1">
+				{isLearningRoute &&
+					learningListByRoomId?.map((learning) => (
+						<Button
+							key={learning?._id ?? ""}
+							variant="ghost"
+							className="w-full rounded-tmedium px-2.5 cursor-pointer flex gap-1.5 justify-start"
+							onClick={() =>
+								handleOpenListItem({
+									type: CanvasType.LEARNING_CREATION,
+									data: { threadId: learning?.data?.threadId ?? "", roomId },
+								})
+							}
+						>
+							<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
+							<span className="text-sm font-normal truncate">
+								{learning?.title}
+							</span>
+						</Button>
+					))}
+
+				{isChatRoute &&
+					discussionListByRoomId?.map((discussion) => (
+						<Button
+							key={discussion?._id ?? ""}
+							variant="ghost"
+							className="w-full rounded-tmedium px-2.5 cursor-pointer flex gap-1.5 justify-start"
+							onClick={() =>
+								handleOpenListItem({
+									type: CanvasType.THREAD,
+									data: { threadId: discussion?.data?.threadId ?? "", roomId },
+								})
+							}
+						>
+							<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
+							<span className="text-sm font-normal truncate">
+								{discussion?.title}
+							</span>
+						</Button>
+					))}
+			</div>
+		</TabsContent>
+	);
+});
+
 const AiCanvas = () => {
 	const roomId = useGetRoomId();
 	const canvasList = useCanvasList();
 	const activeCanvasId = useActiveCanvasId();
+	const openCanvas = useCanvasOpenStatus();
 
 	const { setActiveCanvasId } = useCanvasStore(
 		useShallow(({ setActiveCanvasId }) => ({
@@ -360,11 +558,10 @@ const AiCanvas = () => {
 		})),
 	);
 
-	const scrollRef = useRef<HTMLDivElement>(null);
-
 	const typeMap = {
 		[CanvasType.CONTENT]: { icon: File01Icon },
 		[CanvasType.THREAD]: { icon: undefined },
+		[CanvasType.LEARNING_CREATION]: { icon: undefined },
 	};
 
 	const componentMapper = (payload: CanvasPayload) => {
@@ -378,6 +575,15 @@ const AiCanvas = () => {
 						</ContainerWithMaxWidth>
 					</ContainerWithMargin>
 				);
+
+			case CanvasType.LEARNING_CREATION:
+				return (
+					<AiConversation
+						additionalThreadId={data?.threadId ?? ""}
+						type="learning-creation"
+					/>
+				);
+
 			case CanvasType.THREAD:
 				return (
 					<AiConversation
@@ -399,49 +605,21 @@ const AiCanvas = () => {
 		};
 	});
 
-	const sentinelScroll = useCallback((id: string) => {
-		const container = scrollRef.current;
-		if (!container) return;
-		const sentinelElement = container.querySelector(`[data-tab-id="${id}"]`);
-		if (sentinelElement) {
-			sentinelElement.scrollIntoView({
-				behavior: "smooth",
-				block: "start",
-				inline: "start",
-			});
-		}
-	}, []);
-
-	useEffect(() => {
-		sentinelScroll(activeCanvasId);
-	}, [sentinelScroll, activeCanvasId]);
-
 	return (
 		<Tabs
 			value={activeCanvasId}
 			onValueChange={(value) => setActiveCanvasId(roomId, value)}
 			className="gap-0"
 		>
-			<AiCanvasHeader>
-				<ScrollArea
-					ref={scrollRef}
-					className="w-full p-0 h-[calc(var(--header-height)-(var(--spacing)*0.5))]"
-				>
-					<TabsList className="flex items-center bg-transparent h-[calc(var(--header-height)-(var(--spacing)*0.5))]">
-						{canvasTabs?.map((trigger) => (
-							<CanvasTabTrigger
-								key={trigger.id}
-								canvas={trigger}
-								isActive={activeCanvasId === trigger.id}
-							/>
-						))}
-					</TabsList>
-					<ScrollBar orientation="horizontal" />
-				</ScrollArea>
-			</AiCanvasHeader>
+			<TabsList className="flex items-center bg-transparent h-header w-full">
+				<AiCanvasHeader canvasTabs={canvasTabs} />
+			</TabsList>
+
+			<AiCanvasTabListContent />
+
 			{canvasTabs.map((canvas) => (
 				<TabsContent key={canvas.id} value={canvas.id}>
-					<div>{canvas.component}</div>
+					<div className={cn(!openCanvas && "hidden")}>{canvas.component}</div>
 				</TabsContent>
 			))}
 		</Tabs>

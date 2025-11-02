@@ -27,7 +27,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useStickToBottomContext } from "use-stick-to-bottom";
-import { v7 as uuid } from "uuid";
 import {
 	Conversation,
 	ConversationContent,
@@ -84,11 +83,12 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const threadId = additionalThreadId ?? chat?.threadId ?? "";
 	const isMainThread = type === "thread";
+	const isDiscussionThread = type === "discussion";
 
 	const { data: discussion, isPending: isDiscussionPending } = useQuery(
 		convexQuery(
 			api.discussion.getDiscussionByTreadIdAndUserId,
-			!isMainThread && !!user?._id?.toString() && !!threadId
+			isDiscussionThread && !!user?._id?.toString() && !!threadId
 				? {
 						userId: user?._id?.toString() ?? "",
 						threadId,
@@ -112,6 +112,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		threadId ? { threadId } : "skip",
 		{ initialNumItems: 10, stream: true },
 	);
+
 	const createChat = useMutation({
 		mutationKey: ["createChat", roomId],
 		mutationFn: useConvexMutation(api.chat.createChat),
@@ -173,8 +174,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			const prompt = message.text ?? "";
 			createChat.mutate(
 				{
-					modelKey: "minimax/minimax-m2:free",
-					uuid: uuid(),
+					agentType: "learning-generation",
 					userId,
 				},
 				{
@@ -189,16 +189,15 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							threadId,
 							roomId,
 							prompt,
-							modelKey: "minimax/minimax-m2:free",
+							agentType: "learning-generation",
 							userId,
-							streamSection: type,
 						});
 					},
 				},
 			);
 			event.preventDefault();
 		},
-		[user?._id, createChat, sendChatMessage, navigate, type],
+		[user?._id, createChat, sendChatMessage, navigate],
 	);
 
 	const handleSubmit = useCallback(
@@ -219,7 +218,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				abortStreamByOrder.mutate({
 					threadId,
 					order: messageOrderThatIsStreaming,
-					streamSection: type,
 				});
 				return;
 			}
@@ -228,9 +226,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				threadId,
 				roomId,
 				prompt: message.text ?? "",
-				modelKey: "minimax/minimax-m2:free",
+				agentType: "learning-generation",
 				userId,
-				streamSection: type,
 			});
 			scrollToBottom();
 			event.preventDefault();
@@ -246,7 +243,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			scrollToBottom,
 			handleSubmitNewChat,
 			isInputStatusLoading,
-			type,
 		],
 	);
 

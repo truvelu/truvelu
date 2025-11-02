@@ -10,7 +10,16 @@ import {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { useEditableTitle } from "@/hooks/use-editable-title";
+import { cn } from "@/lib/utils";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
+	convexQuery,
+	useConvexMutation,
+	useConvexPaginatedQuery,
+} from "@convex-dev/react-query";
+import {
+	Archive03Icon,
 	ArrowRight01Icon,
 	Delete02Icon,
 	Edit03Icon,
@@ -19,14 +28,29 @@ import {
 	FolderOpenIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { Link } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { api } from "convex/_generated/api";
 import { useState } from "react";
+import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "../ui/collapsible";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "../ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -34,73 +58,230 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import SharedIcon from "./shared-icon";
 
 const NavNewLearningItem = () => {
+	const navigate = useNavigate();
+
+	const { upsertCanvas } = useCanvasStore(
+		useShallow(({ upsertCanvas }) => ({
+			upsertCanvas,
+		})),
+	);
+
+	const [openDialog, setOpenDialog] = useState(false);
+	const [isAutogenerateTitle, setIsAutogenerateTitle] = useState(true);
+	const [manualTitle, setManualTitle] = useState("");
+
+	const { data: user } = useQuery({
+		...convexQuery(api.auth.getCurrentUser, {}),
+	});
+
+	const createLearning = useMutation({
+		mutationFn: useConvexMutation(api.learning.createLearning),
+	});
+
 	return (
 		<SidebarMenuItem>
-			<SidebarMenuButton
-				tooltip="Learning"
-				className="cursor-pointer rounded-tlarge py-0"
-			>
-				<SharedIcon icon={FolderAddIcon} />
-				<span>New Learning</span>
-			</SidebarMenuButton>
+			<Dialog open={openDialog} onOpenChange={setOpenDialog}>
+				<DialogTrigger asChild>
+					<SidebarMenuButton
+						tooltip="Learning"
+						className="cursor-pointer rounded-tlarge py-0"
+					>
+						<SharedIcon icon={FolderAddIcon} />
+						<span>New learning</span>
+					</SidebarMenuButton>
+				</DialogTrigger>
+				<DialogContent className="rounded-tmedium">
+					<DialogHeader>
+						<DialogTitle>Learning name</DialogTitle>
+						<DialogDescription />
+					</DialogHeader>
+
+					<div className="flex flex-col gap-3 items-start">
+						<Label className="flex items-start gap-2">
+							<Checkbox
+								id="toggle-2"
+								className="border-sidebar-border data-[state=checked]:border-black data-[state=checked]:bg-sidebar-primary data-[state=checked]:text-white"
+								checked={isAutogenerateTitle}
+								onCheckedChange={(checked) => {
+									setIsAutogenerateTitle(
+										checked === "indeterminate" ? false : checked,
+									);
+
+									if (checked) {
+										setManualTitle("");
+									}
+								}}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										setIsAutogenerateTitle((prev) => !prev);
+										e.preventDefault();
+										e.stopPropagation();
+									}
+								}}
+							/>
+
+							<p className="text-sm leading-none font-medium">
+								Auto generate my learning title.
+							</p>
+						</Label>
+
+						{!isAutogenerateTitle && (
+							<Input
+								placeholder="Enter a title for the learning"
+								className="rounded-tlarge px-2.5"
+								value={manualTitle}
+								onChange={(e) => setManualTitle(e.target.value)}
+							/>
+						)}
+					</div>
+
+					<Alert>
+						<SharedIcon icon={FolderAddIcon} />
+						<AlertTitle>Almost there!</AlertTitle>
+						<AlertDescription>
+							<p>
+								After creating the learning, you will be assisted to generate
+								your course content. You also can manually provide specific
+								knowledge base to be added to the learning, later on.
+							</p>
+						</AlertDescription>
+					</Alert>
+
+					<DialogFooter>
+						<Button
+							className="rounded-tlarge"
+							disabled={!isAutogenerateTitle && !manualTitle}
+							onClick={() => {
+								if (!user) return;
+								createLearning.mutate(
+									{
+										userId: user._id,
+										title: isAutogenerateTitle ? undefined : manualTitle,
+									},
+									{
+										onSuccess: (data) => {
+											setOpenDialog(false);
+											upsertCanvas({
+												type: CanvasType.LEARNING_CREATION,
+												data: {
+													title: isAutogenerateTitle ? undefined : manualTitle,
+													roomId: data?.uuid,
+													threadId: data?.threadId,
+												},
+											});
+											navigate({
+												to: "/l/{-$learningId}",
+												params: { learningId: data.uuid },
+											});
+										},
+									},
+								);
+							}}
+						>
+							I'm ready!
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</SidebarMenuItem>
 	);
 };
 
-const NavLearningItem = () => {
-	const [isOpen, setIsOpen] = useState(false);
+const NavLearningItem = ({
+	learning,
+}: {
+	learning: (typeof api.learning.getLearnings._returnType)["page"][number];
+}) => {
+	const navigate = useNavigate();
+
+	const [collapsibleOpen, setCollapsibleOpen] = useState(false);
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+
+	const updateLearningTitle = useMutation({
+		mutationFn: useConvexMutation(api.learning.updateLearningTitle),
+	});
+
+	const archiveLearning = useMutation({
+		mutationFn: useConvexMutation(api.learning.archiveLearning),
+	});
+
+	const deleteLearning = useMutation({
+		mutationFn: useConvexMutation(api.learning.deleteLearning),
+	});
+
+	const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =
+		useEditableTitle({
+			onSave: (newTitle) => {
+				if (!learning?._id) return;
+				updateLearningTitle.mutate({
+					learningId: learning._id,
+					title: newTitle,
+				});
+			},
+			onStartEdit: () => {
+				// Close dropdown when starting to edit
+				setDropdownOpen(false);
+			},
+		});
 
 	return (
 		<Collapsible
 			asChild
-			onOpenChange={setIsOpen}
-			open={isOpen}
+			onOpenChange={setCollapsibleOpen}
+			open={collapsibleOpen}
 			className="group/collapsible"
 		>
 			<SidebarMenuItem>
 				<div className="flex-1 justify-between flex flex-row items-center gap-1">
-					<Link
-						to={"/l/{-$learningId}"}
-						params={{ learningId: "123" }}
-						className="flex-1"
-						activeProps={{ className: "bg-sidebar-accent" }}
+					<SidebarMenuButton
+						tooltip={learning?.title ?? "Learning"}
+						className="rounded-tlarge relative cursor-pointer py-0"
+						asChild
 					>
-						<SidebarMenuButton
-							tooltip="Learning"
-							className="rounded-tlarge relative cursor-pointer py-0"
-							asChild
+						<Link
+							to={"/l/{-$learningId}"}
+							params={{ learningId: learning?.uuid ?? "" }}
+							className="flex-1"
+							activeProps={{ className: "bg-sidebar-accent" }}
 						>
-							<div>
-								<Button
-									variant="ghost"
-									className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
-									onClick={(e) => {
-										setIsOpen((prev) => !prev);
-										e.stopPropagation();
-										e.preventDefault();
-									}}
-								>
-									{isOpen ? (
-										<SharedIcon icon={FolderOpenIcon} />
-									) : (
-										<SharedIcon icon={Folder01Icon} />
-									)}
-								</Button>
+							<Button
+								variant="ghost"
+								className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
+								onClick={(e) => {
+									setCollapsibleOpen((prev) => !prev);
+									e.stopPropagation();
+									e.preventDefault();
+								}}
+							>
+								{collapsibleOpen ? (
+									<SharedIcon icon={FolderOpenIcon} />
+								) : (
+									<SharedIcon icon={Folder01Icon} />
+								)}
+							</Button>
 
-								<span className="pl-7">Learning</span>
-							</div>
-						</SidebarMenuButton>
-					</Link>
+							<span
+								ref={editableRef}
+								onKeyDown={handleKeyDown}
+								onBlur={handleBlur}
+								className={cn("pl-7", isEditing ? "outline-none" : "")}
+							>
+								{learning?.title ?? "Learning"}
+							</span>
+						</Link>
+					</SidebarMenuButton>
 				</div>
 
 				<CollapsibleContent>
 					<SidebarMenuSub className="mr-0 pr-0">
 						<SidebarMenuSubItem>
 							<SidebarMenuSubButton
-								className="cursor-pointer rounded-tlarge"
+								className="cursor-pointer rounded-tlarge overflow-hidden"
 								asChild
 							>
 								<Link
@@ -130,7 +311,7 @@ const NavLearningItem = () => {
 					</SidebarMenuSub>
 				</CollapsibleContent>
 
-				<DropdownMenu>
+				<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 					<DropdownMenuTrigger asChild>
 						<SidebarMenuAction showOnHover>
 							<SharedIcon icon={MoreHorizontalIcon} />
@@ -141,16 +322,66 @@ const NavLearningItem = () => {
 						align="start"
 						className="rounded-tmedium"
 					>
-						<DropdownMenuItem className="p-2.5 rounded-xl">
+						<DropdownMenuItem
+							className="p-2.5 rounded-xl"
+							onClick={startEditing}
+						>
 							<SharedIcon icon={Edit03Icon} />
-							<span>Rename Learning</span>
+							<span>Rename</span>
 						</DropdownMenuItem>
 
 						<DropdownMenuSeparator />
 
-						<DropdownMenuItem className="!text-destructive p-2.5 rounded-xl">
+						<DropdownMenuItem
+							className="p-2.5 rounded-xl"
+							onClick={() => {
+								if (!learning?._id) return;
+								archiveLearning.mutate(
+									{ learningId: learning?._id },
+									{
+										onSuccess: () => {
+											navigate({
+												to: "/",
+											})
+												.then(() => {
+													toast.success("Learning archived successfully");
+												})
+												.catch(() => {
+													toast.error("Failed to archive learning");
+												});
+										},
+									},
+								);
+							}}
+						>
+							<SharedIcon icon={Archive03Icon} />
+							<span>Archive</span>
+						</DropdownMenuItem>
+
+						<DropdownMenuItem
+							className="!text-destructive p-2.5 rounded-xl"
+							onClick={() => {
+								if (!learning?._id) return;
+								deleteLearning.mutate(
+									{ learningId: learning?._id },
+									{
+										onSuccess: () => {
+											navigate({
+												to: "/",
+											})
+												.then(() => {
+													toast.success("Learning deleted successfully");
+												})
+												.catch(() => {
+													toast.error("Failed to delete learning");
+												});
+										},
+									},
+								);
+							}}
+						>
 							<SharedIcon icon={Delete02Icon} className="text-destructive" />
-							<span>Delete Learning</span>
+							<span>Delete</span>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -160,6 +391,20 @@ const NavLearningItem = () => {
 };
 
 export function NavLearning() {
+	const { data: user } = useQuery({
+		...convexQuery(api.auth.getCurrentUser, {}),
+	});
+
+	const { results: learnings } = useConvexPaginatedQuery(
+		api.learning.getLearnings,
+		user?._id?.toString()
+			? {
+					userId: user?._id?.toString() ?? "",
+				}
+			: "skip",
+		{ initialNumItems: 20 },
+	);
+
 	return (
 		<Collapsible defaultOpen className="group/collapsible">
 			<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
@@ -176,7 +421,12 @@ export function NavLearning() {
 					<SidebarGroupContent>
 						<SidebarMenu>
 							<NavNewLearningItem />
-							<NavLearningItem />
+							{learnings?.map((learning) => (
+								<NavLearningItem
+									key={learning?._id ?? ""}
+									learning={learning}
+								/>
+							))}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</CollapsibleContent>

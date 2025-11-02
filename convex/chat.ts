@@ -8,24 +8,20 @@ import {
 import { getManyFrom } from "convex-helpers/server/relationships";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { v7 as uuidv7 } from "uuid";
 import { components, internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
-import { createChatAgentWithModel } from "./agent";
-import {
-	chatStatusValidator,
-	modelOptionsValidator,
-	streamSectionValidator,
-} from "./schema";
+import { createAgent } from "./agent";
+import { agentTypeValidator, chatStatusValidator } from "./schema";
 
 export const createChat = mutation({
 	args: {
-		uuid: v.string(),
-		modelKey: modelOptionsValidator,
+		agentType: agentTypeValidator,
 		userId: v.string(),
 	},
-	handler: async (ctx, { modelKey, userId, ...args }) => {
+	handler: async (ctx, { agentType, userId }) => {
 		const firstTitle = "New Chat";
-		const agent = createChatAgentWithModel({ modelId: modelKey });
+		const agent = createAgent({ agentType });
 		const { threadId } = await agent.createThread(ctx, {
 			userId,
 			title: firstTitle,
@@ -34,9 +30,9 @@ export const createChat = mutation({
 			userId,
 			threadId,
 			status: "ready",
-			...args,
+			uuid: uuidv7(),
 		});
-		return { threadId, roomId: args.uuid };
+		return { threadId, roomId: uuidv7() };
 	},
 });
 
@@ -66,29 +62,39 @@ export const getChats = query({
 	},
 	handler: async (ctx, args) => {
 		// Fetch threads, discussions, and all user chats in parallel
-		const [threads, discussions, allChats] = await Promise.all([
-			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-				userId: args.userId,
-				paginationOpts: args.paginationOpts,
-			}),
-			// Get all discussion records for this user only (security & performance)
-			ctx.db
-				.query("discussions")
-				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-				.collect(),
-			// Get all chats for this user (includes both main chats and discussion chats)
-			ctx.db
-				.query("chats")
-				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-				.collect(),
-		]);
+		const [threads, allDiscussions, allChats, allLearningChats] =
+			await Promise.all([
+				ctx.runQuery(components.agent.threads.listThreadsByUserId, {
+					userId: args.userId,
+					paginationOpts: args.paginationOpts,
+				}),
+				// Get all discussion records for this user only (security & performance)
+				ctx.db
+					.query("discussions")
+					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+					.collect(),
+				// Get all chats for this user (includes both main chats and discussion chats)
+				ctx.db
+					.query("chats")
+					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+					.collect(),
+				// Get all learning chats for this user
+				ctx.db
+					.query("learningChats")
+					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+					.collect(),
+			]);
 
 		const { page, ...paginationInfo } = threads;
 
 		// Create a Set of discussion chat IDs for O(1) lookup
 		// We exclude discussions from the main chat list since they appear in the canvas
 		const discussionChatIds = new Set(
-			discussions.map((discussion) => discussion.chatId),
+			allDiscussions.map((discussion) => discussion.chatId),
+		);
+
+		const learningChatIds = new Set(
+			allLearningChats.map((learningChat) => learningChat.chatId),
 		);
 
 		// Create a Map of threadId -> chat for O(1) lookup
@@ -106,7 +112,9 @@ export const getChats = query({
 			.filter((thread) => {
 				// Exclude discussions (canvas chats) from main chat list
 				return (
-					thread.data !== undefined && !discussionChatIds.has(thread.data._id)
+					thread.data !== undefined &&
+					!discussionChatIds.has(thread.data._id) &&
+					!learningChatIds.has(thread.data._id)
 				);
 			});
 
@@ -193,30 +201,26 @@ export const sendChatMessage = mutation({
 		threadId: v.string(),
 		roomId: v.string(),
 		prompt: v.string(),
-		modelKey: modelOptionsValidator,
-		streamSection: streamSectionValidator,
+		agentType: agentTypeValidator,
 	},
-	handler: async (
-		ctx,
-		{ userId, threadId, roomId, prompt, modelKey, streamSection },
-	) => {
-		const { messageId, message } = await createChatAgentWithModel({
-			modelId: modelKey,
-		}).saveMessage(ctx, {
-			threadId,
-			userId,
-			prompt,
-			skipEmbeddings: true,
-		});
+	handler: async (ctx, { userId, threadId, roomId, prompt, agentType }) => {
+		const { messageId, message } = await createAgent({ agentType }).saveMessage(
+			ctx,
+			{
+				threadId,
+				userId,
+				prompt,
+				skipEmbeddings: true,
+			},
+		);
 
 		const orderMessage = message?.order ?? 0;
 
 		await Promise.all([
 			ctx.scheduler.runAfter(0, internal.chatAction.streamAsync, {
 				threadId,
-				modelKey,
+				agentType,
 				promptMessageId: messageId,
-				streamSection,
 			}),
 			orderMessage > 0
 				? Promise.resolve()
@@ -233,26 +237,18 @@ export const abortStreamByOrder = mutation({
 	args: {
 		threadId: v.string(),
 		order: v.number(),
-		streamSection: streamSectionValidator,
 	},
-	handler: async (ctx, { threadId, order, streamSection }) => {
+	handler: async (ctx, { threadId, order }) => {
 		const isAborted = await abortStream(ctx, components.agent, {
 			threadId,
 			order,
 			reason: "Aborting explicitly",
 		});
 
-		await Promise.all([
-			streamSection === "thread"
-				? ctx.runMutation(internal.chat.patchChatStatus, {
-						threadId,
-						status: "ready",
-					})
-				: ctx.runMutation(internal.discussion.patchDiscussionStatus, {
-						threadId,
-						status: "ready",
-					}),
-		]);
+		await ctx.runMutation(internal.chat.patchChatStatus, {
+			threadId,
+			status: "ready",
+		});
 
 		return isAborted;
 	},

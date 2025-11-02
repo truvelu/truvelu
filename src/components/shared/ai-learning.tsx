@@ -1,11 +1,29 @@
+import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
+import { convexQuery } from "@convex-dev/react-query";
 import { Folder01Icon } from "@hugeicons/core-free-icons";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { api } from "convex/_generated/api";
 import { Button } from "../ui/button";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
 function AiLearning() {
+	const roomId = useGetRoomId();
+
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data: learning } = useQuery(
+		convexQuery(
+			api.learning.getLearningByRoomId,
+			user?._id?.toString() && roomId
+				? {
+						userId: user?._id?.toString() ?? "",
+						uuid: roomId,
+					}
+				: "skip",
+		),
+	);
 	return (
 		<div className="relative flex">
 			<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] [overflow-anchor:none] [transform:translateZ(0)] [will-change:scroll-position]">
@@ -23,14 +41,14 @@ function AiLearning() {
 										size={36}
 										className="size-7"
 									/>
-									<h1 className="text-2xl">Learning</h1>
+									<h1 className="text-2xl">{learning?.title}</h1>
 								</div>
 
 								<Button
 									variant="outline"
 									className="rounded-tlarge text-gray-500"
 								>
-									Add Knowledge
+									Manage sources
 								</Button>
 							</div>
 

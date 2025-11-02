@@ -4,12 +4,14 @@ import {
 	findFirstCanvasIdInRoom,
 	patternCreators,
 } from "@/lib/canvas.utils";
+import { v7 as uuidv7 } from "uuid";
 import { create } from "zustand";
 import { type StorageValue, persist } from "zustand/middleware";
 
 export enum CanvasType {
 	CONTENT = "content",
 	THREAD = "discussion",
+	LEARNING_CREATION = "learning-creation",
 }
 
 export interface GeneralData {
@@ -25,6 +27,10 @@ export interface ThreadData extends GeneralData {
 	title?: string;
 }
 
+export interface LearningCreationData extends GeneralData {
+	title?: string;
+}
+
 export type CanvasContentPayload = {
 	id: string;
 	type: CanvasType.CONTENT;
@@ -37,7 +43,16 @@ export type CanvasThreadPayload = {
 	data: ThreadData | null;
 };
 
-export type CanvasPayload = CanvasContentPayload | CanvasThreadPayload;
+export type CanvasLearningCreationPayload = {
+	id: string;
+	type: CanvasType.LEARNING_CREATION;
+	data: LearningCreationData | null;
+};
+
+export type CanvasPayload =
+	| CanvasContentPayload
+	| CanvasThreadPayload
+	| CanvasLearningCreationPayload;
 export type CanvasPayloadWithoutId = Omit<CanvasPayload, "id">;
 export type CanvasPayloadWithOptionalId = CanvasPayloadWithoutId & {
 	id?: string;
@@ -75,13 +90,13 @@ export const useCanvasStore = create<CanvasStore>()(
 			upsertCanvas: (payload) => {
 				set((state) => {
 					try {
-						const id = payload.id || crypto.randomUUID();
+						const id = payload.id || uuidv7();
 						const payloadType = payload.type;
 
 						const canvasPayload: CanvasPayload = {
 							id,
 							type: payloadType,
-							data: payload.data as ContentData | ThreadData | null,
+							data: payload.data,
 						};
 
 						const compositeKey = compositeKeyCreator(canvasPayload);
@@ -92,28 +107,16 @@ export const useCanvasStore = create<CanvasStore>()(
 						const newCanvasMap = new Map(state?.canvasMap ?? []);
 						const newOpenCanvasMap = new Map(state?.openCanvas ?? []);
 
-						// Get or create the inner map for this composite key
-						const existingCanvas = newCanvasMap.get(compositeKey);
-						const innerMap = existingCanvas || new Map<string, CanvasPayload>();
+						// For duplicate composite keys, clear the inner map to avoid accumulation
+						const innerMap = new Map<string, CanvasPayload>();
 
-						// Add/update the canvas in the inner map
+						// Add/update the canvas in the inner map (fresh, no duplicates)
 						innerMap.set(id, canvasPayload);
 
 						// Update the outer map
 						newCanvasMap.set(compositeKey, innerMap);
 						newActiveCanvasId.set(payload.data?.roomId ?? "", id);
-
-						// Check if there are any existing canvases for this specific roomId
-						const roomPattern = patternCreators.byRoom(
-							payload.data?.roomId ?? "",
-						);
-						const hasCanvasInRoom = Array.from(
-							state?.canvasMap?.keys() ?? [],
-						).some((key) => roomPattern.test(key));
-
-						if (!existingCanvas && !hasCanvasInRoom) {
-							newOpenCanvasMap.set(payload.data?.roomId ?? "", true);
-						}
+						newOpenCanvasMap.set(payload.data?.roomId ?? "", true);
 
 						return {
 							canvasMap: newCanvasMap,
