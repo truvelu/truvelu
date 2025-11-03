@@ -501,7 +501,7 @@ const AiCanvasTabListContent = memo(() => {
 
 	return (
 		<TabsContent value="list" className="w-full px-1">
-			<div className="flex flex-col gap-1 py-1">
+			<div className="flex flex-col gap-1 py-1 h-svh sm:h-full">
 				{isLearningRoute &&
 					learningListByRoomId?.map((learning) => (
 						<Button
