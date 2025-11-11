@@ -5,6 +5,7 @@ import { useCanvasStore } from "@/zustand/canvas";
 import {
 	MoreHorizontalIcon,
 	Share03Icon,
+	SidebarBottomIcon,
 	SidebarRightIcon,
 } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
@@ -82,7 +83,10 @@ export const Header = () => {
 							className="rounded-full has-[>svg]:p-0 size-7 cursor-pointer"
 							onClick={onOpenCanvas}
 						>
-							<SharedIcon icon={SidebarRightIcon} className="size-4" />
+							<SharedIcon
+								icon={isMobile ? SidebarBottomIcon : SidebarRightIcon}
+								className="size-4"
+							/>
 						</Button>
 					</div>
 				)}

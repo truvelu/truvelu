@@ -26,13 +26,14 @@ export const createChat = mutation({
 			userId,
 			title: firstTitle,
 		});
+		const roomId = uuidv7();
 		await ctx.db.insert("chats", {
 			userId,
 			threadId,
 			status: "ready",
-			uuid: uuidv7(),
+			uuid: roomId,
 		});
-		return { threadId, roomId: uuidv7() };
+		return { threadId, roomId };
 	},
 });
 
@@ -140,6 +141,35 @@ export const getChat = query({
 	},
 });
 
+export const getChatById = query({
+	args: {
+		userId: v.string(),
+		chatId: v.id("chats"),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("chats")
+			.withIndex("by_id", (q) => q.eq("_id", args.chatId))
+			.filter((q) => q.eq("userId", args.userId))
+			.unique();
+	},
+});
+
+export const getChatByThreadIdAndUserId = query({
+	args: {
+		userId: v.string(),
+		threadId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("chats")
+			.withIndex("by_threadId_and_userId", (q) =>
+				q.eq("threadId", args.threadId).eq("userId", args.userId),
+			)
+			.unique();
+	},
+});
+
 export const getChatWithDiscussions = query({
 	args: {
 		chatId: v.id("chats"),
@@ -197,30 +227,31 @@ export const listThreadMessages = query({
 
 export const sendChatMessage = mutation({
 	args: {
+		type: v.optional(v.union(v.literal("ask"), v.literal("learning"))),
 		userId: v.string(),
 		threadId: v.string(),
 		roomId: v.string(),
 		prompt: v.string(),
 		agentType: agentTypeValidator,
 	},
-	handler: async (ctx, { userId, threadId, roomId, prompt, agentType }) => {
-		const { messageId, message } = await createAgent({ agentType }).saveMessage(
-			ctx,
-			{
-				threadId,
-				userId,
-				prompt,
-				skipEmbeddings: true,
-			},
-		);
+	handler: async (ctx, { type = "ask", userId, threadId, roomId, prompt, agentType }) => {
+		const { messageId, message } = await createAgent({
+			agentType,
+		}).saveMessage(ctx, {
+			threadId,
+			userId,
+			prompt,
+			skipEmbeddings: true,
+		});
 
 		const orderMessage = message?.order ?? 0;
 
 		await Promise.all([
 			ctx.scheduler.runAfter(0, internal.chatAction.streamAsync, {
-				threadId,
+				type,
 				agentType,
 				promptMessageId: messageId,
+				threadId,
 			}),
 			orderMessage > 0
 				? Promise.resolve()

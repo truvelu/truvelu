@@ -88,7 +88,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 	component: RootComponent,
 
-	errorComponent: () => <div>Error</div>,
+	errorComponent: (e) => <div>{JSON.stringify(e)}</div>,
 
 	notFoundComponent: () => <div>Not found</div>,
 });

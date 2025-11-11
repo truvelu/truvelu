@@ -17,6 +17,8 @@ import type * as http from "../http.js";
 import type * as learning from "../learning.js";
 import type * as learningAction from "../learningAction.js";
 import type * as migrations from "../migrations.js";
+import type * as plan from "../plan.js";
+import type * as planAction from "../planAction.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +44,8 @@ declare const fullApi: ApiFromModules<{
   learning: typeof learning;
   learningAction: typeof learningAction;
   migrations: typeof migrations;
+  plan: typeof plan;
+  planAction: typeof planAction;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

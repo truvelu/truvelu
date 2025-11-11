@@ -238,10 +238,41 @@ const AiCanvasHeader = memo(
 	({ canvasTabs }: { canvasTabs: CanvasPayload[] }) => {
 		const roomId = useGetRoomId();
 		const matchRoute = useMatchRoute();
-		const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
-		const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
 		const canvasList = useCanvasList();
 		const activeCanvasId = useActiveCanvasId();
+
+		const currentLearningRoute = matchRoute({ to: "/l/{-$learningId}" });
+		const pendingLearningRoute = matchRoute({
+			to: "/l/{-$learningId}",
+			pending: true,
+		});
+		const currentChatRoute = matchRoute({ to: "/c/{-$chatId}" });
+		const pendingChatRoute = matchRoute({
+			to: "/c/{-$chatId}",
+			pending: true,
+		});
+		const currentLearningChatRoute = matchRoute({
+			to: "/l/{-$learningId}/c/{-$chatId}",
+		});
+		const pendingLearningChatRoute = matchRoute({
+			to: "/l/{-$learningId}/c/{-$chatId}",
+			pending: true,
+		});
+
+		const isCurrentLearningRoute = currentLearningRoute !== false;
+		const isPendingLearningRoute = pendingLearningRoute !== false;
+		const isCurrentChatRoute = currentChatRoute !== false;
+		const isPendingChatRoute = pendingChatRoute !== false;
+		const isCurrentLearningChatRoute = currentLearningChatRoute !== false;
+		const isPendingLearningChatRoute = pendingLearningChatRoute !== false;
+
+		const isLearningChatRoute =
+			isCurrentLearningChatRoute || isPendingLearningChatRoute;
+		const isLearningRoute =
+			!isLearningChatRoute &&
+			(isCurrentLearningRoute || isPendingLearningRoute);
+		const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
+		const isIndexRoute = !isLearningRoute && !isChatRoute;
 
 		const { removeCanvas, clearCanvas, clearOtherCanvas, setOpenCanvas } =
 			useCanvasStore(
@@ -260,10 +291,6 @@ const AiCanvasHeader = memo(
 		const scrollRef = useRef<HTMLDivElement>(null);
 
 		const [dropdownOpen, setDropdownOpen] = useState(false);
-
-		const isLearningRoute = learningRoute !== false;
-		const isChatRoute = chatRoute !== false;
-		const isIndexRoute = !isLearningRoute && !isChatRoute;
 
 		const isListActive = activeCanvasId === "list";
 
@@ -447,17 +474,42 @@ const AiCanvasTabListContent = memo(() => {
 	const roomId = useGetRoomId();
 	const matchRoute = useMatchRoute();
 
-	const learningRoute = matchRoute({ to: "/l/{-$learningId}" });
-	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
+	const currentLearningRoute = matchRoute({ to: "/l/{-$learningId}" });
+	const pendingLearningRoute = matchRoute({
+		to: "/l/{-$learningId}",
+		pending: true,
+	});
+	const currentChatRoute = matchRoute({ to: "/c/{-$chatId}" });
+	const pendingChatRoute = matchRoute({
+		to: "/c/{-$chatId}",
+		pending: true,
+	});
+	const currentLearningChatRoute = matchRoute({
+		to: "/l/{-$learningId}/c/{-$chatId}",
+	});
+	const pendingLearningChatRoute = matchRoute({
+		to: "/l/{-$learningId}/c/{-$chatId}",
+		pending: true,
+	});
+
+	const isCurrentLearningRoute = currentLearningRoute !== false;
+	const isPendingLearningRoute = pendingLearningRoute !== false;
+	const isCurrentChatRoute = currentChatRoute !== false;
+	const isPendingChatRoute = pendingChatRoute !== false;
+	const isCurrentLearningChatRoute = currentLearningChatRoute !== false;
+	const isPendingLearningChatRoute = pendingLearningChatRoute !== false;
+
+	const isLearningChatRoute =
+		isCurrentLearningChatRoute || isPendingLearningChatRoute;
+	const isLearningRoute =
+		!isLearningChatRoute && (isCurrentLearningRoute || isPendingLearningRoute);
+	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
 
 	const { upsertCanvas } = useCanvasStore(
 		useShallow(({ upsertCanvas }) => ({
 			upsertCanvas,
 		})),
 	);
-
-	const isLearningRoute = learningRoute !== false;
-	const isChatRoute = chatRoute !== false;
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 

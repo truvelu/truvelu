@@ -1,15 +1,15 @@
-import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { AiBrain01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import type { ComponentProps } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
-import { Response } from "./response";
-import { AiBrain01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import SharedIcon from "../shared/shared-icon";
+import { Response } from "./response";
 
 type ReasoningContextValue = {
 	isStreaming: boolean;
@@ -28,11 +28,15 @@ const useReasoning = () => {
 	return context;
 };
 
-export type ReasoningProps = ComponentProps<typeof Collapsible> & {
+export type ReasoningProps = Omit<
+	ComponentProps<typeof Collapsible>,
+	"onDurationChange"
+> & {
 	isStreaming?: boolean;
 	open?: boolean;
 	defaultOpen?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	onDurationChange?: (duration: number) => void;
 	duration?: number;
 };
 
@@ -46,6 +50,7 @@ export const Reasoning = memo(
 		open,
 		defaultOpen = true,
 		onOpenChange,
+		onDurationChange,
 		duration: durationProp,
 		children,
 		...props
@@ -58,6 +63,10 @@ export const Reasoning = memo(
 		const [duration, setDuration] = useControllableState({
 			prop: durationProp,
 			defaultProp: 0,
+			onChange: (duration) => {
+				if (!onDurationChange) return;
+				onDurationChange?.(duration);
+			},
 		});
 
 		const [hasAutoClosed, setHasAutoClosed] = useState(false);

@@ -5,7 +5,7 @@ import { api, components, internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { createAgent } from "./agent";
 
-export const createLearning = mutation({
+export const createLearningPanel = mutation({
 	args: {
 		userId: v.string(),
 		icon: v.optional(v.string()),
@@ -47,7 +47,15 @@ export const createLearning = mutation({
 		});
 
 		await Promise.all([
+			ctx.db.insert("plans", {
+				title: "New Learning Plan",
+				content: "",
+				status: "draft",
+				userId,
+				chatId: _chatId,
+			}),
 			ctx.db.insert("learningChats", {
+				type: "panel",
 				chatId: _chatId,
 				learningId: _learningId,
 				userId,
@@ -73,6 +81,69 @@ export const createLearning = mutation({
 			success: true,
 			threadId,
 			uuid: learning?.uuid,
+		};
+	},
+});
+
+export const createLearningContent = mutation({
+	args: {
+		learningId: v.id("learning"),
+		userId: v.string(),
+		data: v.array(
+			v.object({
+				order: v.number(),
+				title: v.string(),
+				description: v.string(),
+				learningObjectives: v.array(v.string()),
+				priority: v.optional(v.union(v.string(), v.null())),
+			}),
+		),
+	},
+	handler: async (ctx, args) => {
+		const { learningId, userId, data } = args;
+
+		const agent = createAgent({
+			agentType: "course-planner",
+		});
+
+		const promises = data.map(async (item) => {
+			const { threadId } = await agent.createThread(ctx, {
+				userId,
+				title: item.title,
+				summary: item.description ?? "",
+			});
+
+			const _chatId = await ctx.db.insert("chats", {
+				uuid: uuidv7(),
+				threadId,
+				userId,
+				status: "ready",
+			});
+
+			const _learningChatId = await ctx.db.insert("learningChats", {
+				type: "content",
+				chatId: _chatId,
+				learningId,
+				userId,
+				metadata: {
+					plan: {
+						order: item?.order,
+						title: item?.title,
+						description: item?.description ?? "",
+						learningObjectives: item?.learningObjectives ?? [],
+						priority: item?.priority ?? null,
+						status: "draft",
+					},
+				},
+			});
+
+			return _learningChatId;
+		});
+
+		const learningChatIds = await Promise.all(promises);
+
+		return {
+			learningChatIds,
 		};
 	},
 });
@@ -134,8 +205,11 @@ export const getLearningsChatsByRoomId = query({
 
 		const { page, ...paginationInfo } = threads;
 
+		const learningChatPanelType = allLearningChatsByLearningId.filter(
+			(learningChat) => learningChat.type === "panel",
+		);
 		const learningChatIds = new Set(
-			allLearningChatsByLearningId.map((learningChat) => learningChat.chatId),
+			learningChatPanelType.map((learningChat) => learningChat.chatId),
 		);
 
 		// Create a Map of threadId -> chat for O(1) lookup
@@ -181,6 +255,21 @@ export const getLearningByRoomId = query({
 	},
 });
 
+export const getLearningChatByChatId = query({
+	args: {
+		userId: v.string(),
+		chatId: v.id("chats"),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("learningChats")
+			.withIndex("by_chatId_and_userId", (q) =>
+				q.eq("chatId", args.chatId).eq("userId", args.userId),
+			)
+			.unique();
+	},
+});
+
 export const updateLearningTitle = mutation({
 	args: {
 		learningId: v.id("learning"),
@@ -196,11 +285,14 @@ export const updateLearningTitle = mutation({
 export const archiveLearning = mutation({
 	args: {
 		learningId: v.id("learning"),
+		userId: v.string(),
 	},
-	handler: async (ctx, { learningId }) => {
+	handler: async (ctx, { learningId, userId }) => {
 		const learningChats = await ctx.db
 			.query("learningChats")
-			.withIndex("by_learningId", (q) => q.eq("learningId", learningId))
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", learningId).eq("userId", userId),
+			)
 			.collect();
 
 		const chatJoinLearningChatIds = learningChats.map(
@@ -234,11 +326,23 @@ export const archiveLearning = mutation({
 export const deleteLearning = mutation({
 	args: {
 		learningId: v.id("learning"),
+		userId: v.string(),
 	},
-	handler: async (ctx, { learningId }) => {
+	handler: async (ctx, { learningId, userId }) => {
+		// SECURITY: Verify ownership before proceeding
+		const learning = await ctx.db.get(learningId);
+		if (!learning) {
+			throw new Error("Learning not found");
+		}
+		if (learning.userId !== userId) {
+			throw new Error("Unauthorized: You don't own this learning");
+		}
+
 		const learningChats = await ctx.db
 			.query("learningChats")
-			.withIndex("by_learningId", (q) => q.eq("learningId", learningId))
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", learningId).eq("userId", userId),
+			)
 			.collect();
 
 		const chatJoinLearningChatIds = learningChats.map(
@@ -248,11 +352,114 @@ export const deleteLearning = mutation({
 		const chats = await Promise.all(
 			chatJoinLearningChatIds.map((chatId) => ctx.db.get(chatId)),
 		);
+		const plans = await Promise.all(
+			chatJoinLearningChatIds.flatMap((chatId) =>
+				ctx.db
+					.query("plans")
+					.withIndex("by_chatId_and_userId", (q) =>
+						q.eq("chatId", chatId).eq("userId", userId),
+					)
+					.collect(),
+			),
+		);
+
 		const chatThreadIds = chats.map((chat) => chat?.threadId).filter(Boolean);
 
+		const flatPlans = plans.flat();
+		const planIds = flatPlans.map((plan) => plan?._id).filter(Boolean);
+
+		const planItems = await Promise.all(
+			planIds.flatMap((planId) =>
+				ctx.db
+					.query("planItems")
+					.withIndex("by_planId", (q) => q.eq("planId", planId))
+					.collect(),
+			),
+		);
+		const planMetadata = await Promise.all(
+			planIds.flatMap((planId) =>
+				ctx.db
+					.query("planMetadata")
+					.withIndex("by_planId", (q) => q.eq("planId", planId))
+					.collect(),
+			),
+		);
+
+		const flatPlanMetadata = planMetadata.flat();
+
+		const planMetadataIds = flatPlanMetadata
+			.map((planMetadata) => planMetadata?._id)
+			.filter(Boolean);
+
+		const planMetadataSearchQueries = await Promise.all(
+			planMetadataIds.flatMap((planMetadataId) =>
+				ctx.db
+					.query("planMetadataSearchQueries")
+					.withIndex("by_planMetadataId", (q) =>
+						q.eq("planMetadataId", planMetadataId),
+					)
+					.collect(),
+			),
+		);
+		const planMetadataSearchResults = await Promise.all(
+			planMetadataIds.flatMap((planMetadataId) =>
+				ctx.db
+					.query("planMetadataSearchResults")
+					.withIndex("by_planMetadataId", (q) =>
+						q.eq("planMetadataId", planMetadataId),
+					)
+					.collect(),
+			),
+		);
+		const planMetadataLearningRequirements = await Promise.all(
+			planMetadataIds.flatMap((planMetadataId) =>
+				ctx.db
+					.query("planMetadataLearningRequirements")
+					.withIndex("by_planMetadataId", (q) =>
+						q.eq("planMetadataId", planMetadataId),
+					)
+					.collect(),
+			),
+		);
+
+		const flatPlanItems = planItems.flat();
+		const flatPlanMetadataSearchQueries = planMetadataSearchQueries.flat();
+		const flatPlanMetadataSearchResults = planMetadataSearchResults.flat();
+		const flatPlanMetadataLearningRequirements =
+			planMetadataLearningRequirements.flat();
+
+		// Delete all related records in proper order
+		// We delete children before parents to maintain referential integrity
+		// Each level can be deleted in parallel, but we wait between levels
+
+		// Level 1: Delete deepest children (planMetadata children)
+		await Promise.all([
+			...flatPlanMetadataSearchQueries.map((item) => ctx.db.delete(item._id)),
+			...flatPlanMetadataSearchResults.map((item) => ctx.db.delete(item._id)),
+			...flatPlanMetadataLearningRequirements.map((item) =>
+				ctx.db.delete(item._id),
+			),
+		]);
+
+		// Level 2: Delete planMetadata and planItems (both depend on plans)
+		await Promise.all([
+			...flatPlanMetadata.map((item) => ctx.db.delete(item._id)),
+			...flatPlanItems.map((item) => ctx.db.delete(item._id)),
+		]);
+
+		// Level 3: Delete plans
+		await Promise.all([...flatPlans.map((plan) => ctx.db.delete(plan._id))]);
+
+		// Level 4: Delete learningChats join records
+		await Promise.all([
+			...learningChats.map((learningChat) => ctx.db.delete(learningChat._id)),
+		]);
+
+		// Level 5: Delete chats and schedule thread deletions
 		await Promise.all([
 			...chatJoinLearningChatIds.map((chatId) => ctx.db.delete(chatId)),
-			...learningChats.map((learningChat) => ctx.db.delete(learningChat._id)),
+			// Schedule async thread deletions in the agent component
+			// Note: These run asynchronously. If they fail, threads may be orphaned.
 			...chatThreadIds.map((threadId) => {
 				if (!threadId) return Promise.resolve();
 				return ctx.scheduler.runAfter(
@@ -265,6 +472,60 @@ export const deleteLearning = mutation({
 			}),
 		]);
 
-		return await ctx.db.delete(learningId);
+		// Finally, delete the learning record itself
+		await ctx.db.delete(learningId);
+
+		return { success: true };
+	},
+});
+
+export const getLearningChatsContentByLearningRoomId = query({
+	args: {
+		userId: v.string(),
+		uuid: v.string(),
+		paginationOpts: paginationOptsValidator,
+	},
+	handler: async (ctx, args) => {
+		const [learning, allChats] = await Promise.all([
+			ctx.db
+				.query("learning")
+				.withIndex("by_uuid_and_userId", (q) =>
+					q.eq("uuid", args.uuid).eq("userId", args.userId),
+				)
+				.unique(),
+			ctx.db
+				.query("chats")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
+		]);
+
+		if (!learning) {
+			throw new Error("Learning not found");
+		}
+
+		// Create a Map of threadId -> chat for O(1) lookup
+		const chatsById = new Map(allChats.map((chat) => [chat._id, chat]));
+
+		const learningChats = await ctx.db
+			.query("learningChats")
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", learning._id).eq("userId", args.userId),
+			)
+			.paginate(args.paginationOpts);
+
+		const { page: learningChatsPage, ...paginationInfo } = learningChats;
+
+		const sortedLearningChats = learningChatsPage
+			.filter((learningChat) => learningChat.type === "content")
+			.map((learningChat) => ({
+				...learningChat,
+				learningData: learning,
+				chatData: chatsById.get(learningChat.chatId),
+			}));
+
+		return {
+			...paginationInfo,
+			page: sortedLearningChats,
+		};
 	},
 });

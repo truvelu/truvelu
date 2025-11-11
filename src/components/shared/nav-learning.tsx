@@ -11,6 +11,7 @@ import {
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
+import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
@@ -60,11 +61,14 @@ import {
 } from "../ui/dropdown-menu";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { useSidebar } from "../ui/sidebar";
 import SharedIcon from "./shared-icon";
 
 const NavNewLearningItem = () => {
 	const navigate = useNavigate();
 
+	const { setOpen: setSidebarOpen, setOpenMobile: setSidebarOpenMobile } =
+		useSidebar();
 	const { upsertCanvas } = useCanvasStore(
 		useShallow(({ upsertCanvas }) => ({
 			upsertCanvas,
@@ -79,8 +83,8 @@ const NavNewLearningItem = () => {
 		...convexQuery(api.auth.getCurrentUser, {}),
 	});
 
-	const createLearning = useMutation({
-		mutationFn: useConvexMutation(api.learning.createLearning),
+	const createLearningPanel = useMutation({
+		mutationFn: useConvexMutation(api.learning.createLearningPanel),
 	});
 
 	return (
@@ -158,7 +162,7 @@ const NavNewLearningItem = () => {
 							disabled={!isAutogenerateTitle && !manualTitle}
 							onClick={() => {
 								if (!user) return;
-								createLearning.mutate(
+								createLearningPanel.mutate(
 									{
 										userId: user._id,
 										title: isAutogenerateTitle ? undefined : manualTitle,
@@ -178,6 +182,9 @@ const NavNewLearningItem = () => {
 												to: "/l/{-$learningId}",
 												params: { learningId: data.uuid },
 											});
+
+											setSidebarOpen(false);
+											setSidebarOpenMobile(false);
 										},
 									},
 								);
@@ -198,9 +205,14 @@ const NavLearningItem = ({
 	learning: (typeof api.learning.getLearnings._returnType)["page"][number];
 }) => {
 	const navigate = useNavigate();
+	const roomId = useGetRoomId();
 
 	const [collapsibleOpen, setCollapsibleOpen] = useState(false);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
+
+	const { data: user } = useQuery({
+		...convexQuery(api.auth.getCurrentUser, {}),
+	});
 
 	const updateLearningTitle = useMutation({
 		mutationFn: useConvexMutation(api.learning.updateLearningTitle),
@@ -335,20 +347,28 @@ const NavLearningItem = ({
 						<DropdownMenuItem
 							className="p-2.5 rounded-xl"
 							onClick={() => {
-								if (!learning?._id) return;
+								if (!learning?._id || !user?._id) return;
 								archiveLearning.mutate(
-									{ learningId: learning?._id },
+									{
+										learningId: learning?._id,
+										userId: user?._id,
+									},
 									{
 										onSuccess: () => {
-											navigate({
-												to: "/",
-											})
-												.then(() => {
-													toast.success("Learning archived successfully");
+											if (roomId === learning?.uuid) {
+												navigate({
+													to: "/",
 												})
-												.catch(() => {
-													toast.error("Failed to archive learning");
-												});
+													.then(() => {
+														toast.success("Learning archived successfully");
+													})
+													.catch(() => {
+														toast.error("Failed to archive learning");
+													});
+												return;
+											}
+
+											toast.success("Learning archived successfully");
 										},
 									},
 								);
@@ -361,20 +381,25 @@ const NavLearningItem = ({
 						<DropdownMenuItem
 							className="!text-destructive p-2.5 rounded-xl"
 							onClick={() => {
-								if (!learning?._id) return;
+								if (!learning?._id || !user?._id) return;
 								deleteLearning.mutate(
-									{ learningId: learning?._id },
+									{ learningId: learning?._id, userId: user?._id },
 									{
 										onSuccess: () => {
-											navigate({
-												to: "/",
-											})
-												.then(() => {
-													toast.success("Learning deleted successfully");
+											if (roomId === learning?.uuid) {
+												navigate({
+													to: "/",
 												})
-												.catch(() => {
-													toast.error("Failed to delete learning");
-												});
+													.then(() => {
+														toast.success("Learning deleted successfully");
+													})
+													.catch(() => {
+														toast.error("Failed to delete learning");
+													});
+												return;
+											}
+
+											toast.success("Learning deleted successfully");
 										},
 									},
 								);

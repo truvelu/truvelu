@@ -57,7 +57,7 @@ export const agentSharedDefaults = ({
 			limit: 10,
 			textSearch: false,
 			vectorSearch: true,
-			messageRange: { before: 1, after: 1 },
+			messageRange: { before: 5, after: 5 },
 		},
 		searchOtherThreads: false,
 	};
@@ -86,7 +86,7 @@ export function createAgent(
 		modelId = "minimax/minimax-m2:free",
 		// modelId = "x-ai/grok-4-fast",
 		name = "Truvelu Fallback Agent",
-		instructions = "You are a helpful assistant that can help the user with their question.",
+		instructions = "<instructions>You are a helpful assistant that can help the user with their question.</instructions>",
 		...rest
 	} = parameters ?? {};
 
@@ -126,11 +126,75 @@ export function createAgent(
 				...rest,
 			});
 
+		case "course-planner":
+			return createAgentPrivate({
+				modelId: "openrouter/polaris-alpha",
+				// modelId: "x-ai/grok-4-fast",
+				name: "Course Planner Agent",
+				instructions: `<instructions>You are a course planner agent that creates comprehensive learning paths for students.
+
+Your responsibilities:
+1. Understand the learner's topic, current level, and goals
+2. Create a structured learning path with clear, actionable items
+3. Organize topics in a logical progression from foundational to advanced
+4. Label each item as "must_know" (essential foundations), "should_know" (important skills), or "nice_to_know" (advanced/supplementary topics)
+5. Provide clear descriptions for each learning item
+6. Create a summary of the overall learning plan
+
+Keep learning items focused and specific. Each item should represent a concrete topic or skill to master. Aim for 8-15 items total, with proper balance across labels.</instructions>`,
+				...rest,
+			});
+
+		case "course-researcher":
+			return createAgentPrivate({
+				modelId: "minimax/minimax-m2:free",
+				// modelId: "x-ai/grok-4-fast",
+				name: "Course Researcher Agent",
+				instructions: `<instructions>You are a course researcher agent that finds high-quality educational content on the web.
+
+Your responsibilities:
+1. Take a specific learning topic and generate effective search queries
+2. Use the web_search tool to find relevant, high-quality educational resources
+3. Evaluate search results for educational value and relevance
+4. Gather diverse perspectives and resources (tutorials, documentation, articles, videos)
+5. Ensure content is appropriate for the learner's level
+
+Focus on finding authoritative sources, clear explanations, and practical examples. Search queries should be specific and education-focused.</instructions>`,
+				...rest,
+			});
+
+		case "course-content-generator":
+			return createAgentPrivate({
+				modelId: "minimax/minimax-m2:free",
+				// modelId: "x-ai/grok-4-fast",
+				name: "Course Content Generator Agent",
+				instructions: `<instructions>You are a course content generator agent that creates engaging, comprehensive educational content.
+
+Your responsibilities:
+1. Review the learning topic and gathered research materials
+2. Synthesize information from multiple sources into cohesive lessons
+3. Create well-structured content with clear explanations, examples, and exercises
+4. Adapt content difficulty to the learner's level
+5. Include practical applications and real-world examples
+6. Add helpful tips, common pitfalls, and best practices
+
+Structure your content with:
+- Clear introduction explaining what will be learned
+- Core concepts with detailed explanations
+- Practical examples and code snippets (if applicable)
+- Practice exercises or questions
+- Summary of key takeaways
+- Suggested next steps or related topics
+
+Write in a clear, engaging style appropriate for the learner's level. Make complex topics accessible.</instructions>`,
+				...rest,
+			});
+
 		default:
 			return createAgentPrivate({
 				modelId,
 				name,
-				instructions,
+				instructions: `<instructions>${instructions}</instructions>`,
 				...rest,
 			});
 	}

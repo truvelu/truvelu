@@ -57,7 +57,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	const { data: chat } = useQuery({
 		...convexQuery(
 			api.chat.getChat,
-			user?._id && roomId
+			!!user?._id?.toString() && !!roomId
 				? {
 						userId: user?._id?.toString() ?? "",
 						uuid: roomId,
@@ -150,6 +150,7 @@ const AiActions = memo((props: AiActionsProps) => {
 			sidebarOpen,
 			openCanvas,
 			getCanvas,
+			setOpenCanvas,
 			removeCanvas,
 			upsertCanvas,
 			setSidebarOpen,

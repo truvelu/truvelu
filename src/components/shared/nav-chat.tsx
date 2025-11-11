@@ -8,6 +8,7 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
+import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { convexQuery } from "@convex-dev/react-query";
 import {
 	Archive03Icon,
@@ -40,6 +41,7 @@ import SharedIcon from "./shared-icon";
 const NavChatItem = ({
 	chat,
 }: { chat: (typeof api.chat.getChats._returnType)["page"][number] }) => {
+	const roomId = useGetRoomId();
 	const navigate = useNavigate();
 
 	const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -117,15 +119,21 @@ const NavChatItem = ({
 						onClick={() => {
 							if (!chat?._id) return;
 							archiveChat({ threadId: chat._id });
-							navigate({
-								to: "/",
-							})
-								.then(() => {
-									toast.success("Chat archived successfully");
+
+							if (roomId === chat?.data?.uuid) {
+								navigate({
+									to: "/",
 								})
-								.catch(() => {
-									toast.error("Failed to archive chat");
-								});
+									.then(() => {
+										toast.success("Chat archived successfully");
+									})
+									.catch(() => {
+										toast.error("Failed to archive chat");
+									});
+								return;
+							}
+
+							toast.success("Chat archived successfully");
 						}}
 					>
 						<SharedIcon icon={Archive03Icon} />
@@ -137,15 +145,20 @@ const NavChatItem = ({
 						onClick={() => {
 							if (!chat?._id) return;
 							deleteChat({ threadId: chat._id });
-							navigate({
-								to: "/",
-							})
-								.then(() => {
-									toast.success("Chat deleted successfully");
+							if (roomId === chat?.data?.uuid) {
+								navigate({
+									to: "/",
 								})
-								.catch(() => {
-									toast.error("Failed to delete chat");
-								});
+									.then(() => {
+										toast.success("Chat delete successfully");
+									})
+									.catch(() => {
+										toast.error("Failed to delete chat");
+									});
+								return;
+							}
+
+							toast.success("Chat deleted successfully");
 						}}
 					>
 						<SharedIcon icon={Delete02Icon} className="text-destructive" />

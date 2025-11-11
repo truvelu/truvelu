@@ -15,6 +15,14 @@ export const MODELS: ReadonlyMap<
 	}
 > = new Map([
 	[
+		"openrouter/polaris-alpha",
+		{
+			value: "openrouter/polaris-alpha",
+			label: "OpenRouter: Polaris Alpha",
+			isReasoning: false,
+		},
+	],
+	[
 		"google/gemma-3n-e4b-it",
 		{
 			value: "google/gemma-3n-e4b-it",

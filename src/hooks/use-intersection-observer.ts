@@ -49,6 +49,8 @@ export function useIntersectionObserver({
 
 	const frozen = state.entry?.isIntersecting && freezeOnceVisible;
 
+	const thresholdString = JSON.stringify(threshold);
+
 	useEffect(() => {
 		// Ensure we have a ref to observe
 		if (!ref) return;
@@ -60,6 +62,8 @@ export function useIntersectionObserver({
 		if (frozen) return;
 
 		let unobserve: (() => void) | undefined;
+
+		const thresholdParsed = JSON.parse(thresholdString);
 
 		const observer = new IntersectionObserver(
 			(entries: IntersectionObserverEntry[]): void => {
@@ -87,7 +91,7 @@ export function useIntersectionObserver({
 					}
 				});
 			},
-			{ threshold, root, rootMargin },
+			{ threshold: thresholdParsed, root, rootMargin },
 		);
 
 		observer.observe(ref);
@@ -95,14 +99,7 @@ export function useIntersectionObserver({
 		return () => {
 			observer.disconnect();
 		};
-	}, [
-		ref,
-		JSON.stringify(threshold),
-		root,
-		rootMargin,
-		frozen,
-		freezeOnceVisible,
-	]);
+	}, [ref, thresholdString, root, rootMargin, frozen, freezeOnceVisible]);
 
 	// ensures that if the observed element changes, the intersection observer is reinitialized
 	const prevRef = useRef<Element | null>(null);

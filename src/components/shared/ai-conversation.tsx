@@ -11,8 +11,9 @@ import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Message01Icon } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
+import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
-import type { streamSectionValidator } from "convex/schema";
+import type { agentTypeValidator, streamSectionValidator } from "convex/schema";
 import type { Infer } from "convex/values";
 import {
 	type FormEvent,
@@ -80,28 +81,32 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				: "skip",
 		),
 	);
-
-	const threadId = additionalThreadId ?? chat?.threadId ?? "";
-	const isMainThread = type === "thread";
-	const isDiscussionThread = type === "discussion";
-
-	const { data: discussion, isPending: isDiscussionPending } = useQuery(
+	const { data: chatByThreadId, isPending: isChatByThreadIdPending } = useQuery(
 		convexQuery(
-			api.discussion.getDiscussionByTreadIdAndUserId,
-			isDiscussionThread && !!user?._id?.toString() && !!threadId
+			api.chat.getChatByThreadIdAndUserId,
+			!!user?._id?.toString() && !!additionalThreadId
 				? {
 						userId: user?._id?.toString() ?? "",
-						threadId,
+						threadId: additionalThreadId,
 					}
 				: "skip",
 		),
 	);
 
+	const threadId = additionalThreadId ?? chat?.threadId ?? "";
+	const isMainThread = type === "thread";
+
 	const indexRoute = matchRoute({ to: "/" });
-	const learningRoute = matchRoute({ to: "/l/{-$learningId}", pending: true });
+	const currentlearningRoute = matchRoute({ to: "/l/{-$learningId}" });
+	const pendingLearningRoute = matchRoute({
+		to: "/l/{-$learningId}",
+		pending: true,
+	});
 
 	const isIndexRoute = indexRoute !== false && !roomId;
-	const isLearningRoute = learningRoute !== false;
+	const isCurrentLearningRoute = currentlearningRoute !== false;
+	const isPendingLearningRoute = pendingLearningRoute !== false;
+	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
 
 	const {
 		results: messages,
@@ -132,8 +137,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const chatStatus = useMemo(() => chat?.status ?? "ready", [chat]);
 	const discussionStatus = useMemo(
-		() => discussion?.status ?? "ready",
-		[discussion],
+		() => chatByThreadId?.status ?? "ready",
+		[chatByThreadId],
 	);
 	const roomStatus = useMemo(
 		() => (isMainThread ? chatStatus : discussionStatus),
@@ -141,8 +146,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	);
 
 	const roomIsPending = useMemo(
-		() => (isUserPending || isMainThread ? isChatPending : isDiscussionPending),
-		[isUserPending, isChatPending, isDiscussionPending, isMainThread],
+		() =>
+			isUserPending || isMainThread ? isChatPending : isChatByThreadIdPending,
+		[isUserPending, isChatPending, isChatByThreadIdPending, isMainThread],
 	);
 
 	const messageThatIsStreaming = useMemo(
@@ -157,13 +163,23 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		() => roomStatus === "streaming" || !!messageThatIsStreaming,
 		[roomStatus, messageThatIsStreaming],
 	);
-	const messageThatIsStreamingTextPartHasValue = useMemo(
-		() =>
-			messageThatIsStreaming?.parts
-				?.filter((part) => part.type === MessageType.TEXT)
-				?.some((part) => !!part.text) ?? false,
-		[messageThatIsStreaming],
-	);
+	const messageThatIsStreamingTextPartHasValue = useMemo(() => {
+		const parts = messageThatIsStreaming?.parts ?? [];
+
+		const textPart = parts.find((part) => part.type === MessageType.TEXT);
+		const toolPart = parts.find((part) => part.type.startsWith("tool-")) as
+			| ToolUIPart
+			| undefined;
+		const reasoningPart = parts.find((part) => part.type === "reasoning");
+
+		const textPartHasValue = !!(textPart?.text && textPart.text.length > 0);
+		const toolPartHasValue = !!toolPart?.output;
+		const reasoningPartHasValue = !!(
+			reasoningPart?.text && reasoningPart.text.length > 0
+		);
+
+		return textPartHasValue || toolPartHasValue || reasoningPartHasValue;
+	}, [messageThatIsStreaming]);
 
 	const handleSubmitNewChat = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
@@ -189,7 +205,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							threadId,
 							roomId,
 							prompt,
-							agentType: "learning-generation",
+							agentType: "course-planner",
 							userId,
 						});
 					},
@@ -222,11 +238,32 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				return;
 			}
 
+			const MAPPING: {
+				[key: string]: {
+					agentType: Infer<typeof agentTypeValidator>;
+					type: "learning" | "ask";
+				};
+			} = {
+				"learning-creation": {
+					agentType: "course-planner",
+					type: "learning",
+				},
+				thread: {
+					agentType: "question-answering",
+					type: "ask",
+				},
+				discussion: {
+					agentType: "question-answering",
+					type: "ask",
+				},
+			};
+
 			sendChatMessage.mutate({
 				threadId,
 				roomId,
 				prompt: message.text ?? "",
-				agentType: "learning-generation",
+				agentType: MAPPING[type]?.agentType ?? "question-answering",
+				type: MAPPING[type]?.type ?? "ask",
 				userId,
 			});
 			scrollToBottom();
@@ -243,6 +280,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			scrollToBottom,
 			handleSubmitNewChat,
 			isInputStatusLoading,
+			type,
 		],
 	);
 
@@ -366,7 +404,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				<ContainerWithMargin
 					asContent
 					style={{
-						paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 8rem)`,
+						paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 1rem)`,
 					}}
 				>
 					<ContainerWithMaxWidth className="w-full">
