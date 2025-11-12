@@ -17,6 +17,176 @@ if (!exaApiKey) {
 	throw new Error("EXA_API_KEY environment variable not set");
 }
 
+export const streamGenerateLearningContent = internalAction({
+	args: {
+		learningId: v.id("learning"),
+		userId: v.string(),
+	},
+	handler: async (ctx, { learningId, userId }) => {
+		const courseContentGeneratorAgent = createAgent({
+			agentType: "course-content-generator",
+		});
+		const courseResearcherAgent = createAgent({
+			agentType: "course-researcher",
+		});
+
+		const learningListData = await ctx.runQuery(
+			api.learning.getLearningChatsContentByLearningIdThatStatusDraft,
+			{
+				userId,
+				learningId,
+			},
+		);
+
+		const streamerCreator = async (data: (typeof learningListData)[number]) => {
+			const threadId = data?.chatData?.threadId;
+
+			if (!threadId) return;
+
+			await Promise.all([
+				ctx.runMutation(internal.chat.patchChatStatus, {
+					threadId,
+					status: "streaming",
+				}),
+				ctx.runMutation(api.learning.updateLearningChatMetadataPlanStatus, {
+					learningChatId: data._id,
+					status: "generating",
+				}),
+			]);
+
+			const generateSearchQueries = await generateObject({
+				model: courseResearcherAgent.options.languageModel,
+				system: courseResearcherAgent.options.instructions,
+				prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
+				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
+				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
+				<title>${data?.metadata?.plan?.title}</title>
+				<description>${data?.metadata?.plan?.description}</description>
+				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
+				<the-ask></the-ask>`,
+				schema: z.object({
+					searchQueries: z.array(
+						z.object({
+							query: z.string(),
+							numResults: z.number(),
+						}),
+					),
+				}),
+			});
+
+			const searchResultsToSave: {
+				title: string;
+				url: string;
+				image: string;
+				content: string;
+				publishedDate: string;
+				score: number;
+			}[] = [];
+
+			if (generateSearchQueries.object.searchQueries.length > 0) {
+				try {
+					// Dynamic import to avoid bundling issues
+					const Exa = (await import("exa-js")).default;
+					const exa = new Exa(exaApiKey);
+
+					for (const searchQuery of generateSearchQueries.object
+						.searchQueries) {
+						const { results } = await exa.search(searchQuery.query, {
+							useAutoprompt: true,
+							numResults: searchQuery.numResults,
+						});
+						const processedResults = results.map((result) => ({
+							title: result.title ?? "",
+							url: result.url ?? "",
+							image: result.image ?? "",
+							content: result.text ?? "",
+							publishedDate: result.publishedDate ?? "",
+							score: result.score ?? 0,
+						}));
+						searchResultsToSave.push(...processedResults);
+					}
+				} catch (error) {
+					console.error("Exa search error:", error);
+					throw new Error(
+						`Web search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+					);
+				}
+			}
+
+			const streamer = new DeltaStreamer(
+				components.agent,
+				ctx,
+				{
+					throttleMs: 100,
+					onAsyncAbort: async () => console.error("Aborted asynchronously"),
+					// This will collapse multiple tiny deltas into one if they're being sent
+					// in quick succession.
+					compress: compressUIMessageChunks,
+					abortSignal: undefined,
+				},
+				{
+					threadId,
+					format: "UIMessageChunk",
+					order: 0,
+					stepOrder: 0,
+					userId: userId,
+				},
+			);
+
+			const response = streamText({
+				model: courseContentGeneratorAgent.options.languageModel,
+				system: courseContentGeneratorAgent.options.instructions,
+				prompt: `
+				<search-results>${JSON.stringify(searchResultsToSave)}</search-results>
+				<learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</learning-requirement>
+				<title>${data?.metadata?.plan?.title}</title>
+				<description>${data?.metadata?.plan?.description}</description>
+				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
+				<the-ask>
+				1. Generate a learning list for the user's learning plan based on parameters that mentioned in the prompt.
+				2. make sure the learning content is follow the learning objectives and the learning requirement.
+				3. output the learning list in markdown format.
+				</the-ask>`,
+				onFinish: async (completion) => {
+					const text = completion.text;
+					await courseContentGeneratorAgent.saveMessage(ctx, {
+						threadId,
+						message: {
+							role: "assistant",
+							content: text,
+						},
+						userId,
+						skipEmbeddings: true,
+					});
+					await Promise.all([
+						ctx.runMutation(internal.chat.patchChatStatus, {
+							threadId,
+							status: "ready",
+						}),
+						ctx.runMutation(api.learning.updateLearningChatMetadataPlanStatus, {
+							learningChatId: data._id,
+							status: "completed",
+						}),
+					]);
+				},
+				onError: (error) => {
+					console.error(error);
+					streamer.fail(JSON.stringify(error));
+				},
+				abortSignal: streamer.abortController.signal,
+			});
+
+			await streamer.consumeStream(response.toUIMessageStream());
+		};
+
+		await Promise.all(
+			learningListData.map(async (data) => {
+				await streamerCreator(data);
+			}),
+		);
+	},
+});
+
 export const streamAsync = internalAction({
 	args: {
 		type: v.optional(v.union(v.literal("ask"), v.literal("learning"))),
@@ -45,6 +215,7 @@ export const streamAsync = internalAction({
 					2. generateSearchQueries: Generate a search query for the user's learning plan.
 					3. webSearch: Search the web for up-to-date educational content and resources about a specific topic.
 					4. generateLearningList: Generate a learning list for the user's learning plan.
+					5. streamGenerateLearningContent: Stream the learning content for the user's learning plan.
 					</tools>
 					<flow>
 					1. Call the understandUserAnswer tool to understand the user's answer about the user's learning preference.
@@ -52,6 +223,7 @@ export const streamAsync = internalAction({
 					3. If the user's answer is full fill the question, call the generateSearchQueries tool to generate a search query for the user's learning plan.
 					4. Call the webSearch tool to find relevant, high-quality educational resources about the search query.
 					5. Call the generateLearningList tool to generate a learning list for the user's learning plan based on the search results.
+					6. Call the streamGenerateLearningContent tool to stream the learning content for the user's learning plan.
 					</flow>
 					<the-ask>
 					- Follow the flow and call the tools to generate a learning list for the user's learning plan.
@@ -561,6 +733,239 @@ export const streamAsync = internalAction({
 										});
 									},
 								}),
+
+								streamGenerateLearningContent: createTool({
+									description:
+										"Stream the learning content for the user's learning plan.",
+									args: z.object({}),
+									handler: async (ctx) => {
+										if (!ctx.threadId || !ctx.userId) {
+											throw new Error("Thread ID or User ID is not set");
+										}
+
+										const chat = await ctx.runQuery(
+											api.chat.getChatByThreadIdAndUserId,
+											{
+												threadId: ctx.threadId,
+												userId: ctx.userId,
+											},
+										);
+
+										if (!chat) {
+											throw new Error("Chat not found");
+										}
+
+										const learningChat = await ctx.runQuery(
+											api.learning.getLearningChatByChatId,
+											{
+												chatId: chat._id,
+												userId: ctx.userId,
+											},
+										);
+
+										if (!learningChat) {
+											throw new Error("Learning chat not found");
+										}
+
+										// GENERATE THE CONTENT
+										const courseContentGeneratorAgent = createAgent({
+											agentType: "course-content-generator",
+										});
+										const courseResearcherAgent = createAgent({
+											agentType: "course-researcher",
+										});
+
+										const learningListData = await ctx.runQuery(
+											api.learning
+												.getLearningChatsContentByLearningIdThatStatusDraft,
+											{
+												userId: ctx.userId,
+												learningId: learningChat.learningId,
+											},
+										);
+
+										const streamerCreator = async (
+											data: (typeof learningListData)[number],
+										) => {
+											const threadId = data?.chatData?.threadId;
+
+											if (!threadId) return;
+
+											await Promise.all([
+												ctx.runMutation(internal.chat.patchChatStatus, {
+													threadId,
+													status: "streaming",
+												}),
+												ctx.runMutation(
+													api.learning.updateLearningChatMetadataPlanStatus,
+													{
+														learningChatId: data._id,
+														status: "generating",
+													},
+												),
+											]);
+
+											const generateSearchQueries = await generateObject({
+												model: courseResearcherAgent.options.languageModel,
+												system: courseResearcherAgent.options.instructions,
+												prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
+				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
+				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
+				<title>${data?.metadata?.plan?.title}</title>
+				<description>${data?.metadata?.plan?.description}</description>
+				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
+				<the-ask></the-ask>`,
+												schema: z.object({
+													searchQueries: z.array(
+														z.object({
+															query: z.string(),
+															numResults: z.number().min(1).max(3),
+														}),
+													),
+												}),
+											});
+
+											const searchResultsToSave: {
+												title: string;
+												url: string;
+												image: string;
+												content: string;
+												publishedDate: string;
+												score: number;
+											}[] = [];
+
+											if (
+												generateSearchQueries.object.searchQueries.length > 0
+											) {
+												try {
+													// Dynamic import to avoid bundling issues
+													const Exa = (await import("exa-js")).default;
+													const exa = new Exa(exaApiKey);
+
+													for (const searchQuery of generateSearchQueries.object
+														.searchQueries) {
+														const { results } = await exa.search(
+															searchQuery.query,
+															{
+																useAutoprompt: true,
+																numResults: searchQuery.numResults,
+															},
+														);
+														const processedResults = results.map((result) => ({
+															title: result.title ?? "",
+															url: result.url ?? "",
+															image: result.image ?? "",
+															content: result.text ?? "",
+															publishedDate: result.publishedDate ?? "",
+															score: result.score ?? 0,
+														}));
+														searchResultsToSave.push(...processedResults);
+														await new Promise((resolve) =>
+															setTimeout(resolve, 1000),
+														);
+													}
+												} catch (error) {
+													console.error("Exa search error:", error);
+													throw new Error(
+														`Web search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+													);
+												}
+											}
+
+											const streamer = new DeltaStreamer(
+												components.agent,
+												ctx,
+												{
+													throttleMs: 100,
+													onAsyncAbort: async () =>
+														console.error("Aborted asynchronously"),
+													// This will collapse multiple tiny deltas into one if they're being sent
+													// in quick succession.
+													compress: compressUIMessageChunks,
+													abortSignal: undefined,
+												},
+												{
+													threadId,
+													format: "UIMessageChunk",
+													order: 0,
+													stepOrder: 0,
+													userId: ctx.userId,
+												},
+											);
+
+											const response = streamText({
+												model:
+													courseContentGeneratorAgent.options.languageModel,
+												system:
+													courseContentGeneratorAgent.options.instructions,
+												prompt: `
+				<search-results>${JSON.stringify(searchResultsToSave)}</search-results>
+				<learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</learning-requirement>
+				<title>${data?.metadata?.plan?.title}</title>
+				<description>${data?.metadata?.plan?.description}</description>
+				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
+				<the-ask>
+				1. Generate a learning list for the user's learning plan based on parameters that mentioned in the prompt.
+				2. make sure the learning content is follow the learning objectives and the learning requirement.
+				3. output the learning list in markdown format.
+				</the-ask>`,
+												onFinish: async (completion) => {
+													const text = completion.text;
+													await courseContentGeneratorAgent.saveMessage(ctx, {
+														threadId,
+														message: {
+															role: "assistant",
+															content: text,
+														},
+														userId: ctx.userId,
+														skipEmbeddings: true,
+													});
+													await Promise.all([
+														ctx.runMutation(internal.chat.patchChatStatus, {
+															threadId,
+															status: "ready",
+														}),
+														ctx.runMutation(
+															api.learning.updateLearningChatMetadataPlanStatus,
+															{
+																learningChatId: data._id,
+																status: "completed",
+															},
+														),
+													]);
+												},
+												onError: (error) => {
+													console.error(error);
+													streamer.fail(JSON.stringify(error));
+												},
+												abortSignal: streamer.abortController.signal,
+											});
+
+											await streamer.consumeStream(
+												response.toUIMessageStream(),
+											);
+										};
+
+										const BATCH_SIZE = 2;
+										for (
+											let i = 0;
+											i < learningListData.length;
+											i += BATCH_SIZE
+										) {
+											const batch = learningListData.slice(i, i + BATCH_SIZE);
+											await Promise.all(
+												batch.map(async (data) => {
+													await streamerCreator(data);
+												}),
+											);
+										}
+
+										return JSON.stringify({
+											message:
+												"Learning content streamed successfully. Next continue to ask the user to see the learning content inside the learning dashboard, because the data will be shown there.",
+										});
+									},
+								}),
 							},
 						},
 						{
@@ -631,7 +1036,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 				format: "UIMessageChunk",
 				order: 0,
 				stepOrder: 0,
-				userId: undefined,
+				userId,
 			},
 		);
 

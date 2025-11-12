@@ -214,6 +214,17 @@ const NavLearningItem = ({
 		...convexQuery(api.auth.getCurrentUser, {}),
 	});
 
+	const { results: learningChatsContent } = useConvexPaginatedQuery(
+		api.learning.getLearningChatsContentByLearningId,
+		user?._id?.toString() && learning?._id
+			? {
+					userId: user?._id?.toString() ?? "",
+					learningId: learning?._id,
+				}
+			: "skip",
+		{ initialNumItems: 20 },
+	);
+
 	const updateLearningTitle = useMutation({
 		mutationFn: useConvexMutation(api.learning.updateLearningTitle),
 	});
@@ -291,35 +302,26 @@ const NavLearningItem = ({
 
 				<CollapsibleContent>
 					<SidebarMenuSub className="mr-0 pr-0">
-						<SidebarMenuSubItem>
-							<SidebarMenuSubButton
-								className="cursor-pointer rounded-tlarge overflow-hidden"
-								asChild
-							>
-								<Link
-									to={"/l/{-$learningId}/c/{-$chatId}"}
-									params={{ learningId: "123", chatId: "123" }}
-									activeProps={{ className: "bg-sidebar-accent" }}
+						{/* LEARNING CHATS */}
+						{learningChatsContent?.map((learningChat) => (
+							<SidebarMenuSubItem key={learningChat?._id}>
+								<SidebarMenuSubButton
+									className="cursor-pointer rounded-tlarge overflow-hidden"
+									asChild
 								>
-									<span>Learning A</span>
-								</Link>
-							</SidebarMenuSubButton>
-						</SidebarMenuSubItem>
-
-						<SidebarMenuSubItem>
-							<SidebarMenuSubButton
-								className="cursor-pointer rounded-tlarge"
-								asChild
-							>
-								<Link
-									to={"/l/{-$learningId}/c/{-$chatId}"}
-									params={{ learningId: "123", chatId: "123" }}
-									activeProps={{ className: "bg-sidebar-accent" }}
-								>
-									<span>Learning B</span>
-								</Link>
-							</SidebarMenuSubButton>
-						</SidebarMenuSubItem>
+									<Link
+										to={"/l/{-$learningId}/c/{-$chatId}"}
+										params={{
+											learningId: learningChat?.learningData?.uuid,
+											chatId: learningChat?.chatData?.uuid,
+										}}
+										activeProps={{ className: "bg-sidebar-accent" }}
+									>
+										<span>{learningChat?.metadata?.plan?.title}</span>
+									</Link>
+								</SidebarMenuSubButton>
+							</SidebarMenuSubItem>
+						))}
 					</SidebarMenuSub>
 				</CollapsibleContent>
 

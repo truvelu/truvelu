@@ -83,7 +83,7 @@ export function createAgent(
 ) {
 	const {
 		agentType,
-		modelId = "minimax/minimax-m2:free",
+		modelId = "openrouter/polaris-alpha",
 		// modelId = "x-ai/grok-4-fast",
 		name = "Truvelu Fallback Agent",
 		instructions = "<instructions>You are a helpful assistant that can help the user with their question.</instructions>",
@@ -99,7 +99,7 @@ export function createAgent(
 	switch (agentType) {
 		case "question-answering":
 			return createAgentPrivate({
-				modelId: "minimax/minimax-m2:free",
+				modelId: "openrouter/polaris-alpha",
 				// modelId: "x-ai/grok-4-fast",
 				name: "Question Answering Agent",
 				instructions:
@@ -109,7 +109,7 @@ export function createAgent(
 
 		case "learning-generation":
 			return createAgentPrivate({
-				modelId: "minimax/minimax-m2:free",
+				modelId: "openrouter/polaris-alpha",
 				// modelId: "x-ai/grok-4-fast",
 				name: "Learning Generation Agent",
 				instructions:
@@ -147,7 +147,7 @@ Keep learning items focused and specific. Each item should represent a concrete 
 
 		case "course-researcher":
 			return createAgentPrivate({
-				modelId: "minimax/minimax-m2:free",
+				modelId: "openrouter/polaris-alpha",
 				// modelId: "x-ai/grok-4-fast",
 				name: "Course Researcher Agent",
 				instructions: `<instructions>You are a course researcher agent that finds high-quality educational content on the web.
@@ -165,26 +165,18 @@ Focus on finding authoritative sources, clear explanations, and practical exampl
 
 		case "course-content-generator":
 			return createAgentPrivate({
-				modelId: "minimax/minimax-m2:free",
+				modelId: "openrouter/polaris-alpha",
 				// modelId: "x-ai/grok-4-fast",
 				name: "Course Content Generator Agent",
 				instructions: `<instructions>You are a course content generator agent that creates engaging, comprehensive educational content.
 
-Your responsibilities:
-1. Review the learning topic and gathered research materials
-2. Synthesize information from multiple sources into cohesive lessons
-3. Create well-structured content with clear explanations, examples, and exercises
-4. Adapt content difficulty to the learner's level
-5. Include practical applications and real-world examples
-6. Add helpful tips, common pitfalls, and best practices
-
 Structure your content with:
 - Clear introduction explaining what will be learned
 - Core concepts with detailed explanations
-- Practical examples and code snippets (if applicable)
-- Practice exercises or questions
+- Use proper article structure like headings, subheadings, paragraphs, bullets, numbering, code snippet, and etc.
+- Giving examples like code snippets, math equations, and etc. (if applicable)
 - Summary of key takeaways
-- Suggested next steps or related topics
+- suggested next steps or related topics
 
 Write in a clear, engaging style appropriate for the learner's level. Make complex topics accessible.</instructions>`,
 				...rest,

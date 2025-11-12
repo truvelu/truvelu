@@ -1,7 +1,11 @@
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
-import { Calendar04Icon, Folder01Icon } from "@hugeicons/core-free-icons";
+import {
+	ArrowMoveUpRightIcon,
+	Calendar04Icon,
+	Folder01Icon,
+} from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
@@ -9,6 +13,13 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import {
+	Empty,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "../ui/empty";
 import { Skeleton } from "../ui/skeleton";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
@@ -100,7 +111,7 @@ function AiLearning() {
 						)}
 					>
 						<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
-							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-white px-3 items-center">
+							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-white px-3 items-start md:items-center">
 								<div className="flex items-center gap-0.5 max-md:-translate-x-1">
 									{isLoading ? (
 										<Skeleton className="size-7" />
@@ -146,6 +157,26 @@ function AiLearning() {
 											</li>
 										))}
 
+									{!isLoading && learningChatsContent?.length === 0 && (
+										<Empty>
+											<EmptyHeader>
+												<EmptyMedia className="relative h-20 w-full">
+													<SharedIcon
+														icon={ArrowMoveUpRightIcon}
+														strokeWidth={1}
+														className="size-20 absolute top-1/2 left-1/2 -translate-x-1/6 -translate-y-1/2 text-gray-300"
+													/>
+												</EmptyMedia>
+												<EmptyTitle>No Course Yet</EmptyTitle>
+												<EmptyDescription className="text-gray-400">
+													You haven&apos;t created any course yet. Get started
+													by generate your first course by start chatting inside
+													the chat section.
+												</EmptyDescription>
+											</EmptyHeader>
+										</Empty>
+									)}
+
 									{!isLoading &&
 										learningChatsContent?.map((item) => (
 											<li
@@ -185,7 +216,7 @@ function AiLearning() {
 																	"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-white ring-1 ring-sidebar-border text-sidebar-foreground",
 																)}
 															>
-																Ready
+																{item?.metadata?.plan?.status}
 															</Badge>
 														</div>
 

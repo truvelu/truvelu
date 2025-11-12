@@ -13,6 +13,7 @@ export const getRouter = () => {
 		routeTree,
 		context: { ...rqContext },
 		defaultPreload: "intent",
+		defaultStaleTime: 5 * 60 * 60 * 1000,
 		scrollRestoration: true,
 		Wrap: (props: { children: React.ReactNode }) => {
 			return (

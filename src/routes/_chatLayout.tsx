@@ -26,11 +26,9 @@ import type { ImperativePanelHandle } from "react-resizable-panels";
 import { useShallow } from "zustand/react/shallow";
 
 export const Route = createFileRoute("/_chatLayout")({
-	ssr: false,
-
 	component: ChatLayout,
 
-	beforeLoad: async (context) => {
+	loader: async (context) => {
 		// Public routes that don't require authentication
 		const publicRoutes = ["/"] as const;
 		const requiresAuth = !publicRoutes.includes(
@@ -50,10 +48,11 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 	const isMobile = useIsMobile();
 	const openCanvas = useCanvasOpenStatus();
 	const activeCanvasId = useActiveCanvasId();
-	const { toggleCanvas, setActiveCanvasId } = useCanvasStore(
-		useShallow(({ toggleCanvas, setActiveCanvasId }) => ({
+	const { toggleCanvas, setActiveCanvasId, closeCanvas } = useCanvasStore(
+		useShallow(({ toggleCanvas, setActiveCanvasId, closeCanvas }) => ({
 			toggleCanvas,
 			setActiveCanvasId,
+			closeCanvas,
 		})),
 	);
 
@@ -133,6 +132,9 @@ function ResponsiveLayout({ children }: { children: ReactNode }) {
 				ref={rightPanelRef}
 				id="resizable-panel-right-panel"
 				collapsible
+				onCollapse={() => {
+					closeCanvas(roomId);
+				}}
 				defaultSize={openCanvas ? undefined : 0}
 				minSize={35}
 				className={cn(

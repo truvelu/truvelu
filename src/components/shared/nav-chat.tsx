@@ -83,7 +83,14 @@ const NavChatItem = ({
 				<Link
 					to={"/c/{-$chatId}"}
 					params={{ chatId: chat?.data?.uuid ?? "" }}
-					activeProps={{ className: "bg-sidebar-accent" }}
+					activeProps={{
+						className: "bg-sidebar-accent",
+						onClick: (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							return;
+						},
+					}}
 				>
 					<SharedIcon icon={GridIcon} />
 					<span

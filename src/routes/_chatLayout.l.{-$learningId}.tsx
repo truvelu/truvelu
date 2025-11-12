@@ -3,8 +3,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Authenticated } from "convex/react";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
-	ssr: false,
-
 	component: RouteComponent,
 
 	beforeLoad: async (context) => {

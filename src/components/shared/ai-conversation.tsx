@@ -67,21 +67,19 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { ref: inputRef, height: inputHeight } =
 		useGetComponentSize<HTMLDivElement>();
 
-	const { data: user, isPending: isUserPending } = useQuery(
-		convexQuery(api.auth.getCurrentUser, {}),
-	);
-	const { data: chat, isPending: isChatPending } = useQuery(
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data: chat } = useQuery(
 		convexQuery(
 			api.chat.getChat,
-			!!user?._id?.toString() && !!roomId
+			!!user && !!roomId
 				? {
-						userId: user?._id?.toString() ?? "",
+						userId: user._id,
 						uuid: roomId,
 					}
 				: "skip",
 		),
 	);
-	const { data: chatByThreadId, isPending: isChatByThreadIdPending } = useQuery(
+	const { data: chatByThreadId } = useQuery(
 		convexQuery(
 			api.chat.getChatByThreadIdAndUserId,
 			!!user?._id?.toString() && !!additionalThreadId
@@ -96,14 +94,16 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const threadId = additionalThreadId ?? chat?.threadId ?? "";
 	const isMainThread = type === "thread";
 
-	const indexRoute = matchRoute({ to: "/" });
+	const currentIndexRoute = matchRoute({ to: "/" });
+	const pendingIndexRoute = matchRoute({ to: "/", pending: true });
 	const currentlearningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const pendingLearningRoute = matchRoute({
 		to: "/l/{-$learningId}",
 		pending: true,
 	});
 
-	const isIndexRoute = indexRoute !== false && !roomId;
+	const isIndexRoute =
+		(currentIndexRoute !== false || pendingIndexRoute !== false) && !roomId;
 	const isCurrentLearningRoute = currentlearningRoute !== false;
 	const isPendingLearningRoute = pendingLearningRoute !== false;
 	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
@@ -143,12 +143,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const roomStatus = useMemo(
 		() => (isMainThread ? chatStatus : discussionStatus),
 		[isMainThread, discussionStatus, chatStatus],
-	);
-
-	const roomIsPending = useMemo(
-		() =>
-			isUserPending || isMainThread ? isChatPending : isChatByThreadIdPending,
-		[isUserPending, isChatPending, isChatByThreadIdPending, isMainThread],
 	);
 
 	const messageThatIsStreaming = useMemo(
@@ -374,29 +368,13 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	useEffect(() => {
 		if (isIndexRoute || isLearningRoute) return;
-		if (isUserPending || roomIsPending || isChatPending) return;
-		if (!user?._id?.toString() || !roomId) return;
-		if (chat) return;
+		if (!user) return;
+		if (chat !== null) return;
 
-		navigate({ to: "/" })
-			.then(() => {
-				toast.error("Chat not found");
-			})
-			.catch((error) => {
-				console.error("Navigation error:", error);
-				toast.error("Failed to navigate to home");
-			});
-	}, [
-		chat,
-		navigate,
-		user?._id,
-		roomId,
-		isUserPending,
-		roomIsPending,
-		isChatPending,
-		isIndexRoute,
-		isLearningRoute,
-	]);
+		navigate({ to: "/" });
+
+		toast.error("Chat not found");
+	}, [chat, navigate, user, isIndexRoute, isLearningRoute]);
 
 	return (
 		<>

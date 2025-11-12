@@ -1,21 +1,21 @@
-import AiConversation from "@/components/shared/ai-conversation";
+import {
+	ContainerWithMargin,
+	ContainerWithMaxWidth,
+} from "@/components/shared/container";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { Authenticated } from "convex/react";
+import { Suspense, lazy } from "react";
+
+const AiConversation = lazy(
+	() => import("@/components/shared/ai-conversation"),
+);
 
 export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
-	ssr: false,
-
 	component: App,
-
-	beforeLoad: async (context) => {
-		if (!context.params.chatId) {
-			throw redirect({
-				to: "/",
-			});
-		}
-	},
 
 	loader: async (context) => {
 		const userId = context.context.userId;
@@ -35,7 +35,21 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 function App() {
 	return (
 		<Authenticated>
-			<AiConversation />
+			<Suspense
+				fallback={
+					<div className="relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))] [&>div]:[scrollbar-gutter:stable_both-edges]">
+						<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+							<ContainerWithMargin>
+								<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
+									<Skeleton className="size-full h-[112px] rounded-tlarge bg-gray-200" />
+								</ContainerWithMaxWidth>
+							</ContainerWithMargin>
+						</div>
+					</div>
+				}
+			>
+				<AiConversation />
+			</Suspense>
 		</Authenticated>
 	);
 }

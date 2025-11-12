@@ -33,7 +33,15 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction } from "convex/react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import {
+	Suspense,
+	lazy,
+	memo,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Response } from "../ai-elements/response";
 import { Button } from "../ui/button";
@@ -45,10 +53,14 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { Skeleton } from "../ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import AiConversation from "./ai-conversation";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
+
+const AiConversation = lazy(
+	() => import("@/components/shared/ai-conversation"),
+);
 
 interface CanvasTabTriggerProps {
 	canvas: CanvasPayload & { icon?: typeof File01Icon; title?: string };
@@ -630,18 +642,46 @@ const AiCanvas = () => {
 
 			case CanvasType.LEARNING_CREATION:
 				return (
-					<AiConversation
-						additionalThreadId={data?.threadId ?? ""}
-						type="learning-creation"
-					/>
+					<Suspense
+						fallback={
+							<div className="relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))] [&>div]:[scrollbar-gutter:stable_both-edges]">
+								<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+									<ContainerWithMargin>
+										<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
+											<Skeleton className="size-full h-[112px] rounded-tlarge bg-gray-200" />
+										</ContainerWithMaxWidth>
+									</ContainerWithMargin>
+								</div>
+							</div>
+						}
+					>
+						<AiConversation
+							additionalThreadId={data?.threadId ?? ""}
+							type="learning-creation"
+						/>
+					</Suspense>
 				);
 
 			case CanvasType.THREAD:
 				return (
-					<AiConversation
-						additionalThreadId={data?.threadId ?? ""}
-						type="discussion"
-					/>
+					<Suspense
+						fallback={
+							<div className="relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))] [&>div]:[scrollbar-gutter:stable_both-edges]">
+								<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+									<ContainerWithMargin>
+										<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
+											<Skeleton className="size-full h-[112px] rounded-tlarge bg-gray-200" />
+										</ContainerWithMaxWidth>
+									</ContainerWithMargin>
+								</div>
+							</div>
+						}
+					>
+						<AiConversation
+							additionalThreadId={data?.threadId ?? ""}
+							type="discussion"
+						/>
+					</Suspense>
 				);
 			default:
 				return null;
