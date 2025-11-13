@@ -1,192 +1,101 @@
-import {
-	DeltaStreamer,
-	compressUIMessageChunks,
-	createTool,
-} from "@convex-dev/agent";
-import { generateObject, generateText, stepCountIs, streamText } from "ai";
+/**
+ * Chat actions
+ * Single responsibility: External actions for chat domain
+ */
+
+import { createTool } from "@convex-dev/agent";
+import { generateObject, generateText, stepCountIs } from "ai";
 import { v } from "convex/values";
 import z from "zod";
-import { api, components, internal } from "./_generated/api";
-import { action, internalAction } from "./_generated/server";
-import { createAgent } from "./agent";
-import { agentTypeValidator } from "./schema";
+import { api, internal } from "../_generated/api";
+import { action, internalAction } from "../_generated/server";
+import { createAgent } from "../agent";
+import { agentTypeValidator } from "../schema";
 
-const exaApiKey = process.env.EXA_API_KEY;
-
-if (!exaApiKey) {
-	throw new Error("EXA_API_KEY environment variable not set");
-}
-
-export const streamGenerateLearningContent = internalAction({
-	args: {
-		learningId: v.id("learning"),
-		userId: v.string(),
-	},
-	handler: async (ctx, { learningId, userId }) => {
-		const courseContentGeneratorAgent = createAgent({
-			agentType: "course-content-generator",
+/**
+ * Update thread title automatically
+ */
+export const updateThreadTitle = internalAction({
+	args: { threadId: v.string() },
+	handler: async (ctx, { threadId }) => {
+		const agent = createAgent({
+			agentType: "title-generation",
+			storageOptions: { saveMessages: "none" },
 		});
-		const courseResearcherAgent = createAgent({
-			agentType: "course-researcher",
-		});
-
-		const learningListData = await ctx.runQuery(
-			api.learning.getLearningChatsContentByLearningIdThatStatusDraft,
+		const { thread } = await agent.continueThread(ctx, { threadId });
+		const {
+			object: { title, summary },
+		} = await agent.generateObject(
+			ctx,
+			{ threadId },
 			{
-				userId,
-				learningId,
+				mode: "json",
+				schemaDescription:
+					"Generate a title and summary for the thread. The title should be a single sentence that captures the main topic of the thread. The summary should be a short description of the thread that could be used to describe it to someone who hasn't read it.",
+				schema: z.object({
+					title: z.string().describe("The new title for the thread"),
+					summary: z.string().describe("The new summary for the thread"),
+				}),
+				prompt: "Generate a title and summary for this thread.",
 			},
 		);
 
-		const streamerCreator = async (data: (typeof learningListData)[number]) => {
-			const threadId = data?.chatData?.threadId;
-
-			if (!threadId) return;
-
-			await Promise.all([
-				ctx.runMutation(internal.chat.patchChatStatus, {
-					threadId,
-					status: "streaming",
-				}),
-				ctx.runMutation(api.learning.updateLearningChatMetadataPlanStatus, {
-					learningChatId: data._id,
-					status: "generating",
-				}),
-			]);
-
-			const generateSearchQueries = await generateObject({
-				model: courseResearcherAgent.options.languageModel,
-				system: courseResearcherAgent.options.instructions,
-				prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
-				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
-				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
-				<title>${data?.metadata?.plan?.title}</title>
-				<description>${data?.metadata?.plan?.description}</description>
-				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
-				<the-ask></the-ask>`,
-				schema: z.object({
-					searchQueries: z.array(
-						z.object({
-							query: z.string(),
-							numResults: z.number(),
-						}),
-					),
-				}),
-			});
-
-			const searchResultsToSave: {
-				title: string;
-				url: string;
-				image: string;
-				content: string;
-				publishedDate: string;
-				score: number;
-			}[] = [];
-
-			if (generateSearchQueries.object.searchQueries.length > 0) {
-				try {
-					// Dynamic import to avoid bundling issues
-					const Exa = (await import("exa-js")).default;
-					const exa = new Exa(exaApiKey);
-
-					for (const searchQuery of generateSearchQueries.object
-						.searchQueries) {
-						const { results } = await exa.search(searchQuery.query, {
-							useAutoprompt: true,
-							numResults: searchQuery.numResults,
-						});
-						const processedResults = results.map((result) => ({
-							title: result.title ?? "",
-							url: result.url ?? "",
-							image: result.image ?? "",
-							content: result.text ?? "",
-							publishedDate: result.publishedDate ?? "",
-							score: result.score ?? 0,
-						}));
-						searchResultsToSave.push(...processedResults);
-					}
-				} catch (error) {
-					console.error("Exa search error:", error);
-					throw new Error(
-						`Web search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-					);
-				}
-			}
-
-			const streamer = new DeltaStreamer(
-				components.agent,
-				ctx,
-				{
-					throttleMs: 100,
-					onAsyncAbort: async () => console.error("Aborted asynchronously"),
-					// This will collapse multiple tiny deltas into one if they're being sent
-					// in quick succession.
-					compress: compressUIMessageChunks,
-					abortSignal: undefined,
-				},
-				{
-					threadId,
-					format: "UIMessageChunk",
-					order: 0,
-					stepOrder: 0,
-					userId: userId,
-				},
-			);
-
-			const response = streamText({
-				model: courseContentGeneratorAgent.options.languageModel,
-				system: courseContentGeneratorAgent.options.instructions,
-				prompt: `
-				<search-results>${JSON.stringify(searchResultsToSave)}</search-results>
-				<learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</learning-requirement>
-				<title>${data?.metadata?.plan?.title}</title>
-				<description>${data?.metadata?.plan?.description}</description>
-				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
-				<the-ask>
-				1. Generate a learning list for the user's learning plan based on parameters that mentioned in the prompt.
-				2. make sure the learning content is follow the learning objectives and the learning requirement.
-				3. output the learning list in markdown format.
-				</the-ask>`,
-				onFinish: async (completion) => {
-					const text = completion.text;
-					await courseContentGeneratorAgent.saveMessage(ctx, {
-						threadId,
-						message: {
-							role: "assistant",
-							content: text,
-						},
-						userId,
-						skipEmbeddings: true,
-					});
-					await Promise.all([
-						ctx.runMutation(internal.chat.patchChatStatus, {
-							threadId,
-							status: "ready",
-						}),
-						ctx.runMutation(api.learning.updateLearningChatMetadataPlanStatus, {
-							learningChatId: data._id,
-							status: "completed",
-						}),
-					]);
-				},
-				onError: (error) => {
-					console.error(error);
-					streamer.fail(JSON.stringify(error));
-				},
-				abortSignal: streamer.abortController.signal,
-			});
-
-			await streamer.consumeStream(response.toUIMessageStream());
-		};
-
-		await Promise.all(
-			learningListData.map(async (data) => {
-				await streamerCreator(data);
-			}),
-		);
+		await thread.updateMetadata({ title, summary });
 	},
 });
 
+/**
+ * Update chat title manually
+ */
+export const updateChatTitle = action({
+	args: {
+		threadId: v.string(),
+		title: v.string(),
+	},
+	handler: async (ctx, { threadId, title }) => {
+		const agent = createAgent({
+			agentType: "title-generation",
+		});
+		const { thread } = await agent.continueThread(ctx, { threadId });
+		await thread.updateMetadata({ title });
+	},
+});
+
+/**
+ * Archive a chat
+ */
+export const archiveChat = action({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, { threadId }) => {
+		const agent = createAgent({
+			agentType: "question-answering",
+		});
+		const { thread } = await agent.continueThread(ctx, { threadId });
+		await thread.updateMetadata({ status: "archived" });
+	},
+});
+
+/**
+ * Delete a chat
+ */
+export const deleteChat = action({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, { threadId }) => {
+		const agent = createAgent({
+			agentType: "question-answering",
+		});
+		await agent.deleteThreadSync(ctx, { threadId });
+	},
+});
+
+/**
+ * Stream chat messages async (handles both "ask" and "learning" types)
+ * This is a polymorphic action that coordinates between chat and learning domains
+ */
 export const streamAsync = internalAction({
 	args: {
 		type: v.optional(v.union(v.literal("ask"), v.literal("learning"))),
@@ -254,7 +163,7 @@ export const streamAsync = internalAction({
 
 										// Get last plan (for early validation before AI processing)
 										const lastPlan = await ctx.runQuery(
-											api.plan.getLastPlanByThreadId,
+											api.plan.queries.getLastPlanByThreadId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -331,7 +240,8 @@ export const streamAsync = internalAction({
 											});
 
 											await ctx.runMutation(
-												api.plan.upsertPlanMetadataLearningRequirements,
+												api.plan.mutations
+													.upsertPlanMetadataLearningRequirements,
 												{
 													planId: lastPlan._id,
 													userId: ctx.userId,
@@ -363,7 +273,7 @@ export const streamAsync = internalAction({
 
 										// Get plan with metadata details
 										const { metadata } = await ctx.runAction(
-											api.planAction.getLastPlanWithMetadataByThreadId,
+											api.plan.actions.getLastPlanWithMetadataByThreadId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -412,7 +322,7 @@ export const streamAsync = internalAction({
 
 										// Save the fully validated learning requirements
 										await ctx.runMutation(
-											api.plan.upsertPlanMetadataLearningRequirements,
+											api.plan.mutations.upsertPlanMetadataLearningRequirements,
 											{
 												planId: lastPlan._id,
 												userId: ctx.userId,
@@ -444,7 +354,7 @@ export const streamAsync = internalAction({
 
 										// Get plan with metadata details using reusable function
 										const { plan, metadata } = await ctx.runAction(
-											api.planAction.getLastPlanWithMetadataByThreadId,
+											api.plan.actions.getLastPlanWithMetadataByThreadId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -480,7 +390,7 @@ export const streamAsync = internalAction({
 										});
 
 										await ctx.runMutation(
-											api.plan.upsertPlanMetadataSearchQuery,
+											api.plan.mutations.upsertPlanMetadataSearchQuery,
 											{
 												planId: plan._id,
 												userId: ctx.userId ?? "",
@@ -517,7 +427,7 @@ export const streamAsync = internalAction({
 
 										// Get plan with metadata details using reusable function
 										const { plan, metadata } = await ctx.runAction(
-											api.planAction.getLastPlanWithMetadataByThreadId,
+											api.plan.actions.getLastPlanWithMetadataByThreadId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -560,7 +470,7 @@ export const streamAsync = internalAction({
 
 												// Save search results to database
 												await ctx.runMutation(
-													api.plan.upsertPlanMetadataSearchResult,
+													api.plan.mutations.upsertPlanMetadataSearchResult,
 													{
 														planId: plan._id,
 														userId: ctx.userId,
@@ -601,7 +511,7 @@ export const streamAsync = internalAction({
 
 										// Get plan with metadata details using reusable function
 										const { metadata } = await ctx.runAction(
-											api.planAction.getLastPlanWithMetadataByThreadId,
+											api.plan.actions.getLastPlanWithMetadataByThreadId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -688,7 +598,7 @@ export const streamAsync = internalAction({
 										]);
 
 										const chat = await ctx.runQuery(
-											api.chat.getChatByThreadIdAndUserId,
+											api.chat.queries.getChatByThreadIdAndUserId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -700,7 +610,7 @@ export const streamAsync = internalAction({
 										}
 
 										const learningChat = await ctx.runQuery(
-											api.learning.getLearningChatByChatId,
+											api.learning.queries.getLearningChatByChatId,
 											{
 												chatId: chat._id,
 												userId: ctx.userId,
@@ -711,17 +621,13 @@ export const streamAsync = internalAction({
 											throw new Error("Learning chat not found");
 										}
 
-										await Promise.all([
-											ctx.runMutation(api.learning.createLearningContent, {
-												learningId: learningChat.learningId,
-												userId: ctx.userId,
-												data: learningListGenerateObject.object.learningList,
-											}),
-											ctx.runMutation(api.learning.updateLearningTitle, {
+										await ctx.runMutation(
+											api.learning.mutations.updateLearningTitle,
+											{
 												learningId: learningChat.learningId,
 												title: learningTitleGeneratext.text,
-											}),
-										]);
+											},
+										);
 
 										return JSON.stringify({
 											data: {
@@ -744,7 +650,7 @@ export const streamAsync = internalAction({
 										}
 
 										const chat = await ctx.runQuery(
-											api.chat.getChatByThreadIdAndUserId,
+											api.chat.queries.getChatByThreadIdAndUserId,
 											{
 												threadId: ctx.threadId,
 												userId: ctx.userId,
@@ -755,210 +661,41 @@ export const streamAsync = internalAction({
 											throw new Error("Chat not found");
 										}
 
-										const learningChat = await ctx.runQuery(
-											api.learning.getLearningChatByChatId,
-											{
+										const [learningChat, plan] = await Promise.all([
+											ctx.runQuery(
+												api.learning.queries.getLearningChatByChatId,
+												{
+													chatId: chat._id,
+													userId: ctx.userId,
+												},
+											),
+											ctx.runQuery(api.plan.queries.getPlanByChatIdAndUserId, {
 												chatId: chat._id,
 												userId: ctx.userId,
-											},
-										);
+											}),
+										]);
 
 										if (!learningChat) {
 											throw new Error("Learning chat not found");
 										}
 
-										// GENERATE THE CONTENT
-										const courseContentGeneratorAgent = createAgent({
-											agentType: "course-content-generator",
-										});
-										const courseResearcherAgent = createAgent({
-											agentType: "course-researcher",
-										});
+										if (!plan) {
+											throw new Error("Plan not found");
+										}
 
-										const learningListData = await ctx.runQuery(
-											api.learning
-												.getLearningChatsContentByLearningIdThatStatusDraft,
+										// Call the learning action to stream content
+										await ctx.runAction(
+											internal.learning.actions.streamGenerateLearningContent,
 											{
-												userId: ctx.userId,
 												learningId: learningChat.learningId,
+												userId: ctx.userId,
 											},
 										);
 
-										const streamerCreator = async (
-											data: (typeof learningListData)[number],
-										) => {
-											const threadId = data?.chatData?.threadId;
-
-											if (!threadId) return;
-
-											await Promise.all([
-												ctx.runMutation(internal.chat.patchChatStatus, {
-													threadId,
-													status: "streaming",
-												}),
-												ctx.runMutation(
-													api.learning.updateLearningChatMetadataPlanStatus,
-													{
-														learningChatId: data._id,
-														status: "generating",
-													},
-												),
-											]);
-
-											const generateSearchQueries = await generateObject({
-												model: courseResearcherAgent.options.languageModel,
-												system: courseResearcherAgent.options.instructions,
-												prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
-				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
-				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
-				<title>${data?.metadata?.plan?.title}</title>
-				<description>${data?.metadata?.plan?.description}</description>
-				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
-				<the-ask></the-ask>`,
-												schema: z.object({
-													searchQueries: z.array(
-														z.object({
-															query: z.string(),
-															numResults: z.number().min(1).max(3),
-														}),
-													),
-												}),
-											});
-
-											const searchResultsToSave: {
-												title: string;
-												url: string;
-												image: string;
-												content: string;
-												publishedDate: string;
-												score: number;
-											}[] = [];
-
-											if (
-												generateSearchQueries.object.searchQueries.length > 0
-											) {
-												try {
-													// Dynamic import to avoid bundling issues
-													const Exa = (await import("exa-js")).default;
-													const exa = new Exa(exaApiKey);
-
-													for (const searchQuery of generateSearchQueries.object
-														.searchQueries) {
-														const { results } = await exa.search(
-															searchQuery.query,
-															{
-																useAutoprompt: true,
-																numResults: searchQuery.numResults,
-															},
-														);
-														const processedResults = results.map((result) => ({
-															title: result.title ?? "",
-															url: result.url ?? "",
-															image: result.image ?? "",
-															content: result.text ?? "",
-															publishedDate: result.publishedDate ?? "",
-															score: result.score ?? 0,
-														}));
-														searchResultsToSave.push(...processedResults);
-														await new Promise((resolve) =>
-															setTimeout(resolve, 1000),
-														);
-													}
-												} catch (error) {
-													console.error("Exa search error:", error);
-													throw new Error(
-														`Web search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-													);
-												}
-											}
-
-											const streamer = new DeltaStreamer(
-												components.agent,
-												ctx,
-												{
-													throttleMs: 100,
-													onAsyncAbort: async () =>
-														console.error("Aborted asynchronously"),
-													// This will collapse multiple tiny deltas into one if they're being sent
-													// in quick succession.
-													compress: compressUIMessageChunks,
-													abortSignal: undefined,
-												},
-												{
-													threadId,
-													format: "UIMessageChunk",
-													order: 0,
-													stepOrder: 0,
-													userId: ctx.userId,
-												},
-											);
-
-											const response = streamText({
-												model:
-													courseContentGeneratorAgent.options.languageModel,
-												system:
-													courseContentGeneratorAgent.options.instructions,
-												prompt: `
-				<search-results>${JSON.stringify(searchResultsToSave)}</search-results>
-				<learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</learning-requirement>
-				<title>${data?.metadata?.plan?.title}</title>
-				<description>${data?.metadata?.plan?.description}</description>
-				<learning-objectives>${JSON.stringify(data?.metadata?.plan?.learningObjectives)}</learning-objectives>
-				<the-ask>
-				1. Generate a learning list for the user's learning plan based on parameters that mentioned in the prompt.
-				2. make sure the learning content is follow the learning objectives and the learning requirement.
-				3. output the learning list in markdown format.
-				</the-ask>`,
-												onFinish: async (completion) => {
-													const text = completion.text;
-													await courseContentGeneratorAgent.saveMessage(ctx, {
-														threadId,
-														message: {
-															role: "assistant",
-															content: text,
-														},
-														userId: ctx.userId,
-														skipEmbeddings: true,
-													});
-													await Promise.all([
-														ctx.runMutation(internal.chat.patchChatStatus, {
-															threadId,
-															status: "ready",
-														}),
-														ctx.runMutation(
-															api.learning.updateLearningChatMetadataPlanStatus,
-															{
-																learningChatId: data._id,
-																status: "completed",
-															},
-														),
-													]);
-												},
-												onError: (error) => {
-													console.error(error);
-													streamer.fail(JSON.stringify(error));
-												},
-												abortSignal: streamer.abortController.signal,
-											});
-
-											await streamer.consumeStream(
-												response.toUIMessageStream(),
-											);
-										};
-
-										const BATCH_SIZE = 2;
-										for (
-											let i = 0;
-											i < learningListData.length;
-											i += BATCH_SIZE
-										) {
-											const batch = learningListData.slice(i, i + BATCH_SIZE);
-											await Promise.all(
-												batch.map(async (data) => {
-													await streamerCreator(data);
-												}),
-											);
-										}
+										await ctx.runMutation(api.plan.mutations.updatePlanStatus, {
+											planId: plan._id,
+											status: "completed",
+										});
 
 										return JSON.stringify({
 											message:
@@ -991,7 +728,7 @@ export const streamAsync = internalAction({
 					)
 				: Promise.resolve(),
 
-			ctx.runMutation(internal.chat.patchChatStatus, {
+			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
 				status: "streaming",
 			}),
@@ -999,146 +736,9 @@ export const streamAsync = internalAction({
 
 		type === "learning" ? await learningResult?.consumeStream() : undefined;
 		type === "ask" ? await askResult?.consumeStream() : undefined;
-		await ctx.runMutation(internal.chat.patchChatStatus, {
+		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
 			status: "ready",
 		});
-	},
-});
-
-export const generateGreetingMessageForLearnerAsync = internalAction({
-	args: {
-		threadId: v.string(),
-		agentType: agentTypeValidator,
-		userId: v.string(),
-	},
-	handler: async (ctx, { threadId, agentType, userId }) => {
-		const agent = createAgent({ agentType });
-
-		await ctx.runMutation(internal.chat.patchChatStatus, {
-			threadId,
-			status: "streaming",
-		});
-
-		const streamer = new DeltaStreamer(
-			components.agent,
-			ctx,
-			{
-				throttleMs: 100,
-				onAsyncAbort: async () => console.error("Aborted asynchronously"),
-				// This will collapse multiple tiny deltas into one if they're being sent
-				// in quick succession.
-				compress: compressUIMessageChunks,
-				abortSignal: undefined,
-			},
-			{
-				threadId,
-				format: "UIMessageChunk",
-				order: 0,
-				stepOrder: 0,
-				userId,
-			},
-		);
-
-		const response = streamText({
-			model: agent.options.languageModel,
-			system: agent.options.instructions,
-			prompt: `Greet the learner in a friendly and engaging way. After that ask the user about:
-			1. topic they want to learn about,
-			2. user level understanding of the topic,
-			3. user's goal for learning the topic
-			4. the user's prefered duration for learning the topic (short: Crash Course, detailed: Course)`,
-			onFinish: async (completion) => {
-				const text = completion.text;
-				await agent.saveMessage(ctx, {
-					threadId,
-					message: {
-						role: "assistant",
-						content: text,
-					},
-					userId,
-					skipEmbeddings: true,
-				});
-				await ctx.runMutation(internal.chat.patchChatStatus, {
-					threadId,
-					status: "ready",
-				});
-			},
-			onError: (error) => {
-				console.error(error);
-				streamer.fail(JSON.stringify(error));
-			},
-			abortSignal: streamer.abortController.signal,
-		});
-
-		await streamer.consumeStream(response.toUIMessageStream());
-	},
-});
-
-export const updateThreadTitle = internalAction({
-	args: { threadId: v.string() },
-	handler: async (ctx, { threadId }) => {
-		const agent = createAgent({
-			agentType: "title-generation",
-			storageOptions: { saveMessages: "none" },
-		});
-		const { thread } = await agent.continueThread(ctx, { threadId });
-		const {
-			object: { title, summary },
-		} = await agent.generateObject(
-			ctx,
-			{ threadId },
-			{
-				mode: "json",
-				schemaDescription:
-					"Generate a title and summary for the thread. The title should be a single sentence that captures the main topic of the thread. The summary should be a short description of the thread that could be used to describe it to someone who hasn't read it.",
-				schema: z.object({
-					title: z.string().describe("The new title for the thread"),
-					summary: z.string().describe("The new summary for the thread"),
-				}),
-				prompt: "Generate a title and summary for this thread.",
-			},
-		);
-
-		await thread.updateMetadata({ title, summary });
-	},
-});
-
-export const updateChatTitle = action({
-	args: {
-		threadId: v.string(),
-		title: v.string(),
-	},
-	handler: async (ctx, { threadId, title }) => {
-		const agent = createAgent({
-			agentType: "title-generation",
-		});
-		const { thread } = await agent.continueThread(ctx, { threadId });
-		await thread.updateMetadata({ title });
-	},
-});
-
-export const archiveChat = action({
-	args: {
-		threadId: v.string(),
-	},
-	handler: async (ctx, { threadId }) => {
-		const agent = createAgent({
-			agentType: "question-answering",
-		});
-		const { thread } = await agent.continueThread(ctx, { threadId });
-		await thread.updateMetadata({ status: "archived" });
-	},
-});
-
-export const deleteChat = action({
-	args: {
-		threadId: v.string(),
-	},
-	handler: async (ctx, { threadId }) => {
-		const agent = createAgent({
-			agentType: "question-answering",
-		});
-		await agent.deleteThreadSync(ctx, { threadId });
 	},
 });

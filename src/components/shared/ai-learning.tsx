@@ -56,7 +56,7 @@ function AiLearning() {
 	);
 	const { data: learning, isPending: isLearningPending } = useQuery(
 		convexQuery(
-			api.learning.getLearningByRoomId,
+			api.learning.queries.getLearningByRoomId,
 			isLearningRoute && user?._id?.toString() && roomId
 				? {
 						userId: user?._id?.toString() ?? "",
@@ -67,7 +67,7 @@ function AiLearning() {
 	);
 
 	const { results: learningChatsContent, isLoading } = useConvexPaginatedQuery(
-		api.learning.getLearningChatsContentByLearningRoomId,
+		api.learning.queries.getLearningChatsContentByLearningRoomId,
 		isLearningRoute && user?._id?.toString() && roomId
 			? {
 					userId: user?._id?.toString() ?? "",
@@ -194,13 +194,13 @@ function AiLearning() {
 													<div className="flex flex-col">
 														{/* BADGE */}
 														<div className="flex gap-1.5 mb-2">
-															{item?.metadata?.plan?.priority && (
+															{item?.metadata?.priority && (
 																<Badge
 																	className={cn(
 																		"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-white ring-1 ring-sidebar-border text-sidebar-foreground",
 																	)}
 																>
-																	{item?.metadata?.plan?.priority
+																	{item?.metadata?.priority
 																		.split("_")
 																		.map(
 																			(v) =>
@@ -216,7 +216,7 @@ function AiLearning() {
 																	"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-white ring-1 ring-sidebar-border text-sidebar-foreground",
 																)}
 															>
-																{item?.metadata?.plan?.status}
+																{item?.metadata?.status}
 															</Badge>
 														</div>
 
@@ -224,10 +224,10 @@ function AiLearning() {
 														<div className="flex w-full items-center gap-4 mb-0.5">
 															<div className="grow overflow-hidden">
 																<div className="text-sm font-medium">
-																	{item?.metadata?.plan?.title ?? ""}
+																	{item?.metadata?.title ?? ""}
 																</div>
 																<div className="min-h-0 truncate text-sm">
-																	{item?.metadata?.plan?.description ?? ""}
+																	{item?.metadata?.description ?? ""}
 																</div>
 															</div>
 

@@ -84,7 +84,7 @@ const NavNewLearningItem = () => {
 	});
 
 	const createLearningPanel = useMutation({
-		mutationFn: useConvexMutation(api.learning.createLearningPanel),
+		mutationFn: useConvexMutation(api.learning.mutations.createLearningPanel),
 	});
 
 	return (
@@ -202,7 +202,7 @@ const NavNewLearningItem = () => {
 const NavLearningItem = ({
 	learning,
 }: {
-	learning: (typeof api.learning.getLearnings._returnType)["page"][number];
+	learning: (typeof api.learning.queries.getLearnings._returnType)["page"][number];
 }) => {
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
@@ -215,7 +215,7 @@ const NavLearningItem = ({
 	});
 
 	const { results: learningChatsContent } = useConvexPaginatedQuery(
-		api.learning.getLearningChatsContentByLearningId,
+		api.learning.queries.getLearningChatsContentByLearningId,
 		user?._id?.toString() && learning?._id
 			? {
 					userId: user?._id?.toString() ?? "",
@@ -226,15 +226,15 @@ const NavLearningItem = ({
 	);
 
 	const updateLearningTitle = useMutation({
-		mutationFn: useConvexMutation(api.learning.updateLearningTitle),
+		mutationFn: useConvexMutation(api.learning.mutations.updateLearningTitle),
 	});
 
 	const archiveLearning = useMutation({
-		mutationFn: useConvexMutation(api.learning.archiveLearning),
+		mutationFn: useConvexMutation(api.learning.mutations.archiveLearning),
 	});
 
 	const deleteLearning = useMutation({
-		mutationFn: useConvexMutation(api.learning.deleteLearning),
+		mutationFn: useConvexMutation(api.learning.mutations.deleteLearning),
 	});
 
 	const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =
@@ -317,7 +317,7 @@ const NavLearningItem = ({
 										}}
 										activeProps={{ className: "bg-sidebar-accent" }}
 									>
-										<span>{learningChat?.metadata?.plan?.title}</span>
+										<span>{learningChat?.metadata?.title}</span>
 									</Link>
 								</SidebarMenuSubButton>
 							</SidebarMenuSubItem>
@@ -423,7 +423,7 @@ export function NavLearning() {
 	});
 
 	const { results: learnings } = useConvexPaginatedQuery(
-		api.learning.getLearnings,
+		api.learning.queries.getLearnings,
 		user?._id?.toString()
 			? {
 					userId: user?._id?.toString() ?? "",

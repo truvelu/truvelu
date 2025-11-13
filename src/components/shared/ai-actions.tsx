@@ -56,7 +56,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useQuery({
 		...convexQuery(
-			api.chat.getChat,
+			api.chat.queries.getChat,
 			!!user?._id?.toString() && !!roomId
 				? {
 						userId: user?._id?.toString() ?? "",
@@ -68,7 +68,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	});
 	const { data: discussion } = useQuery(
 		convexQuery(
-			api.discussion.getDiscussionByMessageIdAndUserId,
+			api.discussion.queries.getDiscussionByMessageIdAndUserId,
 			user?._id && message.id
 				? {
 						messageId: message.id,
@@ -79,7 +79,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	);
 	const { data: chatDiscussionMetadata } = useQuery(
 		convexQuery(
-			api.chat.getMetadata,
+			api.chat.queries.getMetadata,
 			discussion?.threadId
 				? {
 						threadId: discussion?.threadId ?? "",
@@ -88,13 +88,13 @@ const AiActions = memo((props: AiActionsProps) => {
 		),
 	);
 	const { results: discussionMessages } = useUIMessages(
-		api.chat.listThreadMessages,
+		api.chat.queries.listThreadMessages,
 		discussion?.threadId ? { threadId: discussion?.threadId ?? "" } : "skip",
 		{ initialNumItems: 5, stream: false },
 	);
 	const createDiscussion = useMutation({
 		mutationKey: ["createDiscussion"],
-		mutationFn: useConvexMutation(api.discussion.createDiscussion),
+		mutationFn: useConvexMutation(api.discussion.mutations.createDiscussion),
 	});
 
 	const textPart = useMemo(

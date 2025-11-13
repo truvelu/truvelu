@@ -95,17 +95,17 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 		})),
 	);
 
-	const updateChatTitle = useAction(api.chatAction.updateChatTitle);
+	const updateChatTitle = useAction(api.chat.actions.updateChatTitle);
 	const deleteDiscussion = useMutation({
 		mutationKey: ["deleteDiscussion"],
-		mutationFn: useConvexMutation(api.discussion.deleteDiscussion),
+		mutationFn: useConvexMutation(api.discussion.mutations.deleteDiscussion),
 	});
 
 	const threadId = canvas?.data?.threadId ?? "";
 	const roomId = canvas?.data?.roomId ?? "";
 
 	const { data: canvasMetadata } = useQuery(
-		convexQuery(api.chat.getMetadata, threadId ? { threadId } : "skip"),
+		convexQuery(api.chat.queries.getMetadata, threadId ? { threadId } : "skip"),
 	);
 
 	const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =
@@ -525,8 +525,8 @@ const AiCanvasTabListContent = memo(() => {
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 
-	const { results: learningListByRoomId } = useConvexPaginatedQuery(
-		api.learning.getLearningsChatsByRoomId,
+	const { results: learningChatPanelByRoomId } = useConvexPaginatedQuery(
+		api.learning.queries.getLearningsChatPanelsByRoomId,
 		isLearningRoute && !!user?._id?.toString() && !!roomId
 			? {
 					userId: user?._id?.toString() ?? "",
@@ -537,7 +537,7 @@ const AiCanvasTabListContent = memo(() => {
 	);
 
 	const { results: discussionListByRoomId } = useConvexPaginatedQuery(
-		api.discussion.getDiscussionsByRoomId,
+		api.discussion.queries.getDiscussionsByRoomId,
 		isChatRoute && !!user?._id?.toString() && !!roomId
 			? {
 					userId: user?._id?.toString() ?? "",
@@ -567,7 +567,7 @@ const AiCanvasTabListContent = memo(() => {
 		<TabsContent value="list" className="w-full px-1">
 			<div className="flex flex-col gap-1 py-1 h-svh sm:h-full">
 				{isLearningRoute &&
-					learningListByRoomId?.map((learning) => (
+					learningChatPanelByRoomId?.map((learning) => (
 						<Button
 							key={learning?._id ?? ""}
 							variant="ghost"

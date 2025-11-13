@@ -1,9 +1,17 @@
-import { v } from "convex/values";
-import { api } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
-import { freeObjectValidator } from "./schema";
+/**
+ * Plan mutations
+ * Single responsibility: Write operations for plan domain
+ */
 
+import { v } from "convex/values";
+import { api } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
+import { mutation } from "../_generated/server";
+import { freeObjectValidator, planStatusValidator } from "../schema";
+
+/**
+ * Create or get existing plan metadata
+ */
 export const createOrGetPlanMetadata = mutation({
 	args: {
 		planId: v.id("plans"),
@@ -30,63 +38,9 @@ export const createOrGetPlanMetadata = mutation({
 	},
 });
 
-export const getPlanMetadataDetail = query({
-	args: {
-		planId: v.id("plans"),
-		userId: v.string(),
-	},
-	handler: async (ctx, args) => {
-		const planMetadata = await ctx.db
-			.query("planMetadata")
-			.withIndex("by_planId_and_userId", (q) =>
-				q.eq("planId", args.planId).eq("userId", args.userId),
-			)
-			.unique();
-
-		if (!planMetadata) {
-			throw new Error(
-				`Plan metadata not found, planId: ${args.planId}, userId: ${args.userId}, data: ${JSON.stringify(planMetadata)}`,
-			);
-		}
-
-		const [
-			learningRequirement,
-			planMetadataSearchQueries,
-			planMetadataSearchResults,
-		] = await Promise.all([
-			ctx.db
-				.query("planMetadataLearningRequirements")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.unique(),
-			ctx.db
-				.query("planMetadataSearchQueries")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.collect(),
-			ctx.db
-				.query("planMetadataSearchResults")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.collect(),
-		]);
-
-		return {
-			data: {
-				...planMetadata,
-				detail: {
-					learningRequirement,
-					planMetadataSearchQueries,
-					planMetadataSearchResults,
-				},
-			},
-		};
-	},
-});
-
+/**
+ * Upsert plan metadata learning requirements
+ */
 export const upsertPlanMetadataLearningRequirements = mutation({
 	args: {
 		planId: v.id("plans"),
@@ -101,7 +55,7 @@ export const upsertPlanMetadataLearningRequirements = mutation({
 	},
 	handler: async (ctx, args) => {
 		const planMetadata = (await ctx.runMutation(
-			api.plan.createOrGetPlanMetadata,
+			api.plan.mutations.createOrGetPlanMetadata,
 			{
 				planId: args.planId,
 				userId: args.userId,
@@ -153,6 +107,9 @@ export const upsertPlanMetadataLearningRequirements = mutation({
 	},
 });
 
+/**
+ * Upsert plan metadata search queries
+ */
 export const upsertPlanMetadataSearchQuery = mutation({
 	args: {
 		planId: v.id("plans"),
@@ -166,7 +123,7 @@ export const upsertPlanMetadataSearchQuery = mutation({
 	},
 	handler: async (ctx, args) => {
 		const planMetadata = (await ctx.runMutation(
-			api.plan.createOrGetPlanMetadata,
+			api.plan.mutations.createOrGetPlanMetadata,
 			{
 				planId: args.planId,
 				userId: args.userId,
@@ -200,6 +157,9 @@ export const upsertPlanMetadataSearchQuery = mutation({
 	},
 });
 
+/**
+ * Upsert plan metadata search results
+ */
 export const upsertPlanMetadataSearchResult = mutation({
 	args: {
 		planId: v.id("plans"),
@@ -221,7 +181,7 @@ export const upsertPlanMetadataSearchResult = mutation({
 	},
 	handler: async (ctx, args) => {
 		const planMetadata = (await ctx.runMutation(
-			api.plan.createOrGetPlanMetadata,
+			api.plan.mutations.createOrGetPlanMetadata,
 			{
 				planId: args.planId,
 				userId: args.userId,
@@ -261,57 +221,12 @@ export const upsertPlanMetadataSearchResult = mutation({
 	},
 });
 
-export const getPlanByChatId = query({
+export const updatePlanStatus = mutation({
 	args: {
-		chatId: v.id("chats"),
-		userId: v.string(),
+		planId: v.id("plans"),
+		status: planStatusValidator,
 	},
-	handler: async (ctx, args) => {
-		return await ctx.db
-			.query("plans")
-			.withIndex("by_chatId_and_userId", (q) =>
-				q.eq("chatId", args.chatId).eq("userId", args.userId),
-			)
-			.collect();
-	},
-});
-
-/**
- * Get the last plan by threadId
- * This is a reusable query to avoid duplication across tools
- */
-export const getLastPlanByThreadId = query({
-	args: {
-		threadId: v.string(),
-		userId: v.string(),
-	},
-	handler: async (ctx, args) => {
-		// Get chat by threadId
-		const chat = await ctx.db
-			.query("chats")
-			.withIndex("by_threadId_and_userId", (q) =>
-				q.eq("threadId", args.threadId).eq("userId", args.userId),
-			)
-			.unique();
-
-		if (!chat) {
-			throw new Error("Chat not found");
-		}
-
-		// Get all plans for this chat
-		const plans = await ctx.db
-			.query("plans")
-			.withIndex("by_chatId_and_userId", (q) =>
-				q.eq("chatId", chat._id).eq("userId", args.userId),
-			)
-			.collect();
-
-		const lastPlan = plans[plans.length - 1];
-
-		if (!lastPlan) {
-			throw new Error("No plan found for this chat");
-		}
-
-		return lastPlan;
+	handler: async (ctx, { planId, status }) => {
+		await ctx.db.patch(planId, { status });
 	},
 });

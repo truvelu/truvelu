@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 		if (!userId || !chatId) return;
 
 		await context.context.queryClient.ensureQueryData(
-			convexQuery(api.chat.getChat, {
+			convexQuery(api.chat.queries.getChat, {
 				userId,
 				uuid: chatId,
 			}),

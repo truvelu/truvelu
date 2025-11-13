@@ -13,7 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
-import type { agentTypeValidator, streamSectionValidator } from "convex/schema";
+import type { streamSectionValidator } from "convex/schema";
 import type { Infer } from "convex/values";
 import {
 	type FormEvent,
@@ -70,7 +70,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useQuery(
 		convexQuery(
-			api.chat.getChat,
+			api.chat.queries.getChat,
 			!!user && !!roomId
 				? {
 						userId: user._id,
@@ -81,7 +81,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	);
 	const { data: chatByThreadId } = useQuery(
 		convexQuery(
-			api.chat.getChatByThreadIdAndUserId,
+			api.chat.queries.getChatByThreadIdAndUserId,
 			!!user?._id?.toString() && !!additionalThreadId
 				? {
 						userId: user?._id?.toString() ?? "",
@@ -113,26 +113,38 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		status,
 		loadMore,
 	} = useUIMessages(
-		api.chat.listThreadMessages,
+		api.chat.queries.listThreadMessages,
 		threadId ? { threadId } : "skip",
 		{ initialNumItems: 10, stream: true },
 	);
 
+	const { data: lastPlan } = useQuery(
+		convexQuery(
+			api.plan.queries.getLastPlanByThreadId,
+			threadId
+				? {
+						threadId,
+						userId: user?._id?.toString() ?? "",
+					}
+				: "skip",
+		),
+	);
+
 	const createChat = useMutation({
 		mutationKey: ["createChat", roomId],
-		mutationFn: useConvexMutation(api.chat.createChat),
+		mutationFn: useConvexMutation(api.chat.mutations.createChat),
 	});
 	const sendChatMessage = useMutation({
 		mutationKey: ["sendChatMessage", threadId],
 		mutationFn: useConvexMutation(
-			api.chat.sendChatMessage,
+			api.chat.mutations.sendChatMessage,
 		).withOptimisticUpdate(
-			optimisticallySendMessage(api.chat.listThreadMessages),
+			optimisticallySendMessage(api.chat.queries.listThreadMessages),
 		),
 	});
 	const abortStreamByOrder = useMutation({
 		mutationKey: ["abortStreamByOrder", threadId],
-		mutationFn: useConvexMutation(api.chat.abortStreamByOrder),
+		mutationFn: useConvexMutation(api.chat.mutations.abortStreamByOrder),
 	});
 
 	const chatStatus = useMemo(() => chat?.status ?? "ready", [chat]);
@@ -199,7 +211,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							threadId,
 							roomId,
 							prompt,
-							agentType: "course-planner",
 							userId,
 						});
 					},
@@ -232,32 +243,14 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				return;
 			}
 
-			const MAPPING: {
-				[key: string]: {
-					agentType: Infer<typeof agentTypeValidator>;
-					type: "learning" | "ask";
-				};
-			} = {
-				"learning-creation": {
-					agentType: "course-planner",
-					type: "learning",
-				},
-				thread: {
-					agentType: "question-answering",
-					type: "ask",
-				},
-				discussion: {
-					agentType: "question-answering",
-					type: "ask",
-				},
-			};
-
 			sendChatMessage.mutate({
 				threadId,
 				roomId,
 				prompt: message.text ?? "",
-				agentType: MAPPING[type]?.agentType ?? "question-answering",
-				type: MAPPING[type]?.type ?? "ask",
+				type:
+					type === "learning-creation" && lastPlan?.status !== "completed"
+						? "learning"
+						: "ask",
 				userId,
 			});
 			scrollToBottom();
@@ -275,6 +268,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			handleSubmitNewChat,
 			isInputStatusLoading,
 			type,
+			lastPlan?.status,
 		],
 	);
 

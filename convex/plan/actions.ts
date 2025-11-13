@@ -1,7 +1,12 @@
+/**
+ * Plan actions
+ * Single responsibility: External actions for plan domain
+ */
+
 import { v } from "convex/values";
-import { api } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
-import { action } from "./_generated/server";
+import { api } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
+import { action } from "../_generated/server";
 
 /**
  * Get the last plan with metadata details by threadId
@@ -28,7 +33,7 @@ export const getLastPlanWithMetadataByThreadId = action({
 	}> => {
 		// Get the last plan
 		const lastPlan: Doc<"plans"> = await ctx.runQuery(
-			api.plan.getLastPlanByThreadId,
+			api.plan.queries.getLastPlanByThreadId,
 			{
 				threadId: args.threadId,
 				userId: args.userId,
@@ -36,14 +41,14 @@ export const getLastPlanWithMetadataByThreadId = action({
 		);
 
 		// Ensure planMetadata exists
-		await ctx.runMutation(api.plan.createOrGetPlanMetadata, {
+		await ctx.runMutation(api.plan.mutations.createOrGetPlanMetadata, {
 			planId: lastPlan._id,
 			userId: args.userId,
 		});
 
 		// Get full metadata details
 		const planMetadataDetail = await ctx.runQuery(
-			api.plan.getPlanMetadataDetail,
+			api.plan.queries.getPlanMetadataDetail,
 			{
 				planId: lastPlan._id,
 				userId: args.userId,

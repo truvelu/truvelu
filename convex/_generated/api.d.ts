@@ -10,15 +10,24 @@
 
 import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
-import type * as chat from "../chat.js";
-import type * as chatAction from "../chatAction.js";
-import type * as discussion from "../discussion.js";
+import type * as chat_actions from "../chat/actions.js";
+import type * as chat_mutations from "../chat/mutations.js";
+import type * as chat_queries from "../chat/queries.js";
+import type * as discussion_mutations from "../discussion/mutations.js";
+import type * as discussion_queries from "../discussion/queries.js";
 import type * as http from "../http.js";
-import type * as learning from "../learning.js";
-import type * as learningAction from "../learningAction.js";
+import type * as learningChatMetadata_mutations from "../learningChatMetadata/mutations.js";
+import type * as learningChatMetadata_queries from "../learningChatMetadata/queries.js";
+import type * as learning_actions from "../learning/actions.js";
+import type * as learning_mutations from "../learning/mutations.js";
+import type * as learning_queries from "../learning/queries.js";
 import type * as migrations from "../migrations.js";
-import type * as plan from "../plan.js";
-import type * as planAction from "../planAction.js";
+import type * as planMetadata_mutations from "../planMetadata/mutations.js";
+import type * as planMetadata_queries from "../planMetadata/queries.js";
+import type * as plan_actions from "../plan/actions.js";
+import type * as plan_joins from "../plan/joins.js";
+import type * as plan_mutations from "../plan/mutations.js";
+import type * as plan_queries from "../plan/queries.js";
 
 import type {
   ApiFromModules,
@@ -29,15 +38,24 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   auth: typeof auth;
-  chat: typeof chat;
-  chatAction: typeof chatAction;
-  discussion: typeof discussion;
+  "chat/actions": typeof chat_actions;
+  "chat/mutations": typeof chat_mutations;
+  "chat/queries": typeof chat_queries;
+  "discussion/mutations": typeof discussion_mutations;
+  "discussion/queries": typeof discussion_queries;
   http: typeof http;
-  learning: typeof learning;
-  learningAction: typeof learningAction;
+  "learningChatMetadata/mutations": typeof learningChatMetadata_mutations;
+  "learningChatMetadata/queries": typeof learningChatMetadata_queries;
+  "learning/actions": typeof learning_actions;
+  "learning/mutations": typeof learning_mutations;
+  "learning/queries": typeof learning_queries;
   migrations: typeof migrations;
-  plan: typeof plan;
-  planAction: typeof planAction;
+  "planMetadata/mutations": typeof planMetadata_mutations;
+  "planMetadata/queries": typeof planMetadata_queries;
+  "plan/actions": typeof plan_actions;
+  "plan/joins": typeof plan_joins;
+  "plan/mutations": typeof plan_mutations;
+  "plan/queries": typeof plan_queries;
 }>;
 
 /**

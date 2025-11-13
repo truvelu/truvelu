@@ -40,15 +40,17 @@ import SharedIcon from "./shared-icon";
 
 const NavChatItem = ({
 	chat,
-}: { chat: (typeof api.chat.getChats._returnType)["page"][number] }) => {
+}: {
+	chat: (typeof api.chat.queries.getChats._returnType)["page"][number];
+}) => {
 	const roomId = useGetRoomId();
 	const navigate = useNavigate();
 
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
-	const updateChatTitle = useAction(api.chatAction.updateChatTitle);
-	const archiveChat = useAction(api.chatAction.archiveChat);
-	const deleteChat = useAction(api.chatAction.deleteChat);
+	const updateChatTitle = useAction(api.chat.actions.updateChatTitle);
+	const archiveChat = useAction(api.chat.actions.archiveChat);
+	const deleteChat = useAction(api.chat.actions.deleteChat);
 
 	const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =
 		useEditableTitle({
@@ -180,7 +182,7 @@ const NavChatItem = ({
 export function NavChat() {
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { results: chats } = usePaginatedQuery(
-		api.chat.getChats,
+		api.chat.queries.getChats,
 		user?._id?.toString()
 			? {
 					userId: user?._id?.toString() ?? "",

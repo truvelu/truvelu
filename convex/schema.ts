@@ -89,7 +89,6 @@ export default defineSchema({
 		userId: v.string(),
 		status: v.optional(chatStatusValidator),
 	})
-		.index("by_uuid", ["uuid"])
 		.index("by_threadId", ["threadId"])
 		.index("by_userId", ["userId"])
 		.index("by_threadId_and_userId", ["threadId", "userId"])
@@ -102,7 +101,6 @@ export default defineSchema({
 		userId: v.string(), // Owner (denormalized for performance/security)
 	})
 		.index("by_chatId", ["chatId"])
-		.index("by_parentChatId", ["parentChatId"])
 		.index("by_messageId", ["messageId"])
 		.index("by_userId", ["userId"]),
 
@@ -114,8 +112,6 @@ export default defineSchema({
 		icon: v.optional(v.string()),
 		activeStatus: activeStatusValidator,
 	})
-		.index("by_uuid", ["uuid"])
-		.index("by_userId", ["userId"])
 		.index("by_userId_and_activeStatus", ["userId", "activeStatus"])
 		.index("by_uuid_and_userId", ["uuid", "userId"]),
 
@@ -124,30 +120,36 @@ export default defineSchema({
 		chatId: v.id("chats"),
 		type: learningChatTypeValidator,
 		userId: v.string(),
-		metadata: v.optional(
-			v.union(
-				v.null(),
-				v.object({
-					plan: v.optional(
-						v.object({
-							order: v.number(),
-							title: v.string(),
-							description: v.string(),
-							learningObjectives: v.array(v.string()),
-							priority: v.optional(v.union(v.string(), v.null())),
-							status: v.optional(learningChatStatusValidator),
-						}),
-					),
-				}),
-			),
-		),
 	})
-		.index("by_learningId", ["learningId"])
-		.index("by_chatId", ["chatId"])
 		.index("by_userId", ["userId"])
 		.index("by_chatId_and_userId", ["chatId", "userId"])
-		.index("by_learningId_and_chatId", ["learningId", "chatId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
+
+	learningChatMetadata: defineTable({
+		learningChatId: v.id("learningChats"),
+		userId: v.string(),
+	})
+		.index("by_learningChatId", ["learningChatId"])
+		.index("by_userId", ["userId"])
+		.index("by_learningChatId_and_userId", ["learningChatId", "userId"]),
+
+	learningChatMetadataContent: defineTable({
+		learningChatMetadataId: v.id("learningChatMetadata"),
+		userId: v.string(),
+		order: v.number(),
+		title: v.string(),
+		description: v.string(),
+		learningObjectives: v.array(v.string()),
+		priority: v.optional(v.string()),
+		status: learningChatStatusValidator,
+	})
+		.index("by_learningChatMetadataId", ["learningChatMetadataId"])
+		.index("by_userId", ["userId"])
+		.index("by_learningChatMetadataId_and_userId", [
+			"learningChatMetadataId",
+			"userId",
+		])
+		.index("by_status", ["status"]),
 
 	plans: defineTable({
 		parentId: v.optional(v.id("plans")),
@@ -209,11 +211,12 @@ export default defineSchema({
 
 	planItems: defineTable({
 		planId: v.id("plans"),
+		userId: v.string(),
 		title: v.string(),
 		description: v.optional(v.string()),
 		order: v.number(),
 		status: planStatusValidator,
 	})
 		.index("by_planId", ["planId"])
-		.index("by_planId_and_order", ["planId", "order"]),
+		.index("by_planId_and_userId", ["planId", "userId"]),
 });
