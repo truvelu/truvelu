@@ -3,8 +3,8 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
-import netlify from '@netlify/vite-plugin-tanstack-start'
 import type { Plugin } from 'vite'
+import { nitro } from 'nitro/vite'
 
 // Plugin to handle CSS imports during SSR build
 const ignoreCssPlugin = (): Plugin => ({
@@ -58,9 +58,11 @@ const config = defineConfig({
         failOnError: true,
       }
     }),
-    netlify(),
+    nitro(),
     viteReact(),
   ],
+
+  nitro: {},
 })
 
 export default config
