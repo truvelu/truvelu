@@ -19,9 +19,18 @@ async function enrichLearningChatsWithMetadata(
 	learningChatsPage: Doc<"learningChats">[],
 	userId: string,
 ) {
-	const contentLearningChats = learningChatsPage.filter(
-		(learningChat) => learningChat.type === "content",
+	// Fetch all chats for these learning chats to check their type
+	const chatPromises = learningChatsPage.map(
+		async (learningChat) =>
+			[learningChat._id, await ctx.db.get(learningChat.chatId)] as const,
 	);
+	const chats = new Map(await Promise.all(chatPromises));
+
+	// Filter learning chats that have content type chats
+	const contentLearningChats = learningChatsPage.filter((learningChat) => {
+		const chat = chats.get(learningChat._id);
+		return chat?.type === "content";
+	});
 
 	// Fetch metadata references for all learning chats
 	const metadataPromises = contentLearningChats.map((learningChat) =>
@@ -118,8 +127,20 @@ export const getLearningsChatPanelsByRoomId = query({
 
 		const { page, ...paginationInfo } = threads;
 
+		// Get all chats for learning chats to check their type
+		const learningChatChatIds = allLearningChatsByLearningId.map(
+			(lc) => lc.chatId,
+		);
+		const learningChatChats = await Promise.all(
+			learningChatChatIds.map((chatId) => ctx.db.get(chatId)),
+		);
+
+		// Filter learning chats that have panel type
 		const learningChatPanelType = allLearningChatsByLearningId.filter(
-			(learningChat) => learningChat.type === "panel",
+			(_learningChat, index) => {
+				const chat = learningChatChats[index];
+				return chat?.type === "plan";
+			},
 		);
 		const learningChatIds = new Set(
 			learningChatPanelType.map((learningChat) => learningChat.chatId),
@@ -265,10 +286,7 @@ export const getLearningChatsContentByLearningId = query({
 	},
 	handler: async (ctx, args) => {
 		const [learning, allChats] = await Promise.all([
-			ctx.db
-				.query("learning")
-				.withIndex("by_id", (q) => q.eq("_id", args.learningId))
-				.unique(),
+			ctx.db.get(args.learningId),
 			ctx.db
 				.query("chats")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -341,13 +359,24 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 		}
 
 		// STEP 2: Get all learningChats for this learning
-		const allLearningChats = await ctx.db
+		const allLearningChatsRaw = await ctx.db
 			.query("learningChats")
 			.withIndex("by_learningId_and_userId", (q) =>
 				q.eq("learningId", learning._id).eq("userId", args.userId),
 			)
-			.filter((q) => q.eq(q.field("type"), "content"))
 			.collect();
+
+		// STEP 2a: Filter by content type by checking related chats
+		const chatPromises = allLearningChatsRaw.map(
+			async (learningChat) =>
+				[learningChat._id, await ctx.db.get(learningChat.chatId)] as const,
+		);
+		const chats = new Map(await Promise.all(chatPromises));
+
+		const allLearningChats = allLearningChatsRaw.filter((learningChat) => {
+			const chat = chats.get(learningChat._id);
+			return chat?.type === "content";
+		});
 
 		// Early return optimization: avoid unnecessary queries if no data
 		if (allLearningChats.length === 0) {

@@ -5,7 +5,6 @@
 
 import { vMessage } from "@convex-dev/agent";
 import { v } from "convex/values";
-import { v7 as uuidv7 } from "uuid";
 import { api, internal } from "../_generated/api";
 import { mutation } from "../_generated/server";
 import { createAgent } from "../agent";
@@ -34,12 +33,14 @@ export const createDiscussion = mutation({
 		});
 
 		// Create a chat record for this discussion
-		const discussionChatId = await ctx.db.insert("chats", {
-			uuid: uuidv7(),
-			threadId,
-			userId,
-			status: "ready",
-		});
+		const { id: discussionChatId } = await ctx.runMutation(
+			api.chat.mutations.createChat,
+			{
+				agentType,
+				userId,
+				type: "discussion",
+			},
+		);
 
 		await Promise.all([
 			ctx.scheduler.runAfter(0, internal.chat.actions.updateThreadTitle, {

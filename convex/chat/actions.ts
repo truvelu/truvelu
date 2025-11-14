@@ -173,8 +173,6 @@ export const streamAsync = internalAction({
 										const userAnswerIsFullFillTheQuestion =
 											await generateObject({
 												model: agent.options.languageModel,
-												system:
-													"You need to determine if the user's answer is full fill the question about the user's learning preference. If it is, return true. If it is not, return false.",
 												prompt: `
 									<question>${question}</question>
 									<user_answer>${answer}</user_answer>
@@ -233,7 +231,6 @@ export const streamAsync = internalAction({
 										) {
 											const analysis = await generateText({
 												model: agent.options.languageModel,
-												system: agent.options.instructions,
 												prompt: `
 										<question_that_not_full_filled>${userAnswerIsFullFillTheQuestion.object.questionIsNotFullFill.join(", ")}</question_that_not_full_filled>
 										<the-ask>Ask again for the questions that are not full filled by the user's answer.</the-ask>`,
@@ -282,7 +279,6 @@ export const streamAsync = internalAction({
 
 										const analysis = await generateObject({
 											model: agent.options.languageModel,
-											system: agent.options.instructions,
 											prompt: `
 									<question>${question}</question>
 									<metadata>${JSON.stringify(metadata)}</metadata>
@@ -568,31 +564,33 @@ export const streamAsync = internalAction({
 													<the-ask>Generate a learning list for the user's learning plan based on the search results.</the-ask>
 													<output>After this tool is called, just ask the user to see the learning list inside the learning dashboard, because the data will be shown there.</output>`,
 												schema: z.object({
-													learningList: z.array(
-														z.object({
-															order: z
-																.number()
-																.describe("The order of the course"),
-															title: z
-																.string()
-																.describe("The title of the course"),
-															description: z
-																.string()
-																.describe("The description of the course"),
-															learningObjectives: z
-																.array(z.string())
-																.describe(
-																	"The learning objectives of the course",
-																),
-															priority: z
-																.enum([
-																	"must_know",
-																	"should_know",
-																	"nice_to_know",
-																])
-																.describe("The priority of the course"),
-														}),
-													),
+													learningList: z
+														.array(
+															z.object({
+																order: z
+																	.number()
+																	.describe("The order of the course"),
+																title: z
+																	.string()
+																	.describe("The title of the course"),
+																description: z
+																	.string()
+																	.describe("The description of the course"),
+																learningObjectives: z
+																	.array(z.string())
+																	.describe(
+																		"The learning objectives of the course",
+																	),
+																priority: z
+																	.enum([
+																		"must_know",
+																		"should_know",
+																		"nice_to_know",
+																	])
+																	.describe("The priority of the course"),
+															}),
+														)
+														.max(8),
 												}),
 											}),
 										]);
@@ -621,13 +619,30 @@ export const streamAsync = internalAction({
 											throw new Error("Learning chat not found");
 										}
 
-										await ctx.runMutation(
-											api.learning.mutations.updateLearningTitle,
-											{
-												learningId: learningChat.learningId,
-												title: learningTitleGeneratext.text,
-											},
-										);
+										await Promise.all([
+											ctx.runMutation(
+												api.learning.mutations.updateLearningTitle,
+												{
+													learningId: learningChat.learningId,
+													title: learningTitleGeneratext.text,
+												},
+											),
+											ctx.runMutation(
+												api.learning.mutations.createLearningContent,
+												{
+													learningId: learningChat.learningId,
+													userId: ctx.userId,
+													data: learningListGenerateObject.object.learningList.map(
+														(item, index) => ({
+															order: index + 1,
+															title: item.title,
+															description: item.description,
+															learningObjectives: item.learningObjectives,
+														}),
+													),
+												},
+											),
+										]);
 
 										return JSON.stringify({
 											data: {
@@ -683,8 +698,8 @@ export const streamAsync = internalAction({
 											throw new Error("Plan not found");
 										}
 
-										// Call the learning action to stream content
-										await ctx.runAction(
+										await ctx.scheduler.runAfter(
+											0,
 											internal.learning.actions.streamGenerateLearningContent,
 											{
 												learningId: learningChat.learningId,

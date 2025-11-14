@@ -8,7 +8,7 @@ import { v7 as uuidv7 } from "uuid";
 import { api, internal } from "../_generated/api";
 import { mutation } from "../_generated/server";
 import { createAgent } from "../agent";
-import { learningChatStatusValidator } from "../schema";
+import { SectionTypeValidator, learningChatStatusValidator } from "../schema";
 
 /**
  * Create a new learning panel with initial setup
@@ -19,6 +19,7 @@ export const createLearningPanel = mutation({
 		icon: v.optional(v.string()),
 		title: v.optional(v.string()),
 		description: v.optional(v.string()),
+		type: SectionTypeValidator,
 	},
 	handler: async (ctx, args) => {
 		const {
@@ -26,10 +27,11 @@ export const createLearningPanel = mutation({
 			title = "New Learning",
 			description = "",
 			icon = "",
+			type,
 		} = args;
 
 		const agent = createAgent({
-			agentType: "learning-generation",
+			agentType: type === "plan" ? "course-planner" : "question-answering",
 		});
 
 		const [_learningId, { threadId }] = await Promise.all([
@@ -52,6 +54,7 @@ export const createLearningPanel = mutation({
 			threadId,
 			userId,
 			status: "ready",
+			type: "plan",
 		});
 
 		await Promise.all([
@@ -63,7 +66,6 @@ export const createLearningPanel = mutation({
 				chatId: _chatId,
 			}),
 			ctx.db.insert("learningChats", {
-				type: "panel",
 				chatId: _chatId,
 				learningId: _learningId,
 				userId,
@@ -74,7 +76,6 @@ export const createLearningPanel = mutation({
 				{
 					threadId,
 					userId,
-					agentType: "learning-generation",
 				},
 			),
 		]);
@@ -113,12 +114,10 @@ export const createLearningContent = mutation({
 	handler: async (ctx, args) => {
 		const { learningId, userId, data } = args;
 
-		const agent = createAgent({
-			agentType: "course-planner",
-		});
-
 		const promises = data.map(async (item) => {
-			const { threadId } = await agent.createThread(ctx, {
+			const { threadId } = await createAgent({
+				agentType: "course-content-generator",
+			}).createThread(ctx, {
 				userId,
 				title: item.title,
 				summary: item.description ?? "",
@@ -129,10 +128,10 @@ export const createLearningContent = mutation({
 				threadId,
 				userId,
 				status: "ready",
+				type: "content",
 			});
 
 			const _learningChatId = await ctx.db.insert("learningChats", {
-				type: "content",
 				chatId: _chatId,
 				learningId,
 				userId,

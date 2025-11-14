@@ -15,14 +15,6 @@ export const MODELS: ReadonlyMap<
 	}
 > = new Map([
 	[
-		"openrouter/polaris-alpha",
-		{
-			value: "openrouter/polaris-alpha",
-			label: "OpenRouter: Polaris Alpha",
-			isReasoning: false,
-		},
-	],
-	[
 		"google/gemma-3n-e4b-it",
 		{
 			value: "google/gemma-3n-e4b-it",
@@ -47,10 +39,18 @@ export const MODELS: ReadonlyMap<
 		},
 	],
 	[
-		"openai/gpt-5",
+		"openai/gpt-5.1-chat",
 		{
-			value: "openai/gpt-5",
-			label: "OpenAI: GPT-5",
+			value: "openai/gpt-5.1-chat",
+			label: "OpenAI: GPT-5.1-Chat",
+			isReasoning: true,
+		},
+	],
+	[
+		"openai/gpt-5.1",
+		{
+			value: "openai/gpt-5.1",
+			label: "OpenAI: GPT-5.1",
 			isReasoning: true,
 		},
 	],

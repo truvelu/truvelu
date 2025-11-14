@@ -10,7 +10,6 @@ import z from "zod";
 import { api, components, internal } from "../_generated/api";
 import { internalAction } from "../_generated/server";
 import { createAgent } from "../agent";
-import { agentTypeValidator } from "../schema";
 
 const exaApiKey = process.env.EXA_API_KEY;
 
@@ -61,9 +60,6 @@ export const streamGenerateLearningContent = internalAction({
 		const courseContentGeneratorAgent = createAgent({
 			agentType: "course-content-generator",
 		});
-		const courseResearcherAgent = createAgent({
-			agentType: "course-researcher",
-		});
 
 		const learningListData = await ctx.runQuery(
 			api.learning.queries.getLearningChatsContentByLearningIdThatStatusDraft,
@@ -94,8 +90,8 @@ export const streamGenerateLearningContent = internalAction({
 			]);
 
 			const generateSearchQueries = await generateObject({
-				model: courseResearcherAgent.options.languageModel,
-				system: courseResearcherAgent.options.instructions,
+				model: courseContentGeneratorAgent.options.languageModel,
+				system: courseContentGeneratorAgent.options.instructions,
 				prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
 				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
 				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
@@ -240,11 +236,13 @@ export const streamGenerateLearningContent = internalAction({
 export const generateGreetingMessageForLearnerAsync = internalAction({
 	args: {
 		threadId: v.string(),
-		agentType: agentTypeValidator,
 		userId: v.string(),
 	},
-	handler: async (ctx, { threadId, agentType, userId }) => {
-		const agent = createAgent({ agentType });
+	handler: async (ctx, { threadId, userId }) => {
+		const titleGenerationAgent = createAgent({ agentType: "title-generation" });
+		const contentGenerationAgent = createAgent({
+			agentType: "course-content-generator",
+		});
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
@@ -272,8 +270,8 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 		);
 
 		const response = streamText({
-			model: agent.options.languageModel,
-			system: agent.options.instructions,
+			model: titleGenerationAgent.options.languageModel,
+			system: contentGenerationAgent.options.instructions,
 			prompt: `Greet the learner in a friendly and engaging way. After that ask the user about:
 			1. topic they want to learn about,
 			2. user level understanding of the topic,
@@ -281,7 +279,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 			4. the user's prefered duration for learning the topic (short: Crash Course, detailed: Course)`,
 			onFinish: async (completion) => {
 				const text = completion.text;
-				await agent.saveMessage(ctx, {
+				await contentGenerationAgent.saveMessage(ctx, {
 					threadId,
 					message: {
 						role: "assistant",
@@ -295,9 +293,13 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 					status: "ready",
 				});
 			},
-			onError: (error) => {
+			onError: async (error) => {
 				console.error(error);
 				streamer.fail(JSON.stringify(error));
+				await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
+					threadId,
+					status: "error",
+				});
 			},
 			abortSignal: streamer.abortController.signal,
 		});

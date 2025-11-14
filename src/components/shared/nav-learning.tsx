@@ -166,6 +166,7 @@ const NavNewLearningItem = () => {
 									{
 										userId: user._id,
 										title: isAutogenerateTitle ? undefined : manualTitle,
+										type: "plan",
 									},
 									{
 										onSuccess: (data) => {

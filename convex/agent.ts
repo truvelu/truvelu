@@ -83,8 +83,7 @@ export function createAgent(
 ) {
 	const {
 		agentType,
-		modelId = "openrouter/polaris-alpha",
-		// modelId = "x-ai/grok-4-fast",
+		modelId = "x-ai/grok-4-fast",
 		name = "Truvelu Fallback Agent",
 		instructions = "<instructions>You are a helpful assistant that can help the user with their question.</instructions>",
 		...rest
@@ -99,21 +98,10 @@ export function createAgent(
 	switch (agentType) {
 		case "question-answering":
 			return createAgentPrivate({
-				modelId: "openrouter/polaris-alpha",
-				// modelId: "x-ai/grok-4-fast",
+				modelId: "openai/gpt-5.1-chat",
 				name: "Question Answering Agent",
 				instructions:
 					"You are a question answering agent that helps the user with their question. You are also a helpful assistant that can help the user with their question.",
-				...rest,
-			});
-
-		case "learning-generation":
-			return createAgentPrivate({
-				modelId: "openrouter/polaris-alpha",
-				// modelId: "x-ai/grok-4-fast",
-				name: "Learning Generation Agent",
-				instructions:
-					"You are a learning generation agent that generates a learning for a given topic. The learning should be a single sentence that captures the main topic of the learning.",
 				...rest,
 			});
 
@@ -122,14 +110,18 @@ export function createAgent(
 				modelId: "google/gemma-3n-e4b-it",
 				name: "Title Generation Agent",
 				instructions:
-					"You are a title generation agent that generates a title for a given learning. The title should be a single sentence that captures the main topic of the learning. The title should be no more than 8 words.",
+					"You are a title generation agent that generates a title for a given learning. The title should be a single sentence that captures the main topic of the learning. The title should be no more than 50 characters.",
 				...rest,
 			});
 
 		case "course-planner":
 			return createAgentPrivate({
-				modelId: "openrouter/polaris-alpha",
-				// modelId: "x-ai/grok-4-fast",
+				modelId: "openai/gpt-5.1",
+				openrouterSettings: {
+					reasoning: {
+						effort: "low",
+					},
+				},
 				name: "Course Planner Agent",
 				instructions: `<instructions>You are a course planner agent that creates comprehensive learning paths for students.
 
@@ -145,40 +137,104 @@ Keep learning items focused and specific. Each item should represent a concrete 
 				...rest,
 			});
 
-		case "course-researcher":
-			return createAgentPrivate({
-				modelId: "openrouter/polaris-alpha",
-				// modelId: "x-ai/grok-4-fast",
-				name: "Course Researcher Agent",
-				instructions: `<instructions>You are a course researcher agent that finds high-quality educational content on the web.
-
-Your responsibilities:
-1. Take a specific learning topic and generate effective search queries
-2. Use the web_search tool to find relevant, high-quality educational resources
-3. Evaluate search results for educational value and relevance
-4. Gather diverse perspectives and resources (tutorials, documentation, articles, videos)
-5. Ensure content is appropriate for the learner's level
-
-Focus on finding authoritative sources, clear explanations, and practical examples. Search queries should be specific and education-focused.</instructions>`,
-				...rest,
-			});
-
 		case "course-content-generator":
 			return createAgentPrivate({
-				modelId: "openrouter/polaris-alpha",
-				// modelId: "x-ai/grok-4-fast",
+				modelId: "openai/gpt-5.1",
+				openrouterSettings: {
+					reasoning: {
+						effort: "low",
+					},
+				},
 				name: "Course Content Generator Agent",
-				instructions: `<instructions>You are a course content generator agent that creates engaging, comprehensive educational content.
+				instructions: `# System Prompt: Hands-On / Article Module Generator (Markdown)
+You are an expert instructional designer who generates **one (1) learning module at a time**. The user will supply domain, topic, level, objective, and constraints. Your job is to produce a single, complete module in **Markdown**, following the rules and the decision procedure below.
 
-Structure your content with:
-- Clear introduction explaining what will be learned
-- Core concepts with detailed explanations
-- Use proper article structure like headings, subheadings, paragraphs, bullets, numbering, code snippet, and etc.
-- Giving examples like code snippets, math equations, and etc. (if applicable)
-- Summary of key takeaways
-- suggested next steps or related topics
+---
 
-Write in a clear, engaging style appropriate for the learner's level. Make complex topics accessible.</instructions>`,
+## **Rules**
+
+1. Produce **exactly one module** per response.
+2. Follow the exact structure under **Module Structure**.
+3. Remove the **Challenge** section (user handles assessments elsewhere).
+4. Hands-on activities must be **explicit, numbered, executable, detailed, and domain-adjusted**, when the Decision Flow picks hands-on.
+5. Article/theory modules must be structured, readable, and include suggested learner tasks (reading prompts, reflection questions, worked examples) when the Decision Flow picks article/theory.
+6. If optional inputs are missing, infer reasonable defaults consistent with the learner level.
+7. Avoid unsafe, harmful, or illegal instructions. Provide safe alternatives when necessary.
+8. Use clear, concise language and domain-appropriate terminology.
+9. Output **only** the module in Markdown (no extra commentary).
+
+---
+
+## **Decision Flow — choose module format (HANDS-ON vs ARTICLE/THEORY)**
+
+Use the following deterministic procedure to pick the module format. After deciding, include a one-sentence 'FormatDecision' line inside the module.
+
+### **Decision Steps**
+
+1. **User override** — if user explicitly asks for hands-on or article, choose that.
+2. **Objective verb** —
+
+   * apply/perform/build/implement → **hands-on**
+   * understand/explain/analyze/describe → **article/theory**
+3. **Domain heuristic** —
+
+   * Applied fields (software engineering, applied science, engineering, media arts) → prefer **hands-on**
+   * Theoretical fields (pure math, humanities, literature, history) → prefer **article/theory**
+4. **Level & feasibility** — beginners without tools → prefer **article/theory** unless simple simulation is viable.
+5. **Constraints check** — if tools forbidden or activity unsafe → **article/theory**.
+6. **Time & scope** — short/microlearning → theory or micro-hands-on.
+7. **Assessment intent** — if requiring code/artifacts/data → hands-on.
+8. **Tie-breaker** — applied domains favor hands-on; conceptual domains favor article.
+
+Include a one-line final decision in the module:
+'**FormatDecision:** Hands-On — <reason>' or '**FormatDecision:** Article/Theory — <reason>'
+
+---
+
+## **Module Structure (Output Only)**
+
+Your output must follow this structure **exactly**:
+
+### Module Title**
+Short, clear, descriptive.
+
+### Module Objective**
+Concise statement of expected learning.
+
+### Background Overview**
+Brief explanation tailored to the domain.
+
+### Module Content**
+#### If **Hands-On**:
+* **Materials & Tools:** list
+* **Setup:** numbered steps
+* **Hands-On Activity:** clear numbered steps
+* **Hints & Common Pitfalls:** bullet list
+
+#### If **Article/Theory**:
+* **Reading / Theory Sections:** structured explanation
+* **Guided Tasks:** short tasks or reading prompts
+* **Reflection Prompts:** 2-4 thoughtful questions
+* **Further Examples / Demonstrations:** worked examples
+
+### **6. Expected Outcomes**
+Bullet list of concrete skills or understanding.
+
+---
+
+## **Examples of Decision Flow**
+* Software engineering + "implement endpoints" → Hands-On.
+* Pure math proof + "understand proof" → Article/Theory.
+* Chemistry lab topic + no lab allowed → Article/Theory with safe simulation.
+* Art theory (color theory) → Article/Theory.
+
+---
+
+## **Final Notes**
+* Never output internal chain-of-thought. Use the explicit decision flow.
+* Your answer must be **only** the module in Markdown.
+* Only one module per output.
+`,
 				...rest,
 			});
 

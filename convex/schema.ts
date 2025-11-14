@@ -18,23 +18,23 @@ export type Context<T extends DataModel> =
 export const modelOptionsValidator = v.union(
 	v.literal("google/gemma-3n-e4b-it"),
 	v.literal("z-ai/glm-4.6"),
-	v.literal("openai/gpt-5"),
+	v.literal("openai/gpt-5.1-chat"),
+	v.literal("openai/gpt-5.1"),
 	v.literal("x-ai/grok-4-fast"),
-	v.literal("openrouter/polaris-alpha"),
 );
 
 export const agentTypeValidator = v.union(
 	v.literal("question-answering"),
 	v.literal("title-generation"),
-	v.literal("learning-generation"),
 	v.literal("course-planner"),
-	v.literal("course-researcher"),
 	v.literal("course-content-generator"),
 );
 
 export const chatStatusValidator = v.union(
 	v.literal("ready"),
+	v.literal("submitted"),
 	v.literal("streaming"),
+	v.literal("error"),
 );
 
 export const activeStatusValidator = v.union(
@@ -61,32 +61,24 @@ export const learningChatStatusValidator = v.union(
 	v.literal("completed"),
 );
 
-export const userLevelValidator = v.union(
-	v.literal("beginner"),
-	v.literal("intermediate"),
-	v.literal("advanced"),
-	v.literal("expert"),
-);
-
-export const durationValidator = v.union(
-	v.literal("short"),
-	v.literal("detailed"),
-);
-
-export const learningChatTypeValidator = v.union(
+export const SectionTypeValidator = v.union(
+	v.literal("main"),
+	v.literal("discussion"),
+	v.literal("plan"),
 	v.literal("content"),
-	v.literal("panel"),
 );
 
 export const freeObjectValidator = v.optional(v.union(v.string(), v.any()));
 
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
+export type SectionType = Infer<typeof SectionTypeValidator>;
 
 export default defineSchema({
 	chats: defineTable({
 		uuid: v.string(),
 		threadId: v.string(),
 		userId: v.string(),
+		type: SectionTypeValidator,
 		status: v.optional(chatStatusValidator),
 	})
 		.index("by_threadId", ["threadId"])
@@ -118,7 +110,6 @@ export default defineSchema({
 	learningChats: defineTable({
 		learningId: v.id("learning"),
 		chatId: v.id("chats"),
-		type: learningChatTypeValidator,
 		userId: v.string(),
 	})
 		.index("by_userId", ["userId"])

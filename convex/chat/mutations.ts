@@ -9,7 +9,11 @@ import { v7 as uuidv7 } from "uuid";
 import { components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
-import { agentTypeValidator, chatStatusValidator } from "../schema";
+import {
+	SectionTypeValidator,
+	agentTypeValidator,
+	chatStatusValidator,
+} from "../schema";
 
 /**
  * Create a new chat
@@ -18,22 +22,27 @@ export const createChat = mutation({
 	args: {
 		agentType: agentTypeValidator,
 		userId: v.string(),
+		type: SectionTypeValidator,
+		title: v.optional(v.string()),
+		summary: v.optional(v.string()),
 	},
-	handler: async (ctx, { agentType, userId }) => {
+	handler: async (ctx, { agentType, userId, type, title, summary }) => {
 		const firstTitle = "New Chat";
 		const agent = createAgent({ agentType });
 		const { threadId } = await agent.createThread(ctx, {
 			userId,
-			title: firstTitle,
+			title: title ?? firstTitle,
+			summary: summary ?? "",
 		});
 		const roomId = uuidv7();
-		await ctx.db.insert("chats", {
+		const _chatId = await ctx.db.insert("chats", {
 			userId,
 			threadId,
+			type,
 			status: "ready",
 			uuid: roomId,
 		});
-		return { threadId, roomId };
+		return { id: _chatId, threadId, roomId };
 	},
 });
 
@@ -72,9 +81,15 @@ export const sendChatMessage = mutation({
 	},
 	handler: async (ctx, { type = "ask", userId, threadId, roomId, prompt }) => {
 		const agentType = type === "ask" ? "question-answering" : "course-planner";
-		const { messageId, message } = await createAgent({
-			agentType,
-		}).saveMessage(ctx, {
+
+		const agent = createAgent({ agentType });
+
+		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
+			threadId,
+			status: "submitted",
+		});
+
+		const { messageId, message } = await agent.saveMessage(ctx, {
 			threadId,
 			userId,
 			prompt,

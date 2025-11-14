@@ -166,7 +166,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		[messageThatIsStreaming],
 	);
 	const isInputStatusLoading = useMemo(
-		() => roomStatus === "streaming" || !!messageThatIsStreaming,
+		() =>
+			roomStatus === "submitted" ||
+			roomStatus === "streaming" ||
+			!!messageThatIsStreaming,
 		[roomStatus, messageThatIsStreaming],
 	);
 	const messageThatIsStreamingTextPartHasValue = useMemo(() => {
@@ -196,7 +199,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			const prompt = message.text ?? "";
 			createChat.mutate(
 				{
-					agentType: "learning-generation",
+					type: "main",
+					agentType: "question-answering",
 					userId,
 				},
 				{
