@@ -88,15 +88,13 @@ export const getLastPlanByThreadId = query({
 			throw new Error("Chat not found");
 		}
 
-		// Get all plans for this chat
-		const plans = await ctx.db
+		const lastPlan = await ctx.db
 			.query("plans")
 			.withIndex("by_chatId_and_userId", (q) =>
 				q.eq("chatId", chat._id).eq("userId", args.userId),
 			)
-			.collect();
-
-		const lastPlan = plans[plans.length - 1];
+			.order("desc")
+			.first();
 
 		if (!lastPlan) {
 			throw new Error("No plan found for this chat");
@@ -112,17 +110,18 @@ export const getPlanByChatIdAndUserId = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const plans = await ctx.db
+		const plan = await ctx.db
 			.query("plans")
 			.withIndex("by_chatId_and_userId", (q) =>
 				q.eq("chatId", args.chatId).eq("userId", args.userId),
 			)
-			.collect();
+			.order("desc")
+			.first();
 
-		if (plans.length === 0) {
+		if (!plan) {
 			throw new Error("No plan found for this chat");
 		}
 
-		return plans[plans.length - 1];
+		return plan;
 	},
 });

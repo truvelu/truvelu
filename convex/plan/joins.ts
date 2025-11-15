@@ -47,21 +47,17 @@ export const getLatestByChatId = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const plans = await ctx.db
+		const latestPlan = await ctx.db
 			.query("plans")
 			.withIndex("by_chatId_and_userId", (q) =>
 				q.eq("chatId", args.chatId).eq("userId", args.userId),
 			)
-			.collect();
+			.order("desc")
+			.first();
 
-		if (plans.length === 0) {
+		if (!latestPlan) {
 			return null;
 		}
-
-		// Get the most recent plan
-		const latestPlan = plans.sort(
-			(a, b) => b._creationTime - a._creationTime,
-		)[0];
 
 		const items = await ctx.db
 			.query("planItems")

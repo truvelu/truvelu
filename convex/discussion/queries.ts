@@ -49,33 +49,42 @@ export const getDiscussionsByRoomId = query({
 		paginationOpts: paginationOptsValidator,
 	},
 	handler: async (ctx, args) => {
-		const [threads, allDiscussions, allChats] = await Promise.all([
+		const [threads, allChats, parentChat] = await Promise.all([
 			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
 				userId: args.userId,
 				paginationOpts: args.paginationOpts,
 			}),
-			// Get all discussion records for this user only (security & performance)
-			ctx.db
-				.query("discussions")
-				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-				.collect(),
 			// Get all chats for this user (includes both main chats and discussion chats)
 			ctx.db
 				.query("chats")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
 				.collect(),
+			ctx.db
+				.query("chats")
+				.withIndex("by_uuid_and_userId", (q) =>
+					q.eq("uuid", args.uuid).eq("userId", args.userId),
+				)
+				.unique(),
 		]);
+
+		if (!parentChat) {
+			return {
+				...threads,
+				page: [],
+			};
+		}
+
+		const discussions = await ctx.db
+			.query("discussions")
+			.withIndex("by_parentChatId_and_userId", (q) =>
+				q.eq("parentChatId", parentChat._id).eq("userId", args.userId),
+			)
+			.collect();
 
 		const { page, ...paginationInfo } = threads;
 
-		// Create a Set of discussion chat IDs for O(1) lookup
-		// We exclude discussions from the main chat list since they appear in the canvas
-
-		const chatsByRoomId = allChats.find((chat) => chat.uuid === args.uuid);
-		const discussionChatIdFilterByParentChatId = new Set(
-			allDiscussions
-				.filter((discussion) => discussion.parentChatId === chatsByRoomId?._id)
-				.map((discussion) => discussion.chatId),
+		const discussionChatIds = new Set(
+			discussions.map((discussion) => discussion.chatId),
 		);
 
 		// Create a Map of threadId -> chat for O(1) lookup
@@ -94,7 +103,7 @@ export const getDiscussionsByRoomId = query({
 				// Exclude discussions (canvas chats) from main chat list
 				return (
 					thread.data !== undefined &&
-					!!discussionChatIdFilterByParentChatId.has(thread.data._id)
+					discussionChatIds.has(thread.data._id)
 				);
 			});
 

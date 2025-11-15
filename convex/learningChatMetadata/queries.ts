@@ -3,9 +3,52 @@
  * Single responsibility: Read operations only
  */
 
+import { getOneFrom } from "convex-helpers/server/relationships";
+import type { GenericDatabaseReader } from "convex/server";
 import { v } from "convex/values";
-import type { Id } from "../_generated/dataModel";
+import type { DataModel, Doc, Id } from "../_generated/dataModel";
 import { internalQuery, query } from "../_generated/server";
+
+type MetadataBundle = {
+	metadata: Doc<"learningChatMetadata">;
+	content: Doc<"learningChatMetadataContent"> | null;
+};
+
+async function loadMetadataBundle(
+	db: GenericDatabaseReader<DataModel>,
+	learningChatId: Id<"learningChats">,
+	userId: string,
+): Promise<MetadataBundle | null> {
+	const metadata = await getOneFrom(
+		db,
+		"learningChatMetadata",
+		"by_learningChatId",
+		learningChatId,
+	);
+
+	if (!metadata || metadata.userId !== userId) {
+		return null;
+	}
+
+	const content = await getOneFrom(
+		db,
+		"learningChatMetadataContent",
+		"by_learningChatMetadataId",
+		metadata._id,
+	);
+
+	if (content && content.userId !== userId) {
+		return {
+			metadata,
+			content: null,
+		};
+	}
+
+	return {
+		metadata,
+		content,
+	};
+}
 
 /**
  * Get metadata content by learningChatId
@@ -16,25 +59,13 @@ export const getByLearningChatId = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const metadata = await ctx.db
-			.query("learningChatMetadata")
-			.withIndex("by_learningChatId_and_userId", (q) =>
-				q.eq("learningChatId", args.learningChatId).eq("userId", args.userId),
-			)
-			.first();
+		const bundle = await loadMetadataBundle(
+			ctx.db,
+			args.learningChatId,
+			args.userId,
+		);
 
-		if (!metadata) {
-			return null;
-		}
-
-		const content = await ctx.db
-			.query("learningChatMetadataContent")
-			.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-				q.eq("learningChatMetadataId", metadata._id).eq("userId", args.userId),
-			)
-			.first();
-
-		return { metadata, content };
+		return bundle;
 	},
 });
 
@@ -47,25 +78,13 @@ export const getByLearningChatIdInternal = internalQuery({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const metadata = await ctx.db
-			.query("learningChatMetadata")
-			.withIndex("by_learningChatId_and_userId", (q) =>
-				q.eq("learningChatId", args.learningChatId).eq("userId", args.userId),
-			)
-			.first();
+		const bundle = await loadMetadataBundle(
+			ctx.db,
+			args.learningChatId,
+			args.userId,
+		);
 
-		if (!metadata) {
-			return null;
-		}
-
-		const content = await ctx.db
-			.query("learningChatMetadataContent")
-			.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-				q.eq("learningChatMetadataId", metadata._id).eq("userId", args.userId),
-			)
-			.first();
-
-		return { metadata, content };
+		return bundle;
 	},
 });
 
@@ -79,51 +98,25 @@ export const getBatchByLearningChatIds = internalQuery({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		// Fetch all metadata
-		const metadataPromises = args.learningChatIds.map((learningChatId) =>
-			ctx.db
-				.query("learningChatMetadata")
-				.withIndex("by_learningChatId_and_userId", (q) =>
-					q.eq("learningChatId", learningChatId).eq("userId", args.userId),
-				)
-				.first(),
+		const bundles = await Promise.all(
+			args.learningChatIds.map((learningChatId) =>
+				loadMetadataBundle(ctx.db, learningChatId, args.userId),
+			),
 		);
-
-		const metadataResults = await Promise.all(metadataPromises);
-
-		// Filter out null results and fetch content
-		const validMetadata = metadataResults.filter(
-			(m): m is NonNullable<typeof m> => m !== null,
-		);
-
-		const contentPromises = validMetadata.map((metadata) =>
-			ctx.db
-				.query("learningChatMetadataContent")
-				.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-					q
-						.eq("learningChatMetadataId", metadata._id)
-						.eq("userId", args.userId),
-				)
-				.first(),
-		);
-
-		const contentResults = await Promise.all(contentPromises);
 
 		// Build a map of learningChatId -> {metadata, content}
 		const resultMap = new Map<
 			Id<"learningChats">,
 			{
-				metadata: NonNullable<(typeof metadataResults)[number]>;
-				content: (typeof contentResults)[number];
+				metadata: Doc<"learningChatMetadata">;
+				content: Doc<"learningChatMetadataContent"> | null;
 			}
 		>();
 
-		validMetadata.forEach((metadata, index) => {
-			resultMap.set(metadata.learningChatId, {
-				metadata,
-				content: contentResults[index],
-			});
-		});
+		for (const bundle of bundles) {
+			if (!bundle) continue;
+			resultMap.set(bundle.metadata.learningChatId, bundle);
+		}
 
 		return resultMap;
 	},

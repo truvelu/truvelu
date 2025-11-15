@@ -94,7 +94,9 @@ export default defineSchema({
 	})
 		.index("by_chatId", ["chatId"])
 		.index("by_messageId", ["messageId"])
-		.index("by_userId", ["userId"]),
+		.index("by_userId", ["userId"])
+		.index("by_parentChatId", ["parentChatId"])
+		.index("by_parentChatId_and_userId", ["parentChatId", "userId"]),
 
 	learning: defineTable({
 		uuid: v.string(),

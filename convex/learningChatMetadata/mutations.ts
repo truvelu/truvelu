@@ -3,6 +3,7 @@
  * Single responsibility: Write operations only
  */
 
+import { getOneFrom } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 import { internalMutation, mutation } from "../_generated/server";
 import { learningChatStatusValidator } from "../schema";
@@ -17,27 +18,25 @@ export const updateStatus = mutation({
 		status: learningChatStatusValidator,
 	},
 	handler: async (ctx, args) => {
-		const existingMetadata = await ctx.db
-			.query("learningChatMetadata")
-			.withIndex("by_learningChatId_and_userId", (q) =>
-				q.eq("learningChatId", args.learningChatId).eq("userId", args.userId),
-			)
-			.first();
+		const existingMetadata = await getOneFrom(
+			ctx.db,
+			"learningChatMetadata",
+			"by_learningChatId",
+			args.learningChatId,
+		);
 
-		if (!existingMetadata) {
+		if (!existingMetadata || existingMetadata.userId !== args.userId) {
 			throw new Error("Learning chat metadata not found");
 		}
 
-		const existingContent = await ctx.db
-			.query("learningChatMetadataContent")
-			.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-				q
-					.eq("learningChatMetadataId", existingMetadata._id)
-					.eq("userId", args.userId),
-			)
-			.first();
+		const existingContent = await getOneFrom(
+			ctx.db,
+			"learningChatMetadataContent",
+			"by_learningChatMetadataId",
+			existingMetadata._id,
+		);
 
-		if (!existingContent) {
+		if (!existingContent || existingContent.userId !== args.userId) {
 			throw new Error("Learning chat metadata content not found");
 		}
 
@@ -58,26 +57,26 @@ export const deleteByLearningChatId = internalMutation({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const metadata = await ctx.db
-			.query("learningChatMetadata")
-			.withIndex("by_learningChatId_and_userId", (q) =>
-				q.eq("learningChatId", args.learningChatId).eq("userId", args.userId),
-			)
-			.first();
+		const metadata = await getOneFrom(
+			ctx.db,
+			"learningChatMetadata",
+			"by_learningChatId",
+			args.learningChatId,
+		);
 
-		if (!metadata) {
+		if (!metadata || metadata.userId !== args.userId) {
 			return { deletedCount: 0 };
 		}
 
 		// Delete content first
-		const content = await ctx.db
-			.query("learningChatMetadataContent")
-			.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-				q.eq("learningChatMetadataId", metadata._id).eq("userId", args.userId),
-			)
-			.first();
+		const content = await getOneFrom(
+			ctx.db,
+			"learningChatMetadataContent",
+			"by_learningChatMetadataId",
+			metadata._id,
+		);
 
-		if (content) {
+		if (content && content.userId === args.userId) {
 			await ctx.db.delete(content._id);
 		}
 
@@ -99,18 +98,19 @@ export const batchDelete = internalMutation({
 	},
 	handler: async (ctx, args) => {
 		// Fetch all metadata
-		const metadataPromises = args.learningChatIds.map((learningChatId) =>
-			ctx.db
-				.query("learningChatMetadata")
-				.withIndex("by_learningChatId_and_userId", (q) =>
-					q.eq("learningChatId", learningChatId).eq("userId", args.userId),
-				)
-				.first(),
+		const metadataResults = await Promise.all(
+			args.learningChatIds.map((learningChatId) =>
+				getOneFrom(
+					ctx.db,
+					"learningChatMetadata",
+					"by_learningChatId",
+					learningChatId,
+				),
+			),
 		);
-
-		const metadataResults = await Promise.all(metadataPromises);
 		const validMetadata = metadataResults.filter(
-			(m): m is NonNullable<typeof m> => m !== null,
+			(m): m is NonNullable<typeof m> =>
+				m !== null && m.userId === args.userId,
 		);
 
 		if (validMetadata.length === 0) {
@@ -118,20 +118,19 @@ export const batchDelete = internalMutation({
 		}
 
 		// Fetch all content
-		const contentPromises = validMetadata.map((metadata) =>
-			ctx.db
-				.query("learningChatMetadataContent")
-				.withIndex("by_learningChatMetadataId_and_userId", (q) =>
-					q
-						.eq("learningChatMetadataId", metadata._id)
-						.eq("userId", args.userId),
-				)
-				.first(),
+		const contentResults = await Promise.all(
+			validMetadata.map((metadata) =>
+				getOneFrom(
+					ctx.db,
+					"learningChatMetadataContent",
+					"by_learningChatMetadataId",
+					metadata._id,
+				),
+			),
 		);
-
-		const contentResults = await Promise.all(contentPromises);
 		const validContent = contentResults.filter(
-			(c): c is NonNullable<typeof c> => c !== null,
+			(c): c is NonNullable<typeof c> =>
+				c !== null && c.userId === args.userId,
 		);
 
 		// Delete all content first
