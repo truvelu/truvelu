@@ -98,7 +98,8 @@ export function createAgent(
 	switch (agentType) {
 		case "question-answering":
 			return createAgentPrivate({
-				modelId: "openai/gpt-5.1-chat",
+				modelId: "openrouter/sherlock-think-alpha",
+				// modelId: "openai/gpt-5.1-chat",
 				name: "Question Answering Agent",
 				instructions:
 					"You are a question answering agent that helps the user with their question. You are also a helpful assistant that can help the user with their question.",
@@ -116,7 +117,8 @@ export function createAgent(
 
 		case "course-planner":
 			return createAgentPrivate({
-				modelId: "openai/gpt-5.1",
+				modelId: "openrouter/sherlock-think-alpha",
+				// modelId: "openai/gpt-5.1",
 				openrouterSettings: {
 					reasoning: {
 						effort: "low",
@@ -139,7 +141,8 @@ Keep learning items focused and specific. Each item should represent a concrete 
 
 		case "course-content-generator":
 			return createAgentPrivate({
-				modelId: "openai/gpt-5.1",
+				modelId: "openrouter/sherlock-think-alpha",
+				// modelId: "openai/gpt-5.1",
 				openrouterSettings: {
 					reasoning: {
 						effort: "low",
