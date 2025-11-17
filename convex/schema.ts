@@ -15,6 +15,8 @@ export type Context<T extends DataModel> =
 	| GenericActionCtx<T>
 	| GenericCtx<T>;
 
+export const chatModeValidator = v.union(v.literal("ask"), v.literal("agent"));
+
 export const modelOptionsValidator = v.union(
 	v.literal("google/gemma-3n-e4b-it"),
 	v.literal("z-ai/glm-4.6"),
@@ -71,8 +73,17 @@ export const SectionTypeValidator = v.union(
 
 export const freeObjectValidator = v.optional(v.union(v.string(), v.any()));
 
+export const learningPreferenceValidator = v.object({
+	topic: v.optional(v.union(v.string(), v.null())),
+	userLevel: v.optional(v.union(v.string(), v.null())),
+	goal: v.optional(v.union(v.string(), v.null())),
+	duration: v.optional(v.union(v.string(), v.null())),
+	other: freeObjectValidator,
+});
+
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
 export type SectionType = Infer<typeof SectionTypeValidator>;
+export type ChatMode = Infer<typeof chatModeValidator>;
 
 export default defineSchema({
 	chats: defineTable({
@@ -80,6 +91,7 @@ export default defineSchema({
 		threadId: v.string(),
 		userId: v.string(),
 		type: SectionTypeValidator,
+		statusMessage: v.optional(v.string()),
 		status: v.optional(chatStatusValidator),
 	})
 		.index("by_threadId", ["threadId"])

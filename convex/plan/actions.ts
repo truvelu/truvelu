@@ -6,14 +6,14 @@
 import { v } from "convex/values";
 import { api } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { action } from "../_generated/server";
+import { internalAction } from "../_generated/server";
 
 /**
  * Get the last plan with metadata details by threadId
  * This is a reusable action that ensures metadata exists and returns full details
  * Use this in AI tools to avoid duplication
  */
-export const getLastPlanWithMetadataByThreadId = action({
+export const getLastPlanWithMetadataByThreadId = internalAction({
 	args: {
 		threadId: v.string(),
 		userId: v.string(),

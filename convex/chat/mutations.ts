@@ -6,13 +6,15 @@
 import { abortStream } from "@convex-dev/agent";
 import { v } from "convex/values";
 import { v7 as uuidv7 } from "uuid";
-import { components, internal } from "../_generated/api";
+import { api, components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
 import {
 	SectionTypeValidator,
 	agentTypeValidator,
+	chatModeValidator,
 	chatStatusValidator,
+	learningPreferenceValidator,
 } from "../schema";
 
 /**
@@ -53,8 +55,9 @@ export const patchChatStatus = internalMutation({
 	args: {
 		threadId: v.string(),
 		status: chatStatusValidator,
+		statusMessage: v.optional(v.string()),
 	},
-	handler: async (ctx, { threadId, status }) => {
+	handler: async (ctx, { threadId, status, statusMessage }) => {
 		const chat = await ctx.db
 			.query("chats")
 			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
@@ -64,7 +67,7 @@ export const patchChatStatus = internalMutation({
 			throw new Error("Chat not found");
 		}
 
-		await ctx.db.patch(chat._id, { status });
+		await ctx.db.patch(chat._id, { status, statusMessage });
 	},
 });
 
@@ -73,7 +76,7 @@ export const patchChatStatus = internalMutation({
  */
 export const sendChatMessage = mutation({
 	args: {
-		type: v.optional(v.union(v.literal("ask"), v.literal("learning"))),
+		type: v.optional(chatModeValidator),
 		userId: v.string(),
 		threadId: v.string(),
 		roomId: v.string(),
@@ -113,6 +116,52 @@ export const sendChatMessage = mutation({
 		]);
 
 		return { threadId, messageId, roomId };
+	},
+});
+
+export const sendLearningPreference = mutation({
+	args: {
+		threadId: v.string(),
+		userId: v.string(),
+		payload: learningPreferenceValidator,
+	},
+	handler: async (ctx, { threadId, userId, payload }) => {
+		const getLastPlan = await ctx.runQuery(
+			api.plan.queries.getLastPlanByThreadId,
+			{
+				threadId,
+				userId,
+			},
+		);
+
+		if (!getLastPlan) {
+			throw new Error("Last plan not found");
+		}
+
+		await Promise.all([
+			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
+				threadId,
+				status: "submitted",
+			}),
+			ctx.runMutation(
+				api.plan.mutations.upsertPlanMetadataLearningRequirements,
+				{
+					planId: getLastPlan._id,
+					userId,
+					data: payload,
+				},
+			),
+		]);
+
+		await ctx.scheduler.runAfter(
+			0,
+			internal.chat.actions.streamUserLearningPreference,
+			{
+				threadId,
+				userId,
+				payload,
+			},
+		);
 	},
 });
 

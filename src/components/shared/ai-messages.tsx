@@ -38,6 +38,7 @@ import AiActions from "./ai-actions";
 interface AiMessagesProps {
 	type: Infer<typeof streamSectionValidator>;
 	message: UIMessage;
+	isInputStatusLoading: boolean;
 }
 
 const AiMessageText = memo(
@@ -105,7 +106,7 @@ const AiMessageTool = memo(({ partTool }: { partTool: ToolUIPart }) => {
 
 const AiMessages = memo(
 	(props: AiMessagesProps) => {
-		const { type, message } = props;
+		const { type, message, isInputStatusLoading } = props;
 
 		const isMobile = useIsMobile();
 		const [hoveredId, setHoveredId] = useState<string>("");
@@ -132,62 +133,42 @@ const AiMessages = memo(
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
 			>
-				{message.parts.map((part, i) => {
-					const isTool = (t: typeof part.type): t is `tool-${string}` =>
-						t.startsWith("tool-");
+				<div className="space-y-4">
+					{message.parts.map((part, i) => {
+						const isTool = (t: typeof part.type): t is `tool-${string}` =>
+							t.startsWith("tool-");
 
-					if (isTool(part.type)) {
-						return (
-							<Fragment key={`tool_${i}-${message.id}`}>
-								<AiMessageTool partTool={part as ToolUIPart} />
-							</Fragment>
-						);
-					}
-
-					switch (part.type) {
-						case MessageType.TEXT:
+						if (isTool(part.type)) {
 							return (
-								<Fragment key={`text_${i}-${message.id}`}>
-									<AiMessageText message={message} partText={part} />
+								<Fragment key={`tool_${i}-${message.id}`}>
+									<AiMessageTool partTool={part as ToolUIPart} />
 								</Fragment>
 							);
+						}
 
-						case "reasoning":
-							return (
-								<Fragment key={`reasoning_${i}-${message.id}`}>
-									<AiMessageReasoning partReasoning={part} />
-								</Fragment>
-							);
+						switch (part.type) {
+							case MessageType.TEXT:
+								return (
+									<Fragment key={`text_${i}-${message.id}`}>
+										<AiMessageText message={message} partText={part} />
+									</Fragment>
+								);
 
-						// case MessageType.CANVAS:
-						// 	return (
-						// 		<div
-						// 			role="button"
-						// 			tabIndex={0}
-						// 			className="flex flex-col gap-1 rounded-2-5xl px-4 py-3 text-sm border border-border w-full mt-3 cursor-pointer"
-						// 			onClick={() =>
-						// 				handleOpenCanvas({
-						// 					type: CanvasType.CONTENT,
-						// 					threadId: message.id,
-						// 				})
-						// 			}
-						// 		>
-						// 			<h1 className="text-base font-semibold">
-						// 				{part.title}
-						// 			</h1>
-						// 			<p className="text-sm text-gray-400">
-						// 				Interactive canvas
-						// 			</p>
-						// 		</div>
-						// 	);
+							case "reasoning":
+								return (
+									<Fragment key={`reasoning_${i}-${message.id}`}>
+										<AiMessageReasoning partReasoning={part} />
+									</Fragment>
+								);
 
-						default:
-							return null;
-					}
-				})}
+							default:
+								return null;
+						}
+					})}
+				</div>
 
 				{/* actions */}
-				{message?.status !== "pending" && message?.status !== "streaming" && (
+				{!isInputStatusLoading && (
 					<AiActions type={type} message={message} hoveredId={hoveredId} />
 				)}
 			</div>
@@ -198,6 +179,9 @@ const AiMessages = memo(
 		// Only re-render if message ID changed, parts length changed, or streaming status changed
 		if (prevProps.message.id !== nextProps.message.id) return false;
 		if (prevProps.message.parts.length !== nextProps.message.parts.length)
+			return false;
+
+		if (prevProps.isInputStatusLoading !== nextProps.isInputStatusLoading)
 			return false;
 
 		return true;

@@ -74,20 +74,14 @@ export const streamGenerateLearningContent = internalAction({
 
 			if (!threadId) return;
 
-			await Promise.all([
-				ctx.runMutation(internal.chat.mutations.patchChatStatus, {
-					threadId,
-					status: "streaming",
-				}),
-				ctx.runMutation(
-					api.learning.mutations.updateLearningChatMetadataPlanStatus,
-					{
-						learningChatId: data._id,
-						userId,
-						status: "generating",
-					},
-				),
-			]);
+			await ctx.runMutation(
+				api.learning.mutations.updateLearningChatMetadataPlanStatus,
+				{
+					learningChatId: data._id,
+					userId,
+					status: "generating",
+				},
+			);
 
 			const generateSearchQueries = await generateObject({
 				model: courseContentGeneratorAgent.options.languageModel,
@@ -247,6 +241,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
 			status: "streaming",
+			statusMessage: "Waiting for user's response",
 		});
 
 		const streamer = new DeltaStreamer(
@@ -271,12 +266,8 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 
 		const response = streamText({
 			model: titleGenerationAgent.options.languageModel,
-			system: contentGenerationAgent.options.instructions,
-			prompt: `Greet the learner in a friendly and engaging way. After that ask the user about:
-			1. topic they want to learn about,
-			2. user level understanding of the topic,
-			3. user's goal for learning the topic
-			4. the user's prefered duration for learning the topic (short: Crash Course, detailed: Course)`,
+			prompt:
+				"Greet the learner in a friendly and engaging way. After that ask the user about learning preferences. The learning preferences form can be accessed in the bottom of the screen. Make the output maximum in 2 sentence.",
 			onFinish: async (completion) => {
 				const text = completion.text;
 				await contentGenerationAgent.saveMessage(ctx, {
@@ -287,10 +278,6 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 					},
 					userId,
 					skipEmbeddings: true,
-				});
-				await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
-					threadId,
-					status: "ready",
 				});
 			},
 			onError: async (error) => {

@@ -77,8 +77,6 @@ function AiLearning() {
 		{ initialNumItems: 20 },
 	);
 
-	console.log(learningChatsContent);
-
 	useEffect(() => {
 		if (!isLearningRoute) return;
 		if (isUserPending || isLearningPending) return;

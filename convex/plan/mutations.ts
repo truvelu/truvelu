@@ -6,7 +6,7 @@
 import { v } from "convex/values";
 import { api } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { freeObjectValidator, planStatusValidator } from "../schema";
 
 /**
@@ -221,7 +221,7 @@ export const upsertPlanMetadataSearchResult = mutation({
 	},
 });
 
-export const updatePlanStatus = mutation({
+export const updatePlanStatus = internalMutation({
 	args: {
 		planId: v.id("plans"),
 		status: planStatusValidator,

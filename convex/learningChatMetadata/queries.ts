@@ -121,3 +121,51 @@ export const getBatchByLearningChatIds = internalQuery({
 		return resultMap;
 	},
 });
+
+/**
+ * Check if learning chat metadata content exists for a given chat
+ * Used to determine workflow path (new learning vs continuing learning)
+ */
+export const hasLearningChatMetadataContent = query({
+	args: {
+		userId: v.string(),
+		uuid: v.string(),
+	},
+	handler: async (ctx, args) => {
+		// Get learning chat by chat ID
+		const learning = await ctx.db
+			.query("learning")
+			.withIndex("by_uuid_and_userId", (q) =>
+				q.eq("uuid", args.uuid).eq("userId", args.userId),
+			)
+			.unique();
+
+		if (!learning) {
+			return false;
+		}
+
+		const learningChat = await ctx.db
+			.query("learningChats")
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", learning?._id).eq("userId", args.userId),
+			)
+			.collect();
+
+		const learningChatWithChatDataPromises = learningChat.map(async (lc) => {
+			return {
+				...lc,
+				chatData: await ctx.db.get(lc.chatId),
+			};
+		});
+
+		const learningChatWithChatData = await Promise.all(
+			learningChatWithChatDataPromises,
+		);
+
+		const learningChatWIthChatDataWithoutPlan = learningChatWithChatData.filter(
+			(lc) => lc?.chatData?.type !== "plan",
+		);
+
+		return learningChatWIthChatDataWithoutPlan.length > 0;
+	},
+});

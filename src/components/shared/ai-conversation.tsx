@@ -13,7 +13,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
-import type { streamSectionValidator } from "convex/schema";
+import type {
+	learningPreferenceValidator,
+	streamSectionValidator,
+} from "convex/schema";
 import type { Infer } from "convex/values";
 import {
 	type FormEvent,
@@ -35,7 +38,9 @@ import {
 	ConversationScrollButton,
 } from "../ai-elements/conversation";
 import type { PromptInputMessage } from "../ai-elements/prompt-input";
+import { Shimmer } from "../ai-elements/shimmer";
 import { Spinner } from "../ui/spinner";
+import { AiLearningPreferenceInput } from "./ai-learning-preference-input";
 import AiMessages from "./ai-messages";
 import { AiPromptInput } from "./ai-prompt-input";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
@@ -108,6 +113,18 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const isPendingLearningRoute = pendingLearningRoute !== false;
 	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
 
+	const { data: hasLearningChatMetadataContent } = useQuery(
+		convexQuery(
+			api.learningChatMetadata.queries.hasLearningChatMetadataContent,
+			isLearningRoute && !!user?._id?.toString() && !!roomId
+				? {
+						userId: user?._id?.toString() ?? "",
+						uuid: roomId,
+					}
+				: "skip",
+		),
+	);
+
 	const {
 		results: messages,
 		status,
@@ -142,6 +159,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			optimisticallySendMessage(api.chat.queries.listThreadMessages),
 		),
 	});
+	const sendLearningPreference = useMutation({
+		mutationKey: ["sendLearningPreference", threadId],
+		mutationFn: useConvexMutation(api.chat.mutations.sendLearningPreference),
+	});
 	const abortStreamByOrder = useMutation({
 		mutationKey: ["abortStreamByOrder", threadId],
 		mutationFn: useConvexMutation(api.chat.mutations.abortStreamByOrder),
@@ -152,13 +173,31 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		() => chatByThreadId?.status ?? "ready",
 		[chatByThreadId],
 	);
+
 	const roomStatus = useMemo(
 		() => (isMainThread ? chatStatus : discussionStatus),
 		[isMainThread, discussionStatus, chatStatus],
 	);
 
+	const chatStatusMessage = useMemo(
+		() => chat?.statusMessage ?? "",
+		[chat?.statusMessage],
+	);
+	const discussionStatusMessage = useMemo(
+		() => chatByThreadId?.statusMessage ?? "",
+		[chatByThreadId?.statusMessage],
+	);
+	const roomStatusMessage = useMemo(
+		() => (isMainThread ? chatStatusMessage : discussionStatusMessage),
+		[isMainThread, chatStatusMessage, discussionStatusMessage],
+	);
+
 	const messageThatIsStreaming = useMemo(
-		() => messages.find((message) => message?.status === "streaming"),
+		() =>
+			messages.find(
+				(message) =>
+					message?.status === "streaming" || message?.status === "pending",
+			),
 		[messages],
 	);
 	const messageOrderThatIsStreaming = useMemo(
@@ -189,6 +228,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 		return textPartHasValue || toolPartHasValue || reasoningPartHasValue;
 	}, [messageThatIsStreaming]);
+	const learningCreationTypeAndHasNotLearningChatMetadataContent =
+		useMemo(() => {
+			return type === "learning-creation" && !hasLearningChatMetadataContent;
+		}, [type, hasLearningChatMetadataContent]);
 
 	const handleSubmitNewChat = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
@@ -253,7 +296,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				prompt: message.text ?? "",
 				type:
 					type === "learning-creation" && lastPlan?.status !== "completed"
-						? "learning"
+						? "agent"
 						: "ask",
 				userId,
 			});
@@ -274,6 +317,35 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			type,
 			lastPlan?.status,
 		],
+	);
+
+	const handleSubmitLearningPreference = useCallback(
+		(
+			learningPreference: Infer<typeof learningPreferenceValidator>,
+			callback?: {
+				onSuccess?: (data: null) => void;
+				onError?: (error: Error) => void;
+				onSettled?: (data: null | undefined, error: Error | null) => void;
+			},
+		) => {
+			const userId = user?._id?.toString();
+
+			if (!userId) return;
+
+			sendLearningPreference.mutate(
+				{
+					threadId,
+					userId,
+					payload: learningPreference,
+				},
+				{
+					onSuccess: callback?.onSuccess,
+					onError: callback?.onError,
+					onSettled: callback?.onSettled,
+				},
+			);
+		},
+		[sendLearningPreference, user?._id, threadId],
 	);
 
 	// Reset state when roomId changes
@@ -412,12 +484,22 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 								{messages.map((message, index, messageArray) => {
 									return (
 										<Fragment key={`${message.id}`}>
-											<AiMessages message={message} type={type} />
+											<AiMessages
+												message={message}
+												type={type}
+												isInputStatusLoading={isInputStatusLoading}
+											/>
 											{roomStatus === "streaming" &&
 												!messageThatIsStreamingTextPartHasValue &&
 												messageArray.length - 1 === index && (
-													<div className="flex items-center justify-start flex-1 h-9 px-4">
-														<div className="size-4 rounded-full bg-gray-400 animate-ping" />
+													<div className="flex items-center justify-start flex-1 h-9">
+														{roomStatusMessage ? (
+															<Shimmer duration={3} spread={3}>
+																{roomStatusMessage}
+															</Shimmer>
+														) : (
+															<div className="size-4 rounded-full bg-gray-400 animate-ping" />
+														)}
 													</div>
 												)}
 										</Fragment>
@@ -437,11 +519,17 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
 				<ContainerWithMargin>
-					<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
-						<AiPromptInput
-							onSubmit={handleSubmit}
-							isInputStatusLoading={isInputStatusLoading}
-						/>
+					<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-white")}>
+						{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
+							<AiLearningPreferenceInput
+								onSubmit={handleSubmitLearningPreference}
+							/>
+						) : (
+							<AiPromptInput
+								onSubmit={handleSubmit}
+								isInputStatusLoading={isInputStatusLoading}
+							/>
+						)}
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</div>

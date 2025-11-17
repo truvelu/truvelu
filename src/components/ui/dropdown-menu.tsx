@@ -2,11 +2,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
-import {
-	ArrowRight01Icon,
-	CircleIcon,
-	Tick02Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import SharedIcon from "../shared/shared-icon";
 
 function DropdownMenu({
@@ -125,23 +121,28 @@ function DropdownMenuRadioGroup({
 function DropdownMenuRadioItem({
 	className,
 	children,
+	withIcon = true,
 	...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
+	withIcon?: boolean;
+}) {
 	return (
 		<DropdownMenuPrimitive.RadioItem
 			data-slot="dropdown-menu-radio-item"
 			className={cn(
-				"focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 px-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
 		>
-			<span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-				<DropdownMenuPrimitive.ItemIndicator>
-					<SharedIcon icon={CircleIcon} className="fill-current" size={8} />
-				</DropdownMenuPrimitive.ItemIndicator>
-			</span>
 			{children}
+			{withIcon && (
+				<span className="pointer-events-none absolute right-2 flex size-3.5 items-center justify-center">
+					<DropdownMenuPrimitive.ItemIndicator>
+						<SharedIcon icon={Tick02Icon} className="fill-current" size={8} />
+					</DropdownMenuPrimitive.ItemIndicator>
+				</span>
+			)}
 		</DropdownMenuPrimitive.RadioItem>
 	);
 }
@@ -241,6 +242,15 @@ function DropdownMenuSubContent({
 	);
 }
 
+function DropdownMenuItemIndicator({
+	className,
+	...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.ItemIndicator>) {
+	return (
+		<DropdownMenuPrimitive.ItemIndicator className={cn(className)} {...props} />
+	);
+}
+
 export {
 	DropdownMenu,
 	DropdownMenuPortal,
@@ -257,4 +267,5 @@ export {
 	DropdownMenuSub,
 	DropdownMenuSubTrigger,
 	DropdownMenuSubContent,
+	DropdownMenuItemIndicator,
 };
