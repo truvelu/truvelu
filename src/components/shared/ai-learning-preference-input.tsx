@@ -78,7 +78,7 @@ export const AiLearningPreferenceInput = ({
 
 	return (
 		<>
-			<div className="bg-white flex flex-col gap-1.5 p-3 rounded-tlarge border border-sidebar-border">
+			<div className="bg-background flex flex-col gap-1.5 p-3 rounded-tlarge border border-sidebar-border">
 				<div className="flex flex-col gap-0.5">
 					<h1 className="text-base font-medium">Create new course</h1>
 					<p className="text-sm text-muted-foreground">

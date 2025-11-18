@@ -50,7 +50,7 @@ export const Header = () => {
 	return (
 		<div
 			className={cn(
-				"sticky top-0 z-10 h-header bg-white flex items-center border-b border-sidebar-border p-2.5 justify-between md:justify-end",
+				"sticky top-0 z-10 h-header bg-background flex items-center border-b border-sidebar-border p-2.5 justify-between md:justify-end",
 			)}
 		>
 			<Authenticated>

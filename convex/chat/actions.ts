@@ -652,7 +652,8 @@ export const streamUserLearningPreference = internalAction({
 
 		const response = streamText({
 			model: titleGenerationAgent.options.languageModel,
-			prompt: "Thank to user for submitting their learning preferences.",
+			prompt:
+				"Thank the user for submitting their learning preferences.  After that, the system will start the learning workflow. Write the output in maximum 2 sentences.",
 			onFinish: async (completion) => {
 				const text = completion.text;
 				await Promise.all([

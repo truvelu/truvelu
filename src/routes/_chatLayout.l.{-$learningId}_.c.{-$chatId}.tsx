@@ -10,8 +10,8 @@ import { api } from "convex/_generated/api";
 import { Authenticated } from "convex/react";
 import { Suspense, lazy } from "react";
 
-const AiConversation = lazy(
-	() => import("@/components/shared/ai-conversation"),
+const AiLearningContent = lazy(
+	() => import("@/components/shared/ai-learning-content"),
 );
 
 export const Route = createFileRoute(
@@ -58,7 +58,7 @@ function RouteComponent() {
 					</div>
 				}
 			>
-				<AiConversation />
+				<AiLearningContent />
 			</Suspense>
 		</Authenticated>
 	);

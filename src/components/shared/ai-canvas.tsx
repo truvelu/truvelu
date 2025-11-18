@@ -330,7 +330,7 @@ const AiCanvasHeader = memo(
 		return (
 			<div
 				className={cn(
-					"flex items-center gap-1 h-header pb-0.5 px-1 bg-white w-full justify-between  border-b border-sidebar-border",
+					"flex items-center gap-1 h-header pb-0.5 px-1 bg-background w-full justify-between  border-b border-sidebar-border",
 				)}
 			>
 				<div

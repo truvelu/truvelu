@@ -106,12 +106,23 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		to: "/l/{-$learningId}",
 		pending: true,
 	});
+	const currentLearningCreationRoute = matchRoute({
+		to: "/l/{-$learningId}/c/{-$chatId}",
+	});
+	const pendingLearningCreationRoute = matchRoute({
+		to: "/l/{-$learningId}/c/{-$chatId}",
+		pending: true,
+	});
 
 	const isIndexRoute =
 		(currentIndexRoute !== false || pendingIndexRoute !== false) && !roomId;
 	const isCurrentLearningRoute = currentlearningRoute !== false;
 	const isPendingLearningRoute = pendingLearningRoute !== false;
 	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
+	const isCurrentLearningCreationRoute = currentLearningCreationRoute !== false;
+	const isPendingLearningCreationRoute = pendingLearningCreationRoute !== false;
+	const isLearningCreationRoute =
+		isCurrentLearningCreationRoute || isPendingLearningCreationRoute;
 
 	const { data: hasLearningChatMetadataContent } = useQuery(
 		convexQuery(
@@ -517,22 +528,24 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				}}
 			/>
 
-			<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
-				<ContainerWithMargin>
-					<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-white")}>
-						{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
-							<AiLearningPreferenceInput
-								onSubmit={handleSubmitLearningPreference}
-							/>
-						) : (
-							<AiPromptInput
-								onSubmit={handleSubmit}
-								isInputStatusLoading={isInputStatusLoading}
-							/>
-						)}
-					</ContainerWithMaxWidth>
-				</ContainerWithMargin>
-			</div>
+			{!isLearningCreationRoute && (
+				<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+					<ContainerWithMargin>
+						<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-background")}>
+							{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
+								<AiLearningPreferenceInput
+									onSubmit={handleSubmitLearningPreference}
+								/>
+							) : (
+								<AiPromptInput
+									onSubmit={handleSubmit}
+									isInputStatusLoading={isInputStatusLoading}
+								/>
+							)}
+						</ContainerWithMaxWidth>
+					</ContainerWithMargin>
+				</div>
+			)}
 		</>
 	);
 });

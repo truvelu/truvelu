@@ -29,6 +29,11 @@ function AiLearning() {
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
 
+	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
+	const pendingChatRoute = matchRoute({
+		to: "/c/{-$chatId}",
+		pending: true,
+	});
 	const currentlearningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const pendingLearningRoute = matchRoute({
 		to: "/l/{-$learningId}",
@@ -42,6 +47,9 @@ function AiLearning() {
 		pending: true,
 	});
 
+	const isCurrentChatRoute = chatRoute !== false;
+	const isPendingChatRoute = pendingChatRoute !== false;
+	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
 	const isCurrentLearningRoute = currentlearningRoute !== false;
 	const isPendingLearningRoute = pendingLearningRoute !== false;
 	const isCurrentLearningChatRoute = currentLearningChatRoute !== false;
@@ -78,6 +86,7 @@ function AiLearning() {
 	);
 
 	useEffect(() => {
+		if (isChatRoute) return;
 		if (!isLearningRoute) return;
 		if (isUserPending || isLearningPending) return;
 		if (!user?._id?.toString() || !roomId) return;
@@ -98,12 +107,13 @@ function AiLearning() {
 		isUserPending,
 		isLearningPending,
 		isLearningRoute,
+		isChatRoute,
 		learning,
 	]);
 
 	return (
 		<div className="relative flex">
-			<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] [overflow-anchor:none] [transform:translateZ(0)] [will-change:scroll-position]">
+			<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] [overflow-anchor:none] transform-[translateZ(0)] will-change-scroll">
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth
 						className={cn(
@@ -111,7 +121,7 @@ function AiLearning() {
 						)}
 					>
 						<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
-							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-white px-3 items-start md:items-center">
+							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-background px-3 items-start md:items-center">
 								<div className="flex items-center gap-0.5 max-md:-translate-x-1">
 									{isLoading ? (
 										<Skeleton className="size-7" />
@@ -197,7 +207,7 @@ function AiLearning() {
 															{item?.metadata?.priority && (
 																<Badge
 																	className={cn(
-																		"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-white ring-1 ring-sidebar-border text-sidebar-foreground",
+																		"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-background ring-1 ring-sidebar-border text-sidebar-foreground",
 																	)}
 																>
 																	{item?.metadata?.priority
@@ -213,7 +223,7 @@ function AiLearning() {
 															{/* STATUS */}
 															<Badge
 																className={cn(
-																	"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-white ring-1 ring-sidebar-border text-sidebar-foreground",
+																	"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-background ring-1 ring-sidebar-border text-sidebar-foreground",
 																)}
 															>
 																{item?.metadata?.status}
