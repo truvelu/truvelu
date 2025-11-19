@@ -1,5 +1,4 @@
 import { MessageType } from "@/constants/messages";
-import { useGetComponentSize } from "@/hooks/use-get-component-size";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { cn } from "@/lib/utils";
 import { useUIMessages } from "@convex-dev/agent/react";
@@ -34,9 +33,6 @@ const AiLearningContentResult = memo(() => {
 
 	const chatRoomId = params?.chatId;
 	const learningId = params?.learningId;
-
-	const { ref: inputRef, height: inputHeight } =
-		useGetComponentSize<HTMLDivElement>();
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useQuery(
@@ -159,7 +155,7 @@ const AiLearningContentResult = memo(() => {
 					asContent
 					style={{
 						paddingTop: "3rem",
-						paddingBottom: `calc(${inputHeight}px + 0.5rem + env(safe-area-inset-bottom) + 1rem)`,
+						paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom) + 1rem)",
 					}}
 				>
 					<ContainerWithMaxWidth className="w-full">
@@ -219,88 +215,107 @@ const AiLearningContentResult = memo(() => {
 						)}
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
-			</div>
 
-			{isLearningCreationRoute && (
-				<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+				{!isLoading && !!messages?.length && (
 					<ContainerWithMargin>
 						<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-background")}>
-							<div className={cn("flex items-center h-16 justify-between")}>
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										className="rounded-tmedium"
-										disabled={
-											isLoading ||
-											!learningChatsContent?.length ||
-											!currentLearningChatIndex
-										}
-										onClick={() => {
-											if (isLoading || !learningChatsContent?.length) return;
-											if (!currentLearningChatIndex) return;
-											navigate({
-												to: "/l/{-$learningId}/c/{-$chatId}",
-												params: {
-													learningId:
-														learningChatsContent[currentLearningChatIndex - 1]
-															.learningData?.uuid,
-													chatId:
-														learningChatsContent[currentLearningChatIndex - 1]
-															.chatData?.uuid,
-												},
-											});
-										}}
-									>
+							<div className={cn("grid grid-cols-2 h-20 justify-between py-2")}>
+								<Button
+									variant="ghost"
+									className="rounded-md p-2 flex flex-col items-start h-fit"
+									disabled={
+										isLoading ||
+										!learningChatsContent?.length ||
+										!currentLearningChatIndex
+									}
+									onClick={() => {
+										if (isLoading || !learningChatsContent?.length) return;
+										if (!currentLearningChatIndex) return;
+										navigate({
+											to: "/l/{-$learningId}/c/{-$chatId}",
+											params: {
+												learningId:
+													learningChatsContent[currentLearningChatIndex - 1]
+														.learningData?.uuid,
+												chatId:
+													learningChatsContent[currentLearningChatIndex - 1]
+														.chatData?.uuid,
+											},
+										});
+									}}
+								>
+									<div className="flex items-center gap-2">
 										<SharedIcon icon={ArrowLeft02Icon} />
-										<span>Previous</span>
-									</Button>
-									<Button
-										variant="outline"
-										className="rounded-tmedium"
-										disabled={
-											isLoading ||
-											!learningChatsContent?.length ||
-											currentLearningChatIndex ===
-												learningChatsContent?.length - 1
-										}
-										onClick={() => {
-											if (isLoading || !learningChatsContent?.length) return;
-											if (
-												currentLearningChatIndex ===
-												learningChatsContent?.length - 1
-											)
-												return;
-											navigate({
-												to: "/l/{-$learningId}/c/{-$chatId}",
-												params: {
-													learningId:
-														learningChatsContent[currentLearningChatIndex + 1]
-															.learningData?.uuid,
-													chatId:
-														learningChatsContent[currentLearningChatIndex + 1]
-															.chatData?.uuid,
-												},
-											});
-										}}
-									>
-										<span>Next</span>
-										<SharedIcon icon={ArrowRight02Icon} />
-									</Button>
-								</div>
+										<span className="text-sm font-medium text-accent-foreground">
+											Previous
+										</span>
+									</div>
 
-								{messageThatIsStreaming && (
-									<Button
-										variant="outline"
-										className="rounded-full aspect-square size-9 p-0!"
-										onClick={handleAbortStreamByOrder}
-									>
-										<SharedIcon icon={StopIcon} />
-									</Button>
-								)}
+									<h1 className="text-xs font-medium">
+										{
+											learningChatsContent[currentLearningChatIndex - 1]
+												?.metadata?.title
+										}
+									</h1>
+								</Button>
+
+								<Button
+									variant="ghost"
+									className="rounded-md p-2 flex flex-col items-end h-fit"
+									disabled={
+										isLoading ||
+										!learningChatsContent?.length ||
+										currentLearningChatIndex ===
+											learningChatsContent?.length - 1
+									}
+									onClick={() => {
+										if (isLoading || !learningChatsContent?.length) return;
+										if (
+											currentLearningChatIndex ===
+											learningChatsContent?.length - 1
+										)
+											return;
+										navigate({
+											to: "/l/{-$learningId}/c/{-$chatId}",
+											params: {
+												learningId:
+													learningChatsContent[currentLearningChatIndex + 1]
+														.learningData?.uuid,
+												chatId:
+													learningChatsContent[currentLearningChatIndex + 1]
+														.chatData?.uuid,
+											},
+										});
+									}}
+								>
+									<div className="flex items-center gap-2">
+										<span className="text-sm font-medium text-accent-foreground">
+											Next
+										</span>
+										<SharedIcon icon={ArrowRight02Icon} />
+									</div>
+
+									<h1 className="text-xs font-medium">
+										{
+											learningChatsContent[currentLearningChatIndex + 1]
+												?.metadata?.title
+										}
+									</h1>
+								</Button>
 							</div>
 						</ContainerWithMaxWidth>
 					</ContainerWithMargin>
-				</div>
+				)}
+			</div>
+
+			{isLearningCreationRoute && messageThatIsStreaming && (
+				<Button
+					variant="outline"
+					className="absolute right-4 sm:right-8 lg:ringt-16 bottom-6 rounded-full aspect-square size-9 p-0!"
+					onClick={handleAbortStreamByOrder}
+				>
+					<SharedIcon icon={StopIcon} />
+				</Button>
 			)}
 		</>
 	);

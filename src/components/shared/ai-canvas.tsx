@@ -511,11 +511,12 @@ const AiCanvasTabListContent = memo(() => {
 	const isCurrentLearningChatRoute = currentLearningChatRoute !== false;
 	const isPendingLearningChatRoute = pendingLearningChatRoute !== false;
 
+	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
 	const isLearningChatRoute =
 		isCurrentLearningChatRoute || isPendingLearningChatRoute;
 	const isLearningRoute =
-		!isLearningChatRoute && (isCurrentLearningRoute || isPendingLearningRoute);
-	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
+		!(isLearningChatRoute || isChatRoute) &&
+		(isCurrentLearningRoute || isPendingLearningRoute);
 
 	const { upsertCanvas } = useCanvasStore(
 		useShallow(({ upsertCanvas }) => ({

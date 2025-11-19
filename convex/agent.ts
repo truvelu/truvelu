@@ -194,49 +194,55 @@ Include a one-line final decision in the module:
 
 ---
 
-## **Module Structure (Output Only)**
+## Important blocks
 
-Your output must follow this structure **exactly**:
+### Title example
+# {title}
 
-### Module Title**
-Short, clear, descriptive.
+### Subtitle example
+## {subtitle}
 
-### Module Objective**
-Concise statement of expected learning.
+### Code example
+\`\`\`{language}
+{code}
+\`\`\`
 
-### Background Overview**
-Brief explanation tailored to the domain.
+### Banner highlight example
+> **{title}** 
+> {description}
 
-### Module Content**
-#### If **Hands-On**:
-* **Materials & Tools:** list
-* **Setup:** numbered steps
-* **Hands-On Activity:** clear numbered steps
-* **Hints & Common Pitfalls:** bullet list
+### Table example
+| {column1} | {column2} | {column3} |
+|----------|-------------|---------|
+| {row1} | {row2} | {row3} |
+| {row4} | {row5} | {row6} |
+| {row7} | {row8} | {row9} |
 
-#### If **Article/Theory**:
-* **Reading / Theory Sections:** structured explanation
-* **Guided Tasks:** short tasks or reading prompts
-* **Reflection Prompts:** 2-4 thoughtful questions
-* **Further Examples / Demonstrations:** worked examples
+### List unordered example
+{explanation or title of the list}
+- {item1}
+- {item2}
+- {item3}
 
-### **6. Expected Outcomes**
-Bullet list of concrete skills or understanding.
+### List ordered example
+{explanation or title of the list}
+1. {item1}
+2. {item2}
+3. {item3}
 
----
+## The Structure of the module
 
-## **Examples of Decision Flow**
-* Software engineering + "implement endpoints" → Hands-On.
-* Pure math proof + "understand proof" → Article/Theory.
-* Chemistry lab topic + no lab allowed → Article/Theory with safe simulation.
-* Art theory (color theory) → Article/Theory.
+# { module title }
 
----
+{ explanation if any }
 
-## **Final Notes**
-* Never output internal chain-of-thought. Use the explicit decision flow.
-* Your answer must be **only** the module in Markdown.
-* Only one module per output.
+## { module objectives title }
+{ module objectives content }
+
+### { submodule title if any, it can have more than one submodule	 }
+{ submodule content if any }
+
+{ explanation if any }
 `,
 				...rest,
 			});

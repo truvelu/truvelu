@@ -1,9 +1,11 @@
-import AiLearning from "@/components/shared/ai-learning";
+import { AiLearningSkeleton } from "@/components/shared/ai-learning-skeleton";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Authenticated } from "convex/react";
+import { Suspense, lazy } from "react";
 
 export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 	component: RouteComponent,
+
+	pendingComponent: AiLearningSkeleton,
 
 	beforeLoad: async (context) => {
 		if (!context.params.learningId) {
@@ -14,10 +16,12 @@ export const Route = createFileRoute("/_chatLayout/l/{-$learningId}")({
 	},
 });
 
+const AiLearning = lazy(() => import("@/components/shared/ai-learning"));
+
 function RouteComponent() {
 	return (
-		<Authenticated>
+		<Suspense fallback={<AiLearningSkeleton />}>
 			<AiLearning />
-		</Authenticated>
+		</Suspense>
 	);
 }

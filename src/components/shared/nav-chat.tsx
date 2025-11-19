@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { convexQuery } from "@convex-dev/react-query";
+import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
 	Archive03Icon,
 	ArrowRight01Icon,
@@ -21,7 +21,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
-import { useAction, usePaginatedQuery } from "convex/react";
+import { useAction } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -181,7 +181,7 @@ const NavChatItem = ({
 
 export function NavChat() {
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { results: chats } = usePaginatedQuery(
+	const { results: chats } = useConvexPaginatedQuery(
 		api.chat.queries.getChats,
 		user?._id?.toString()
 			? {
