@@ -13,10 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
-import type {
-	learningPreferenceValidator,
-	streamSectionValidator,
-} from "convex/schema";
+import type { streamSectionValidator } from "convex/schema";
 import type { Infer } from "convex/values";
 import {
 	type FormEvent,
@@ -169,10 +166,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		).withOptimisticUpdate(
 			optimisticallySendMessage(api.chat.queries.listThreadMessages),
 		),
-	});
-	const sendLearningPreference = useMutation({
-		mutationKey: ["sendLearningPreference", threadId],
-		mutationFn: useConvexMutation(api.chat.mutations.sendLearningPreference),
 	});
 	const abortStreamByOrder = useMutation({
 		mutationKey: ["abortStreamByOrder", threadId],
@@ -330,35 +323,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		],
 	);
 
-	const handleSubmitLearningPreference = useCallback(
-		(
-			learningPreference: Infer<typeof learningPreferenceValidator>,
-			callback?: {
-				onSuccess?: (data: null) => void;
-				onError?: (error: Error) => void;
-				onSettled?: (data: null | undefined, error: Error | null) => void;
-			},
-		) => {
-			const userId = user?._id?.toString();
-
-			if (!userId) return;
-
-			sendLearningPreference.mutate(
-				{
-					threadId,
-					userId,
-					payload: learningPreference,
-				},
-				{
-					onSuccess: callback?.onSuccess,
-					onError: callback?.onError,
-					onSettled: callback?.onSettled,
-				},
-			);
-		},
-		[sendLearningPreference, user?._id, threadId],
-	);
-
 	// Reset state when roomId changes
 	useEffect(() => {
 		if (prevRoomIdRef.current !== roomId) {
@@ -486,7 +450,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 										>
 											<div className="rounded-tlarge px-2.5 py-1.5 flex items-center gap-1 outline-1 outline-gray-400">
 												<Spinner />
-												<span className="text-sm text-gray-600">
+												<span className="text-sm text-secondary-foreground/40">
 													Loading more
 												</span>
 											</div>
@@ -509,7 +473,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 																{roomStatusMessage}
 															</Shimmer>
 														) : (
-															<div className="size-4 rounded-full bg-gray-400 animate-ping" />
+															<div className="size-4 rounded-full bg-secondary-foreground/40 animate-ping" />
 														)}
 													</div>
 												)}
@@ -533,9 +497,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 					<ContainerWithMargin>
 						<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-background")}>
 							{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
-								<AiLearningPreferenceInput
-									onSubmit={handleSubmitLearningPreference}
-								/>
+								<AiLearningPreferenceInput threadId={threadId} />
 							) : (
 								<AiPromptInput
 									onSubmit={handleSubmit}

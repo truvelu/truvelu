@@ -31,10 +31,10 @@ export const MODELS: ReadonlyMap<
 		},
 	],
 	[
-		"x-ai/grok-4-fast",
+		"x-ai/grok-4.1-fast",
 		{
-			value: "x-ai/grok-4-fast",
-			label: "X-AI: Grok-4-Fast",
+			value: "x-ai/grok-4.1-fast",
+			label: "X-AI: Grok-4.1-Fast",
 			isReasoning: true,
 		},
 	],

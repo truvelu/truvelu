@@ -22,8 +22,7 @@ export const modelOptionsValidator = v.union(
 	v.literal("z-ai/glm-4.6"),
 	v.literal("openai/gpt-5.1-chat"),
 	v.literal("openai/gpt-5.1"),
-	v.literal("x-ai/grok-4-fast"),
-	v.literal("openrouter/sherlock-think-alpha"),
+	v.literal("x-ai/grok-4.1-fast"),
 );
 
 export const agentTypeValidator = v.union(

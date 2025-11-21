@@ -13,19 +13,20 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
 import {
-	CheckmarkBadge02Icon,
-	CreditCardIcon,
+	Cancel01Icon,
 	Logout05Icon,
-	SparklesIcon,
-	UnfoldMoreIcon,
+	Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent } from "../ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { ModeToggle } from "./mode-toggle";
 import SharedIcon from "./shared-icon";
 import SignOutButton from "./sign-out-button";
 
@@ -48,7 +49,7 @@ const ModalNavUserLogout = ({
 					<h1 className="text-2xl font-semibold text-center">
 						Are you sure you want to log out?
 					</h1>
-					<p className="text-xl text-center text-gray-600 pt-4 pb-6">
+					<p className="text-xl text-center text-secondary-foreground/50 pt-4 pb-6">
 						Log out of Platform as {data?.email}?
 					</p>
 					<div className="flex flex-col gap-4">
@@ -72,13 +73,105 @@ const ModalNavUserLogout = ({
 	);
 };
 
+const ModalNavUserSettings = ({
+	isOpenModalSettings,
+	onValueChangeModalSettings,
+}: {
+	isOpenModalSettings: boolean;
+	onValueChangeModalSettings: (open: boolean) => void;
+}) => {
+	return (
+		<Dialog
+			open={isOpenModalSettings}
+			onOpenChange={onValueChangeModalSettings}
+		>
+			<DialogContent
+				className="col-auto col-start-2 row-auto row-start-2 h-full w-full text-start rounded-2xl flex flex-col focus:outline-hidden overflow-hidden max-h-[85vh] max-md:min-h-[60vh] md:h-[600px] md:max-w-[680px] p-0"
+				showCloseButton={false}
+			>
+				<div className="grow overflow-y-auto">
+					<Tabs
+						defaultValue="General"
+						className="flex h-full flex-col md:flex-row gap-0"
+						orientation="vertical"
+					>
+						<TabsList className="p-0 flex flex-1 justify-start flex-row flex-wrap select-none max-md:overflow-x-auto max-md:border-b max-md:p-1.5 md:max-w-[210px] md:min-w-[180px] md:flex-col rounded-none h-full w-full border-0 bg-accent">
+							<div className="py-3 px-2.5 max-md:hidden w-full">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="rounded-lg cursor-pointer hover:bg-accent-foreground/10"
+									onClick={() => onValueChangeModalSettings(false)}
+								>
+									<SharedIcon icon={Cancel01Icon} />
+								</Button>
+							</div>
+
+							<TabsTrigger
+								value="general"
+								className="flex-none w-[calc(100%-1.25rem)] h-9 bg-primary-foreground shadow-none! border-none font-normal flex gap-1.5 justify-start"
+							>
+								<SharedIcon icon={Settings02Icon} className="size-5" />
+								General
+							</TabsTrigger>
+						</TabsList>
+						<TabsContent
+							value="general"
+							className="relative flex w-full flex-col overflow-y-auto px-4 text-sm max-md:max-h-[calc(100vh-150px)] md:min-h-[380px]"
+						>
+							<div className="py-3 border-b border-border">
+								<h3 className="w-full text-lg font-normal">General</h3>
+							</div>
+
+							<div className="h-14 border-b border-border w-full flex items-center justify-between">
+								<h4 className="w-full text-sm font-normal">Appearance</h4>
+
+								<ModeToggle />
+							</div>
+						</TabsContent>
+					</Tabs>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
+const NavAvatar = ({
+	className,
+	avatarClassName,
+}: { className?: string; avatarClassName?: string }) => {
+	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const userInitialName = data?.name
+		?.split(" ")
+		?.map((name) => name[0]?.toUpperCase())
+		?.slice(0, 2)
+		?.join("");
+	return (
+		<div
+			className={cn("flex items-center justify-center rounded-lg", className)}
+		>
+			<Avatar className={cn("size-6 rounded-full", avatarClassName)}>
+				<AvatarImage src={data?.image ?? ""} alt={data?.name ?? ""} />
+				<AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+					{userInitialName}
+				</AvatarFallback>
+			</Avatar>
+		</div>
+	);
+};
+
 export function NavUser() {
 	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 
 	const [isOpenModalLogout, setIsOpenModalLogout] = useState(false);
+	const [isOpenModalSettings, setIsOpenModalSettings] = useState(false);
 
 	const onValueChangeModalLogout = (open: boolean) => {
 		setIsOpenModalLogout(open);
+	};
+
+	const onValueChangeModalSettings = (open: boolean) => {
+		setIsOpenModalSettings(open);
 	};
 
 	return (
@@ -89,62 +182,57 @@ export function NavUser() {
 						<DropdownMenuTrigger asChild>
 							<SidebarMenuButton
 								size="lg"
-								className="!rounded-none py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[collapsible=icon]:!rounded-none"
+								className="group rounded-none! py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[collapsible=icon]:rounded-none!"
 							>
-								<Avatar className="h-8 w-8 rounded-lg">
-									<AvatarImage src={data?.image ?? ""} alt={data?.name ?? ""} />
-									<AvatarFallback className="rounded-lg">CN</AvatarFallback>
-								</Avatar>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">{data?.name}</span>
+								<NavAvatar className="group-data-[collapsible=icon]:min-w-9 group-data-[collapsible=icon]:min-h-9" />
+
+								<div className="grid flex-1 text-left leading-tight">
+									<span className="truncate text-sm">{data?.name}</span>
+									<span className="truncate text-xs text-muted-foreground">
+										Free
+									</span>
 								</div>
-								<SharedIcon icon={UnfoldMoreIcon} className="ml-auto" />
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent
-							className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+							className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-2xl py-1.5 px-0"
 							side="bottom"
 							align="center"
 							sideOffset={4}
 						>
-							<DropdownMenuLabel className="p-0 font-normal">
-								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-									<Avatar className="h-8 w-8 rounded-lg">
-										<AvatarImage
-											src={data?.image ?? ""}
-											alt={data?.name ?? ""}
-										/>
-										<AvatarFallback className="rounded-lg">CN</AvatarFallback>
-									</Avatar>
+							<DropdownMenuLabel className="p-0 font-normal mx-2.5">
+								<div className="flex items-center gap-2 pl-2.5 pr-8 py-1.5 text-left text-sm">
+									<NavAvatar avatarClassName="size-5" />
+
 									<div className="grid flex-1 text-left text-sm leading-tight">
 										<span className="truncate font-medium">{data?.name}</span>
 									</div>
 								</div>
 							</DropdownMenuLabel>
-							<DropdownMenuSeparator />
+							<DropdownMenuSeparator className="mx-4 my-1" />
 							<DropdownMenuGroup>
-								<DropdownMenuItem>
-									<SharedIcon icon={SparklesIcon} />
-									Upgrade to Pro
+								<DropdownMenuItem
+									onClick={() => onValueChangeModalSettings(true)}
+									className="pl-2.5 pr-8 h-9 flex items-center cursor-pointer mx-2.5 gap-1.5 text-primary"
+								>
+									<SharedIcon
+										icon={Settings02Icon}
+										className="size-5 text-primary"
+									/>
+									Settings
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
-							<DropdownMenuSeparator />
-							<DropdownMenuGroup>
-								<DropdownMenuItem>
-									<SharedIcon icon={CheckmarkBadge02Icon} />
-									Account
-								</DropdownMenuItem>
-								<DropdownMenuItem>
-									<SharedIcon icon={CreditCardIcon} />
-									Billing
-								</DropdownMenuItem>
-							</DropdownMenuGroup>
-							<DropdownMenuSeparator />
+
+							<DropdownMenuSeparator className="mx-4 my-1" />
+
 							<DropdownMenuItem
 								onClick={() => onValueChangeModalLogout(true)}
-								className="w-full rounded-tmedium cursor-pointer"
+								className="w-full rounded-tmedium cursor-pointer pl-2.5 pr-8 h-9 flex items-center mx-2.5 gap-1.5 text-primary"
 							>
-								<SharedIcon icon={Logout05Icon} />
+								<SharedIcon
+									icon={Logout05Icon}
+									className="size-5 text-primary"
+								/>
 								Log out
 							</DropdownMenuItem>
 						</DropdownMenuContent>
@@ -155,6 +243,10 @@ export function NavUser() {
 			<ModalNavUserLogout
 				isOpenModalLogout={isOpenModalLogout}
 				onValueChangeModalLogout={onValueChangeModalLogout}
+			/>
+			<ModalNavUserSettings
+				isOpenModalSettings={isOpenModalSettings}
+				onValueChangeModalSettings={onValueChangeModalSettings}
 			/>
 		</>
 	);

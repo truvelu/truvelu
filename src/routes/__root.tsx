@@ -17,6 +17,7 @@ import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
 
+import { ThemeProvider } from "@/components/provider/theme-provider";
 import AuthModal from "@/components/shared/auth-modal";
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
@@ -130,21 +131,23 @@ function RootComponent() {
 			authClient={authClient}
 		>
 			<ConvexProvider>
-				<Outlet />
-				<Toaster position="top-center" />
-				<AuthModal />
-				<TanstackDevtools
-					config={{
-						position: "bottom-right",
-					}}
-					plugins={[
-						{
-							name: "Tanstack Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-						TanStackQueryDevtools,
-					]}
-				/>
+				<ThemeProvider>
+					<Outlet />
+					<Toaster position="top-center" />
+					<AuthModal />
+					<TanstackDevtools
+						config={{
+							position: "bottom-right",
+						}}
+						plugins={[
+							{
+								name: "Tanstack Router",
+								render: <TanStackRouterDevtoolsPanel />,
+							},
+							TanStackQueryDevtools,
+						]}
+					/>
+				</ThemeProvider>
 			</ConvexProvider>
 		</ConvexBetterAuthProvider>
 	);

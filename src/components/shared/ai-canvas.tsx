@@ -53,8 +53,8 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-import { Skeleton } from "../ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { AiConversationSkeleton } from "./ai-conversation-skeleton";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
@@ -643,19 +643,7 @@ const AiCanvas = () => {
 
 			case CanvasType.LEARNING_CREATION:
 				return (
-					<Suspense
-						fallback={
-							<div className="relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))] [&>div]:[scrollbar-gutter:stable_both-edges]">
-								<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
-									<ContainerWithMargin>
-										<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
-											<Skeleton className="size-full h-[112px] rounded-tlarge bg-gray-200" />
-										</ContainerWithMaxWidth>
-									</ContainerWithMargin>
-								</div>
-							</div>
-						}
-					>
+					<Suspense fallback={<AiConversationSkeleton />}>
 						<AiConversation
 							additionalThreadId={data?.threadId ?? ""}
 							type="learning-creation"
@@ -665,19 +653,7 @@ const AiCanvas = () => {
 
 			case CanvasType.THREAD:
 				return (
-					<Suspense
-						fallback={
-							<div className="relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))] [&>div]:[scrollbar-gutter:stable_both-edges]">
-								<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
-									<ContainerWithMargin>
-										<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
-											<Skeleton className="size-full h-[112px] rounded-tlarge bg-gray-200" />
-										</ContainerWithMaxWidth>
-									</ContainerWithMargin>
-								</div>
-							</div>
-						}
-					>
+					<Suspense fallback={<AiConversationSkeleton />}>
 						<AiConversation
 							additionalThreadId={data?.threadId ?? ""}
 							type="discussion"

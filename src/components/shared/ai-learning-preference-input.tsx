@@ -1,8 +1,9 @@
 import { useIsMobile } from "@/hooks/use-mobile";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Settings05Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
-import type { learningPreferenceValidator } from "convex/schema";
-import type { Infer } from "convex/values";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "convex/_generated/api";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
@@ -25,17 +26,6 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
 import SharedIcon from "./shared-icon";
 
-interface AiLearningPreferenceInputProps {
-	onSubmit: (
-		learningPreference: Infer<typeof learningPreferenceValidator>,
-		callback?: {
-			onSuccess?: (data: null) => void;
-			onError?: (error: Error) => void;
-			onSettled?: (data: null | undefined, error: Error | null) => void;
-		},
-	) => void;
-}
-
 const formSchema = z.object({
 	topic: z
 		.string()
@@ -49,11 +39,18 @@ const formSchema = z.object({
 });
 
 export const AiLearningPreferenceInput = ({
-	onSubmit,
-}: AiLearningPreferenceInputProps) => {
+	threadId,
+}: { threadId: string }) => {
 	const isMobile = useIsMobile();
 
 	const [isOpen, setIsOpen] = useState(false);
+
+	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+
+	const sendLearningPreference = useMutation({
+		mutationKey: ["sendLearningPreference", threadId],
+		mutationFn: useConvexMutation(api.chat.mutations.sendLearningPreference),
+	});
 
 	const form = useForm({
 		defaultValues: {
@@ -66,13 +63,26 @@ export const AiLearningPreferenceInput = ({
 			onSubmit: formSchema,
 		},
 		onSubmit: async ({ value }) => {
-			onSubmit(value, {
-				onSuccess: () => {
-					toast("You successfully submitted your learning preferences!", {
-						position: "top-center",
-					});
+			const userId = user?._id?.toString();
+
+			if (!userId) return;
+
+			sendLearningPreference.mutate(
+				{
+					threadId,
+					userId,
+					payload: value,
 				},
-			});
+				{
+					onSuccess: () => {
+						toast("You successfully submitted your learning preferences!", {
+							position: "top-center",
+						});
+						setIsOpen(false);
+						form.reset();
+					},
+				},
+			);
 		},
 	});
 
@@ -365,7 +375,11 @@ export const AiLearningPreferenceInput = ({
 								>
 									Reset
 								</Button>
-								<Button type="submit" form="learning-preference-form">
+								<Button
+									type="submit"
+									disabled={sendLearningPreference.isPending}
+									form="learning-preference-form"
+								>
 									Submit
 								</Button>
 							</Field>

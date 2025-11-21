@@ -141,17 +141,14 @@ function AiLearning() {
 
 								<Button
 									variant="outline"
-									className="rounded-tlarge text-gray-500"
+									className="rounded-tlarge text-secondary-foreground"
 								>
 									Manage sources
 								</Button>
 							</div>
 
 							<section className="pb-13">
-								<ol
-									className="divide-token-bg-tertiary group divide-y"
-									aria-busy="false"
-								>
+								<ol className="group divide-y" aria-busy="false">
 									{learningChatsContent?.length === 0 && (
 										<Empty>
 											<EmptyHeader>
@@ -159,11 +156,11 @@ function AiLearning() {
 													<SharedIcon
 														icon={ArrowMoveUpRightIcon}
 														strokeWidth={1}
-														className="size-20 absolute top-1/2 left-1/2 -translate-x-1/6 -translate-y-1/2 text-gray-300"
+														className="size-20 absolute top-1/2 left-1/2 -translate-x-1/6 -translate-y-1/2 text-secondary-foreground/30"
 													/>
 												</EmptyMedia>
 												<EmptyTitle>No Course Yet</EmptyTitle>
-												<EmptyDescription className="text-gray-400">
+												<EmptyDescription className="text-secondary-foreground/50">
 													You haven&apos;t created any course yet. Get started
 													by generate your first course by start chatting inside
 													the chat section.
@@ -175,7 +172,7 @@ function AiLearning() {
 									{learningChatsContent?.map((item) => (
 										<li
 											key={`${item.learningId}-${item.chatId}`}
-											className="group/project-item hover:bg-gray-50 active:bg-gray-50 flex min-h-16 cursor-pointer items-center px-3 py-4 text-sm select-none"
+											className="group/project-item hover:bg-secondary active:bg-secondary flex min-h-16 cursor-pointer items-center px-3 py-4 text-sm select-none"
 										>
 											<Link
 												to={"/l/{-$learningId}/c/{-$chatId}"}
@@ -231,7 +228,7 @@ function AiLearning() {
 													</div>
 
 													{/* CREATION DATE */}
-													<div className="flex items-center gap-1 text-gray-500">
+													<div className="flex items-center gap-1 text-secondary-foreground/70">
 														<SharedIcon
 															icon={Calendar04Icon}
 															className="size-3.5"

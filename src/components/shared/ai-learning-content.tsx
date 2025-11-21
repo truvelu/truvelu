@@ -181,7 +181,7 @@ const AiLearningContentResult = memo(() => {
 									<div className="flex items-center justify-center flex-1 h-12">
 										<div className="rounded-tlarge px-2.5 py-1.5 flex items-center gap-1 outline-1 outline-gray-400">
 											<Spinner />
-											<span className="text-sm text-gray-600">
+											<span className="text-sm text-secondary-foreground/40">
 												Loading more
 											</span>
 										</div>
@@ -204,7 +204,7 @@ const AiLearningContentResult = memo(() => {
 																{chatStatusMessage}
 															</Shimmer>
 														) : (
-															<div className="size-4 rounded-full bg-gray-400 animate-ping" />
+															<div className="size-4 rounded-full bg-secondary-foreground/40 animate-ping" />
 														)}
 													</div>
 												)}
@@ -222,7 +222,7 @@ const AiLearningContentResult = memo(() => {
 							<div className={cn("grid grid-cols-2 h-20 justify-between py-2")}>
 								<Button
 									variant="ghost"
-									className="rounded-md p-2 flex flex-col items-start h-fit"
+									className="rounded-md p-2 flex flex-col items-start h-fit cursor-pointer"
 									disabled={
 										isLoading ||
 										!learningChatsContent?.length ||
@@ -261,7 +261,7 @@ const AiLearningContentResult = memo(() => {
 
 								<Button
 									variant="ghost"
-									className="rounded-md p-2 flex flex-col items-end h-fit"
+									className="rounded-md p-2 flex flex-col items-end h-fit cursor-pointer"
 									disabled={
 										isLoading ||
 										!learningChatsContent?.length ||

@@ -275,7 +275,7 @@ const NavLearningItem = ({
 						>
 							<Button
 								variant="ghost"
-								className="absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-gray-200 size-7 flex items-center justify-center rounded-tlarge"
+								className="p-0 absolute left-0.5 top-1/2 -translate-y-1/2 cursor-pointer bg-transparent hover:bg-secondary-foreground/20 size-7 flex items-center justify-center rounded-tlarge"
 								onClick={(e) => {
 									setCollapsibleOpen((prev) => !prev);
 									e.stopPropagation();

@@ -146,22 +146,22 @@ code {
 
 	* {
 		scrollbar-width: auto;
-		scrollbar-color: oklch(92.8% 0.006 264.531) #fff;
+		scrollbar-color: var(--secondary) transparent;
 	}
 	Firefox *::-webkit-scrollbar {
 		width: 8px;
 		height: 8px;
 	}
 	WebKit *::-webkit-scrollbar-track {
-		background: #fff;
+		background: transparent;
 	}
 	*::-webkit-scrollbar-thumb {
-		background: oklch(92.8% 0.006 264.531);
+		background: var(--secondary);
 		border-radius: 9999px;
 	}
 
 	.dark *::-webkit-scrollbar-thumb {
-		background: oklch(43.2% 0.011 262.661);
+		background: var(--secondary);
 	}
 
 	body {

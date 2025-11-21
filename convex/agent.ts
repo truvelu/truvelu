@@ -83,7 +83,7 @@ export function createAgent(
 ) {
 	const {
 		agentType,
-		modelId = "x-ai/grok-4-fast",
+		modelId = "x-ai/grok-4.1-fast",
 		name = "Truvelu Fallback Agent",
 		instructions = "<instructions>You are a helpful assistant that can help the user with their question.</instructions>",
 		...rest
@@ -98,7 +98,7 @@ export function createAgent(
 	switch (agentType) {
 		case "question-answering":
 			return createAgentPrivate({
-				modelId: "openrouter/sherlock-think-alpha",
+				modelId: "x-ai/grok-4.1-fast",
 				// modelId: "openai/gpt-5.1-chat",
 				name: "Question Answering Agent",
 				instructions:
@@ -117,7 +117,7 @@ export function createAgent(
 
 		case "course-planner":
 			return createAgentPrivate({
-				modelId: "openrouter/sherlock-think-alpha",
+				modelId: "x-ai/grok-4.1-fast",
 				// modelId: "openai/gpt-5.1",
 				openrouterSettings: {
 					reasoning: {
@@ -141,7 +141,7 @@ Keep learning items focused and specific. Each item should represent a concrete 
 
 		case "course-content-generator":
 			return createAgentPrivate({
-				modelId: "openrouter/sherlock-think-alpha",
+				modelId: "x-ai/grok-4.1-fast",
 				// modelId: "openai/gpt-5.1",
 				openrouterSettings: {
 					reasoning: {
