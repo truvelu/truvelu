@@ -117,13 +117,15 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
 	const context = useRouteContext({ from: Route.id });
+	const isDevelopment = process.env.NODE_ENV === "development";
 
 	useEffect(() => {
+		if (!isDevelopment) return;
 		// Make sure to run this only after hydration
 		scan({
 			enabled: true,
 		});
-	}, []);
+	}, [isDevelopment]);
 
 	return (
 		<ConvexBetterAuthProvider
@@ -135,18 +137,20 @@ function RootComponent() {
 					<Outlet />
 					<Toaster position="top-center" />
 					<AuthModal />
-					<TanstackDevtools
-						config={{
-							position: "bottom-right",
-						}}
-						plugins={[
-							{
-								name: "Tanstack Router",
-								render: <TanStackRouterDevtoolsPanel />,
-							},
-							TanStackQueryDevtools,
-						]}
-					/>
+					{isDevelopment && (
+						<TanstackDevtools
+							config={{
+								position: "bottom-right",
+							}}
+							plugins={[
+								{
+									name: "Tanstack Router",
+									render: <TanStackRouterDevtoolsPanel />,
+								},
+								TanStackQueryDevtools,
+							]}
+						/>
+					)}
 				</ThemeProvider>
 			</ConvexProvider>
 		</ConvexBetterAuthProvider>

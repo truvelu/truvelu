@@ -9,7 +9,7 @@ import {
 } from "@convex-dev/agent/react";
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Message01Icon } from "@hugeicons/core-free-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
@@ -70,16 +70,11 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		useGetComponentSize<HTMLDivElement>();
 
 	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat } = useQuery(
-		convexQuery(
-			api.chat.queries.getChat,
-			!!user && !!roomId
-				? {
-						userId: user._id,
-						uuid: roomId,
-					}
-				: "skip",
-		),
+	const { data: chat } = useSuspenseQuery(
+		convexQuery(api.chat.queries.getChat, {
+			userId: user?._id?.toString() ?? "",
+			uuid: roomId,
+		}),
 	);
 	const { data: chatByThreadId } = useQuery(
 		convexQuery(
@@ -98,6 +93,13 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const currentIndexRoute = matchRoute({ to: "/" });
 	const pendingIndexRoute = matchRoute({ to: "/", pending: true });
+	const currentChatRoute = matchRoute({
+		to: "/c/{-$chatId}",
+	});
+	const pendingChatRoute = matchRoute({
+		to: "/c/{-$chatId}",
+		pending: true,
+	});
 	const currentlearningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const pendingLearningRoute = matchRoute({
 		to: "/l/{-$learningId}",
@@ -111,13 +113,18 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		pending: true,
 	});
 
-	const isIndexRoute =
-		(currentIndexRoute !== false || pendingIndexRoute !== false) && !roomId;
+	const isCurrentIndexRoute = currentIndexRoute !== false;
+	const isPendingIndexRoute = pendingIndexRoute !== false;
+	const isCurrentChatRoute = currentChatRoute !== false;
+	const isPendingChatRoute = pendingChatRoute !== false;
 	const isCurrentLearningRoute = currentlearningRoute !== false;
 	const isPendingLearningRoute = pendingLearningRoute !== false;
-	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
 	const isCurrentLearningCreationRoute = currentLearningCreationRoute !== false;
 	const isPendingLearningCreationRoute = pendingLearningCreationRoute !== false;
+
+	const isIndexRoute = (isCurrentIndexRoute || isPendingIndexRoute) && !roomId;
+	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
+	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
 	const isLearningCreationRoute =
 		isCurrentLearningCreationRoute || isPendingLearningCreationRoute;
 
@@ -146,7 +153,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { data: lastPlan } = useQuery(
 		convexQuery(
 			api.plan.queries.getLastPlanByThreadId,
-			threadId
+			(isChatRoute || isLearningCreationRoute) &&
+				threadId &&
+				user?._id?.toString()
 				? {
 						threadId,
 						userId: user?._id?.toString() ?? "",
