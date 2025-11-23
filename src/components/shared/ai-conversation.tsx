@@ -416,7 +416,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		toast.error("Chat not found");
 	}, [chat, navigate, userId, isIndexRoute, isLearningRoute]);
 
-	if (status === "LoadingFirstPage") {
+	if (!isIndexRoute && status === "LoadingFirstPage") {
 		return <AiConversationSkeleton />;
 	}
 

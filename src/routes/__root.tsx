@@ -20,6 +20,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/provider/auth-provider";
 import { ThemeProvider } from "@/components/provider/theme-provider";
 import AuthModal from "@/components/shared/auth-modal";
+import { ErrorClient } from "@/components/shared/error-client";
 import { Toaster } from "@/components/ui/sonner";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -97,9 +98,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 	component: RootComponent,
 
-	errorComponent: (e) => <div>{JSON.stringify(e)}</div>,
+	errorComponent: (e) => <ErrorClient error={e} />,
 
-	notFoundComponent: () => <div>Not found</div>,
+	notFoundComponent: () => <ErrorClient type="not-found" />,
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
