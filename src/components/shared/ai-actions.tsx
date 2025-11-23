@@ -19,6 +19,7 @@ import type { Infer } from "convex/values";
 import { memo, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Action, Actions } from "../ai-elements/actions";
+import { useAuth } from "../provider/auth-provider";
 import { useSidebar } from "../ui/sidebar";
 import SharedIcon from "./shared-icon";
 
@@ -53,13 +54,13 @@ const AiActions = memo((props: AiActionsProps) => {
 
 	const isMainThread = type === "thread";
 
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { userId } = useAuth();
 	const { data: chat } = useQuery({
 		...convexQuery(
 			api.chat.queries.getChat,
-			!!user?._id?.toString() && !!roomId
+			roomId
 				? {
-						userId: user?._id?.toString() ?? "",
+						userId,
 						uuid: roomId,
 					}
 				: "skip",
@@ -69,10 +70,10 @@ const AiActions = memo((props: AiActionsProps) => {
 	const { data: discussion } = useQuery(
 		convexQuery(
 			api.discussion.queries.getDiscussionByMessageIdAndUserId,
-			user?._id && message.id
+			message.id
 				? {
 						messageId: message.id,
-						userId: user?._id?.toString() ?? "",
+						userId,
 					}
 				: "skip",
 		),
@@ -197,7 +198,7 @@ const AiActions = memo((props: AiActionsProps) => {
 									messageId: message.id,
 									messages: preDiscussionMessageFinal,
 									agentType: "question-answering",
-									userId: user?._id?.toString() ?? "",
+									userId,
 								},
 								{
 									onSuccess: ({ threadId }) => {

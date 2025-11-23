@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { createArrayMock } from "@/lib/arrayUtils";
 import { cn } from "@/lib/utils";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {
-	convexQuery,
 	useConvexMutation,
 	useConvexPaginatedQuery,
 } from "@convex-dev/react-query";
@@ -29,12 +29,14 @@ import {
 	FolderOpenIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { AuthLoading, Authenticated } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
+import { useAuth } from "../provider/auth-provider";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -62,6 +64,7 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useSidebar } from "../ui/sidebar";
+import { Skeleton } from "../ui/skeleton";
 import SharedIcon from "./shared-icon";
 
 const NavNewLearningItem = () => {
@@ -79,9 +82,7 @@ const NavNewLearningItem = () => {
 	const [isAutogenerateTitle, setIsAutogenerateTitle] = useState(true);
 	const [manualTitle, setManualTitle] = useState("");
 
-	const { data: user } = useQuery({
-		...convexQuery(api.auth.getCurrentUser, {}),
-	});
+	const { userId } = useAuth();
 
 	const createLearningPanel = useMutation({
 		mutationFn: useConvexMutation(api.learning.mutations.createLearningPanel),
@@ -161,10 +162,10 @@ const NavNewLearningItem = () => {
 							className="rounded-tlarge"
 							disabled={!isAutogenerateTitle && !manualTitle}
 							onClick={() => {
-								if (!user) return;
+								if (!userId) return;
 								createLearningPanel.mutate(
 									{
-										userId: user._id,
+										userId,
 										title: isAutogenerateTitle ? undefined : manualTitle,
 										type: "plan",
 									},
@@ -211,15 +212,13 @@ const NavLearningItem = ({
 	const [collapsibleOpen, setCollapsibleOpen] = useState(false);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
-	const { data: user } = useQuery({
-		...convexQuery(api.auth.getCurrentUser, {}),
-	});
+	const { userId } = useAuth();
 
 	const { results: learningChatsContent } = useConvexPaginatedQuery(
 		api.learning.queries.getLearningChatsContentByLearningId,
-		user?._id?.toString() && learning?._id
+		learning?._id
 			? {
-					userId: user?._id?.toString() ?? "",
+					userId,
 					learningId: learning?._id,
 				}
 			: "skip",
@@ -350,11 +349,11 @@ const NavLearningItem = ({
 						<DropdownMenuItem
 							className="p-2.5 rounded-xl"
 							onClick={() => {
-								if (!learning?._id || !user?._id) return;
+								if (!learning?._id || !userId) return;
 								archiveLearning.mutate(
 									{
 										learningId: learning?._id,
-										userId: user?._id,
+										userId,
 									},
 									{
 										onSuccess: () => {
@@ -382,11 +381,11 @@ const NavLearningItem = ({
 						</DropdownMenuItem>
 
 						<DropdownMenuItem
-							className="!text-destructive p-2.5 rounded-xl"
+							className="text-destructive! p-2.5 rounded-xl"
 							onClick={() => {
-								if (!learning?._id || !user?._id) return;
+								if (!learning?._id || !userId) return;
 								deleteLearning.mutate(
-									{ learningId: learning?._id, userId: user?._id },
+									{ learningId: learning?._id, userId },
 									{
 										onSuccess: () => {
 											if (roomId === learning?.uuid) {
@@ -419,46 +418,78 @@ const NavLearningItem = ({
 };
 
 export function NavLearning() {
-	const { data: user } = useQuery({
-		...convexQuery(api.auth.getCurrentUser, {}),
-	});
+	const { userId } = useAuth();
+	const { state } = useSidebar();
 
-	const { results: learnings } = useConvexPaginatedQuery(
+	const { results: learnings, status } = useConvexPaginatedQuery(
 		api.learning.queries.getLearnings,
-		user?._id?.toString()
-			? {
-					userId: user?._id?.toString() ?? "",
-				}
-			: "skip",
+		{
+			userId,
+		},
 		{ initialNumItems: 20 },
 	);
 
+	function NavLearningItemSkeleton({ length = 10 }: { length?: number }) {
+		return createArrayMock(length).map((index) => (
+			<div key={index} className="h-8 px-1.5 w-full gap-2 flex items-center">
+				<Skeleton className="min-h-5 min-w-5 max-h-5 max-w-5 rounded-sm" />
+				<Skeleton className="h-5 w-full rounded-sm" />
+			</div>
+		));
+	}
+
+	function NavLearningSkeleton({ length = 10 }: { length?: number }) {
+		return (
+			<div className="flex flex-col gap-1 p-2">
+				<div className="h-8 px-2 w-full flex items-center gap-1">
+					<Skeleton className="h-5 w-[60px] rounded-sm" />
+					<Skeleton className="min-h-5 min-w-5 max-h-5 max-w-5 aspect-square shrink-0 rounded-sm" />
+				</div>
+				<NavLearningItemSkeleton length={length} />
+			</div>
+		);
+	}
+
+	if (status === "LoadingFirstPage" && state === "expanded") {
+		return <NavLearningSkeleton length={20} />;
+	}
+
 	return (
-		<Collapsible defaultOpen className="group/collapsible">
-			<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
-				<SidebarGroupLabel asChild>
-					<CollapsibleTrigger className="gap-1 cursor-pointer">
-						Learnings
-						<SharedIcon
-							icon={ArrowRight01Icon}
-							className="transition-transform group-data-[state=open]/collapsible:rotate-90"
-						/>
-					</CollapsibleTrigger>
-				</SidebarGroupLabel>
-				<CollapsibleContent>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							<NavNewLearningItem />
-							{learnings?.map((learning) => (
-								<NavLearningItem
-									key={learning?._id ?? ""}
-									learning={learning}
+		<>
+			<Authenticated>
+				<Collapsible defaultOpen className="group/collapsible">
+					<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
+						<SidebarGroupLabel asChild>
+							<CollapsibleTrigger className="gap-1 cursor-pointer">
+								Learnings
+								<SharedIcon
+									icon={ArrowRight01Icon}
+									className="transition-transform group-data-[state=open]/collapsible:rotate-90"
 								/>
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</CollapsibleContent>
-			</SidebarGroup>
-		</Collapsible>
+							</CollapsibleTrigger>
+						</SidebarGroupLabel>
+						<CollapsibleContent>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									<NavNewLearningItem />
+									{learnings?.map((learning) => (
+										<NavLearningItem
+											key={learning?._id ?? ""}
+											learning={learning}
+										/>
+									))}
+									{status === "LoadingMore" && (
+										<NavLearningItemSkeleton length={20} />
+									)}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</CollapsibleContent>
+					</SidebarGroup>
+				</Collapsible>
+			</Authenticated>
+			<AuthLoading>
+				{state === "expanded" && <NavLearningSkeleton length={20} />}
+			</AuthLoading>
+		</>
 	);
 }

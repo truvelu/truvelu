@@ -6,11 +6,12 @@ import {
 	Calendar04Icon,
 	Folder01Icon,
 } from "@hugeicons/core-free-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { useAuth } from "../provider/auth-provider";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
@@ -61,26 +62,20 @@ function AiLearning() {
 		!(isChatRoute || isLearningChatRoute) &&
 		(isCurrentLearningRoute || isPendingLearningRoute);
 
-	const { data: user, isPending: isUserPending } = useQuery(
-		convexQuery(api.auth.getCurrentUser, {}),
-	);
-	const { data: learning, isPending: isLearningPending } = useQuery(
-		convexQuery(
-			api.learning.queries.getLearningByRoomId,
-			isLearningRoute && !!user?._id?.toString() && !!roomId
-				? {
-						userId: user?._id?.toString() ?? "",
-						uuid: roomId,
-					}
-				: "skip",
-		),
+	const { userId } = useAuth();
+
+	const { data: learning, isPending: isLearningPending } = useSuspenseQuery(
+		convexQuery(api.learning.queries.getLearningByRoomId, {
+			userId,
+			uuid: roomId,
+		}),
 	);
 
 	const { results: learningChatsContent, status } = useConvexPaginatedQuery(
 		api.learning.queries.getLearningChatsContentByLearningRoomId,
-		isLearningRoute && !!user?._id?.toString() && !!roomId
+		isLearningRoute && !!roomId
 			? {
-					userId: user?._id?.toString() ?? "",
+					userId,
 					uuid: roomId,
 				}
 			: "skip",
@@ -89,8 +84,8 @@ function AiLearning() {
 
 	useEffect(() => {
 		if (!isLearningRoute) return;
-		if (isUserPending || isLearningPending) return;
-		if (!user?._id?.toString() || !roomId) return;
+		if (isLearningPending) return;
+		if (!userId || !roomId) return;
 		if (learning) return;
 
 		navigate({ to: "/" })
@@ -101,17 +96,9 @@ function AiLearning() {
 				console.error("Navigation error:", error);
 				toast.error("Failed to navigate to home");
 			});
-	}, [
-		navigate,
-		user?._id,
-		roomId,
-		isUserPending,
-		isLearningPending,
-		isLearningRoute,
-		learning,
-	]);
+	}, [navigate, userId, roomId, isLearningPending, isLearningRoute, learning]);
 
-	if (status === "LoadingFirstPage" || status === "LoadingMore") {
+	if (status === "LoadingFirstPage") {
 		return <AiLearningSkeleton />;
 	}
 

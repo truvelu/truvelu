@@ -13,13 +13,14 @@ import {
 	Message01Icon,
 	StopIcon,
 } from "@hugeicons/core-free-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
 import type {} from "convex/schema";
 import { Fragment, memo, useCallback, useMemo } from "react";
 import { Shimmer } from "../ai-elements/shimmer";
+import { useAuth } from "../provider/auth-provider";
 import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
 import AiMessages from "./ai-messages";
@@ -31,20 +32,15 @@ const AiLearningContentResult = memo(() => {
 	const navigate = useNavigate();
 	const params = useParams({ strict: false });
 
-	const chatRoomId = params?.chatId;
-	const learningId = params?.learningId;
+	const chatRoomId = params?.chatId ?? "";
+	const learningId = params?.learningId ?? "";
 
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { data: chat } = useQuery(
-		convexQuery(
-			api.chat.queries.getChat,
-			!!user && !!chatRoomId
-				? {
-						userId: user._id,
-						uuid: chatRoomId,
-					}
-				: "skip",
-		),
+	const { userId } = useAuth();
+	const { data: chat } = useSuspenseQuery(
+		convexQuery(api.chat.queries.getChat, {
+			userId,
+			uuid: chatRoomId,
+		}),
 	);
 
 	const threadId = chat?.threadId ?? "";
@@ -70,9 +66,9 @@ const AiLearningContentResult = memo(() => {
 
 	const { results: learningChatsContent, isLoading } = useConvexPaginatedQuery(
 		api.learning.queries.getLearningChatsContentByLearningRoomId,
-		isLearningCreationRoute && user?._id?.toString() && learningId
+		isLearningCreationRoute && !!learningId
 			? {
-					userId: user?._id?.toString() ?? "",
+					userId,
 					uuid: learningId,
 				}
 			: "skip",

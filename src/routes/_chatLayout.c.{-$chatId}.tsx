@@ -2,6 +2,7 @@ import { AiConversationSkeleton } from "@/components/shared/ai-conversation-skel
 import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 import { Suspense, lazy } from "react";
 
 const AiConversation = lazy(
@@ -30,8 +31,18 @@ export const Route = createFileRoute("/_chatLayout/c/{-$chatId}")({
 
 function App() {
 	return (
-		<Suspense fallback={<AiConversationSkeleton />}>
-			<AiConversation />
-		</Suspense>
+		<>
+			<Authenticated>
+				<Suspense fallback={<AiConversationSkeleton />}>
+					<AiConversation />
+				</Suspense>
+			</Authenticated>
+			<AuthLoading>
+				<AiConversationSkeleton />
+			</AuthLoading>
+			<Unauthenticated>
+				<AiConversationSkeleton />
+			</Unauthenticated>
+		</>
 	);
 }

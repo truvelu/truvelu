@@ -1,12 +1,13 @@
 import { useIsMobile } from "@/hooks/use-mobile";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { useConvexMutation } from "@convex-dev/react-query";
 import { Settings05Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
+import { useAuth } from "../provider/auth-provider";
 import { Button } from "../ui/button";
 import {
 	Dialog,
@@ -45,7 +46,7 @@ export const AiLearningPreferenceInput = ({
 
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { userId } = useAuth();
 
 	const sendLearningPreference = useMutation({
 		mutationKey: ["sendLearningPreference", threadId],
@@ -63,8 +64,6 @@ export const AiLearningPreferenceInput = ({
 			onSubmit: formSchema,
 		},
 		onSubmit: async ({ value }) => {
-			const userId = user?._id?.toString();
-
 			if (!userId) return;
 
 			sendLearningPreference.mutate(

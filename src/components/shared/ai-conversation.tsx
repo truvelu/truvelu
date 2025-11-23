@@ -36,7 +36,9 @@ import {
 } from "../ai-elements/conversation";
 import type { PromptInputMessage } from "../ai-elements/prompt-input";
 import { Shimmer } from "../ai-elements/shimmer";
+import { useAuth } from "../provider/auth-provider";
 import { Spinner } from "../ui/spinner";
+import { AiConversationSkeleton } from "./ai-conversation-skeleton";
 import { AiLearningPreferenceInput } from "./ai-learning-preference-input";
 import AiMessages from "./ai-messages";
 import { AiPromptInput } from "./ai-prompt-input";
@@ -51,6 +53,7 @@ interface AiConversationProps {
 const AiConversationContent = memo((props: AiConversationProps) => {
 	const { additionalThreadId, type = "thread" } = props;
 
+	const { userId } = useAuth();
 	const matchRoute = useMatchRoute();
 	const navigate = useNavigate();
 	const roomId = useGetRoomId();
@@ -69,19 +72,18 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { ref: inputRef, height: inputHeight } =
 		useGetComponentSize<HTMLDivElement>();
 
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const { data: chat } = useSuspenseQuery(
 		convexQuery(api.chat.queries.getChat, {
-			userId: user?._id?.toString() ?? "",
+			userId,
 			uuid: roomId,
 		}),
 	);
 	const { data: chatByThreadId } = useQuery(
 		convexQuery(
 			api.chat.queries.getChatByThreadIdAndUserId,
-			!!user?._id?.toString() && !!additionalThreadId
+			additionalThreadId
 				? {
-						userId: user?._id?.toString() ?? "",
+						userId,
 						threadId: additionalThreadId,
 					}
 				: "skip",
@@ -93,13 +95,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const currentIndexRoute = matchRoute({ to: "/" });
 	const pendingIndexRoute = matchRoute({ to: "/", pending: true });
-	const currentChatRoute = matchRoute({
-		to: "/c/{-$chatId}",
-	});
-	const pendingChatRoute = matchRoute({
-		to: "/c/{-$chatId}",
-		pending: true,
-	});
 	const currentlearningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const pendingLearningRoute = matchRoute({
 		to: "/l/{-$learningId}",
@@ -115,15 +110,12 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const isCurrentIndexRoute = currentIndexRoute !== false;
 	const isPendingIndexRoute = pendingIndexRoute !== false;
-	const isCurrentChatRoute = currentChatRoute !== false;
-	const isPendingChatRoute = pendingChatRoute !== false;
 	const isCurrentLearningRoute = currentlearningRoute !== false;
 	const isPendingLearningRoute = pendingLearningRoute !== false;
 	const isCurrentLearningCreationRoute = currentLearningCreationRoute !== false;
 	const isPendingLearningCreationRoute = pendingLearningCreationRoute !== false;
 
 	const isIndexRoute = (isCurrentIndexRoute || isPendingIndexRoute) && !roomId;
-	const isChatRoute = isCurrentChatRoute || isPendingChatRoute;
 	const isLearningRoute = isCurrentLearningRoute || isPendingLearningRoute;
 	const isLearningCreationRoute =
 		isCurrentLearningCreationRoute || isPendingLearningCreationRoute;
@@ -131,9 +123,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { data: hasLearningChatMetadataContent } = useQuery(
 		convexQuery(
 			api.learningChatMetadata.queries.hasLearningChatMetadataContent,
-			isLearningRoute && !!user?._id?.toString() && !!roomId
+			isLearningRoute && !!roomId
 				? {
-						userId: user?._id?.toString() ?? "",
+						userId,
 						uuid: roomId,
 					}
 				: "skip",
@@ -153,12 +145,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { data: lastPlan } = useQuery(
 		convexQuery(
 			api.plan.queries.getLastPlanByThreadId,
-			(isChatRoute || isLearningCreationRoute) &&
-				threadId &&
-				user?._id?.toString()
+			type === "learning-creation" && threadId
 				? {
 						threadId,
-						userId: user?._id?.toString() ?? "",
+						userId,
 					}
 				: "skip",
 		),
@@ -248,8 +238,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const handleSubmitNewChat = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
-			const userId = user?._id?.toString();
-
 			if (!userId) return;
 
 			const prompt = message.text ?? "";
@@ -278,13 +266,11 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			);
 			event.preventDefault();
 		},
-		[user?._id, createChat, sendChatMessage, navigate],
+		[userId, createChat, sendChatMessage, navigate],
 	);
 
 	const handleSubmit = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
-			const userId = user?._id?.toString();
-
 			if (!userId) return;
 
 			// Only create new chat if on index route
@@ -318,7 +304,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		},
 		[
 			threadId,
-			user?._id,
+			userId,
 			roomId,
 			sendChatMessage,
 			abortStreamByOrder,
@@ -422,13 +408,17 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	useEffect(() => {
 		if (isIndexRoute || isLearningRoute) return;
-		if (!user) return;
+		if (!userId) return;
 		if (chat !== null) return;
 
 		navigate({ to: "/" });
 
 		toast.error("Chat not found");
-	}, [chat, navigate, user, isIndexRoute, isLearningRoute]);
+	}, [chat, navigate, userId, isIndexRoute, isLearningRoute]);
+
+	if (status === "LoadingFirstPage") {
+		return <AiConversationSkeleton />;
+	}
 
 	return (
 		<>
@@ -440,8 +430,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 					}}
 				>
 					<ContainerWithMaxWidth className="w-full">
-						{(isIndexRoute || status !== "LoadingFirstPage") &&
-						!messages?.length ? (
+						{isIndexRoute && !messages?.length ? (
 							// Show empty state when no messages and not loading
 							<ConversationEmptyState
 								icon={<SharedIcon icon={Message01Icon} size={48} />}

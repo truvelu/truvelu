@@ -19,7 +19,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/zustand/canvas";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
-import { Authenticated } from "convex/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -28,14 +27,14 @@ import { useShallow } from "zustand/react/shallow";
 export const Route = createFileRoute("/_chatLayout")({
 	component: ChatLayout,
 
-	loader: async (context) => {
+	loader: async ({ location, context }) => {
 		// Public routes that don't require authentication
 		const publicRoutes = ["/"] as const;
 		const requiresAuth = !publicRoutes.includes(
-			context.location.pathname as (typeof publicRoutes)[number],
+			location.pathname as (typeof publicRoutes)[number],
 		);
 
-		if (requiresAuth && !context.context.userId) {
+		if (requiresAuth && !context.userId) {
 			throw redirect({
 				to: "/auth",
 			});
@@ -153,9 +152,7 @@ function ChatLayout() {
 	return (
 		<>
 			<SidebarProvider defaultOpen={false}>
-				<Authenticated>
-					<AppSidebar />
-				</Authenticated>
+				<AppSidebar />
 				<SidebarInset className="overflow-x-hidden">
 					<ResponsiveLayout>
 						<Outlet />

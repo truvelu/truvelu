@@ -2,6 +2,7 @@ import { AiConversationSkeleton } from "@/components/shared/ai-conversation-skel
 import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 import { Suspense, lazy } from "react";
 
 const AiLearningContent = lazy(
@@ -40,8 +41,18 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<AiConversationSkeleton />}>
-			<AiLearningContent />
-		</Suspense>
+		<>
+			<Authenticated>
+				<Suspense fallback={<AiConversationSkeleton />}>
+					<AiLearningContent />
+				</Suspense>
+			</Authenticated>
+			<AuthLoading>
+				<AiConversationSkeleton />
+			</AuthLoading>
+			<Unauthenticated>
+				<AiConversationSkeleton />
+			</Unauthenticated>
+		</>
 	);
 }

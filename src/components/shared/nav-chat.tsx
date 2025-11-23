@@ -6,10 +6,12 @@ import {
 	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	useSidebar,
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
+import { createArrayMock } from "@/lib/arrayUtils";
+import { useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
 	Archive03Icon,
 	ArrowRight01Icon,
@@ -18,12 +20,12 @@ import {
 	GridIcon,
 	MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
-import { useAction } from "convex/react";
+import { AuthLoading, Authenticated, useAction } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "../provider/auth-provider";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -36,6 +38,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Skeleton } from "../ui/skeleton";
 import SharedIcon from "./shared-icon";
 
 const NavChatItem = ({
@@ -179,42 +182,77 @@ const NavChatItem = ({
 	);
 };
 
+function NavChatItemSkeleton({ length = 10 }: { length?: number }) {
+	return createArrayMock(length).map((index) => (
+		<div key={index} className="h-8 px-1.5 w-full gap-2 flex items-center">
+			<Skeleton className="min-h-5 min-w-5 max-h-5 max-w-5 rounded-sm" />
+			<Skeleton className="h-5 w-full rounded-sm" />
+		</div>
+	));
+}
+
+function NavChatSkeleton({ length = 10 }: { length?: number }) {
+	return (
+		<div className="flex flex-col gap-1 p-2">
+			<div className="h-8 px-2 w-full flex items-center gap-1">
+				<Skeleton className="h-5 w-9 rounded-sm" />
+				<Skeleton className="min-h-5 min-w-5 max-h-5 max-w-5 rounded-sm" />
+			</div>
+			<NavChatItemSkeleton length={length} />
+		</div>
+	);
+}
+
 export function NavChat() {
-	const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
-	const { results: chats } = useConvexPaginatedQuery(
+	const { userId } = useAuth();
+	const { state } = useSidebar();
+
+	const { results: chats, status } = useConvexPaginatedQuery(
 		api.chat.queries.getChats,
-		user?._id?.toString()
-			? {
-					userId: user?._id?.toString() ?? "",
-				}
-			: "skip",
+		{
+			userId,
+		},
 		{ initialNumItems: 20 },
 	);
 
-	if (!chats?.length) return null;
+	if (status === "LoadingFirstPage" && state === "expanded") {
+		return <NavChatSkeleton length={20} />;
+	}
 
 	return (
-		<Collapsible defaultOpen className="group/collapsible">
-			<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
-				<SidebarGroupLabel asChild>
-					<CollapsibleTrigger className="gap-1 cursor-pointer">
-						Chats
-						<SharedIcon
-							icon={ArrowRight01Icon}
-							className="transition-transform group-data-[state=open]/collapsible:rotate-90"
-						/>
-					</CollapsibleTrigger>
-				</SidebarGroupLabel>
-				<CollapsibleContent>
-					<SidebarGroupContent>
-						<SidebarMenu>
-							{chats?.map((chat) => (
-								<NavChatItem key={chat?.data?.uuid ?? ""} chat={chat} />
-							))}
-						</SidebarMenu>
-					</SidebarGroupContent>
-				</CollapsibleContent>
-			</SidebarGroup>
-		</Collapsible>
+		<>
+			<Authenticated>
+				{!!chats?.length && (
+					<Collapsible defaultOpen className="group/collapsible">
+						<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
+							<SidebarGroupLabel asChild>
+								<CollapsibleTrigger className="gap-1 cursor-pointer">
+									Chats
+									<SharedIcon
+										icon={ArrowRight01Icon}
+										className="transition-transform group-data-[state=open]/collapsible:rotate-90"
+									/>
+								</CollapsibleTrigger>
+							</SidebarGroupLabel>
+							<CollapsibleContent>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{chats?.map((chat) => (
+											<NavChatItem key={chat?.data?.uuid ?? ""} chat={chat} />
+										))}
+										{status === "LoadingMore" && (
+											<NavChatItemSkeleton length={20} />
+										)}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</CollapsibleContent>
+						</SidebarGroup>
+					</Collapsible>
+				)}
+			</Authenticated>
+			<AuthLoading>
+				{state === "expanded" && <NavChatSkeleton length={20} />}
+			</AuthLoading>
+		</>
 	);
 }

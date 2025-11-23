@@ -112,8 +112,16 @@ export const getLearningsChatPanelsByRoomId = query({
 				.unique(),
 		]);
 
-		if (!exactLearningByRoomId) {
-			throw new Error("Learning not found");
+		if (!exactLearningByRoomId?._id) {
+			return {
+				...threads,
+				page: threads.page
+					.filter((thread) => thread.status === "active")
+					.map((thread) => ({
+						...thread,
+						data: null,
+					})),
+			};
 		}
 
 		const allLearningChatsByLearningId = await ctx.db

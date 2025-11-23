@@ -20,7 +20,7 @@ import {
 	Logout05Icon,
 	Settings02Icon,
 } from "@hugeicons/core-free-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
 import { useState } from "react";
 import { Button } from "../ui/button";
@@ -37,7 +37,7 @@ const ModalNavUserLogout = ({
 	isOpenModalLogout: boolean;
 	onValueChangeModalLogout: (open: boolean) => void;
 }) => {
-	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
 
 	return (
 		<Dialog open={isOpenModalLogout} onOpenChange={onValueChangeModalLogout}>
@@ -140,7 +140,7 @@ const NavAvatar = ({
 	className,
 	avatarClassName,
 }: { className?: string; avatarClassName?: string }) => {
-	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const userInitialName = data?.name
 		?.split(" ")
 		?.map((name) => name[0]?.toUpperCase())
@@ -161,7 +161,7 @@ const NavAvatar = ({
 };
 
 export function NavUser() {
-	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
 
 	const [isOpenModalLogout, setIsOpenModalLogout] = useState(false);
 	const [isOpenModalSettings, setIsOpenModalSettings] = useState(false);
