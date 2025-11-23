@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { createArrayMock } from "@/lib/arrayUtils";
+import { createArrayMock } from "@/lib/array-utils";
 import { cn } from "@/lib/utils";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import {

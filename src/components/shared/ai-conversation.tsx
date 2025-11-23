@@ -9,7 +9,7 @@ import {
 } from "@convex-dev/agent/react";
 import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { Message01Icon } from "@hugeicons/core-free-icons";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
@@ -38,7 +38,6 @@ import type { PromptInputMessage } from "../ai-elements/prompt-input";
 import { Shimmer } from "../ai-elements/shimmer";
 import { useAuth } from "../provider/auth-provider";
 import { Spinner } from "../ui/spinner";
-import { AiConversationSkeleton } from "./ai-conversation-skeleton";
 import { AiLearningPreferenceInput } from "./ai-learning-preference-input";
 import AiMessages from "./ai-messages";
 import { AiPromptInput } from "./ai-prompt-input";
@@ -72,11 +71,16 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { ref: inputRef, height: inputHeight } =
 		useGetComponentSize<HTMLDivElement>();
 
-	const { data: chat } = useSuspenseQuery(
-		convexQuery(api.chat.queries.getChat, {
-			userId,
-			uuid: roomId,
-		}),
+	const { data: chat } = useQuery(
+		convexQuery(
+			api.chat.queries.getChat,
+			userId
+				? {
+						userId,
+						uuid: roomId,
+					}
+				: "skip",
+		),
 	);
 	const { data: chatByThreadId } = useQuery(
 		convexQuery(
@@ -416,10 +420,6 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		toast.error("Chat not found");
 	}, [chat, navigate, userId, isIndexRoute, isLearningRoute]);
 
-	if (!isIndexRoute && status === "LoadingFirstPage") {
-		return <AiConversationSkeleton />;
-	}
-
 	return (
 		<>
 			<ConversationContent className="px-0" key={roomId}>
@@ -518,6 +518,8 @@ const AiConversation = memo(
 
 		return (
 			<Conversation
+				initial="instant"
+				resize="instant"
 				key={roomId}
 				className={cn(
 					"relative flex-1 sm:h-[calc(100lvh-var(--spacing-header))]",

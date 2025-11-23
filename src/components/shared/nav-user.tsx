@@ -12,22 +12,28 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
 import {
 	Cancel01Icon,
+	LoginSquare02Icon,
 	Logout05Icon,
 	Settings02Icon,
 } from "@hugeicons/core-free-icons";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
+import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent } from "../ui/dialog";
+import { Skeleton } from "../ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ModeToggle } from "./mode-toggle";
 import SharedIcon from "./shared-icon";
+import SignInButton from "./sign-in-button";
 import SignOutButton from "./sign-out-button";
 
 const ModalNavUserLogout = ({
@@ -37,7 +43,7 @@ const ModalNavUserLogout = ({
 	isOpenModalLogout: boolean;
 	onValueChangeModalLogout: (open: boolean) => void;
 }) => {
-	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 
 	return (
 		<Dialog open={isOpenModalLogout} onOpenChange={onValueChangeModalLogout}>
@@ -140,7 +146,7 @@ const NavAvatar = ({
 	className,
 	avatarClassName,
 }: { className?: string; avatarClassName?: string }) => {
-	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 	const userInitialName = data?.name
 		?.split(" ")
 		?.map((name) => name[0]?.toUpperCase())
@@ -161,7 +167,9 @@ const NavAvatar = ({
 };
 
 export function NavUser() {
-	const { data } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}));
+	const { state } = useSidebar();
+
+	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 
 	const [isOpenModalLogout, setIsOpenModalLogout] = useState(false);
 	const [isOpenModalSettings, setIsOpenModalSettings] = useState(false);
@@ -176,78 +184,112 @@ export function NavUser() {
 
 	return (
 		<>
-			<SidebarMenu>
-				<SidebarMenuItem>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<SidebarMenuButton
-								size="lg"
-								className="group rounded-none! py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[collapsible=icon]:rounded-none!"
-							>
-								<NavAvatar className="group-data-[collapsible=icon]:min-w-9 group-data-[collapsible=icon]:min-h-9" />
+			<Authenticated>
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<SidebarMenuButton
+									size="lg"
+									className="group py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+								>
+									<NavAvatar className="group-data-[collapsible=icon]:min-w-9 group-data-[collapsible=icon]:min-h-9" />
 
-								<div className="grid flex-1 text-left leading-tight">
-									<span className="truncate text-sm">{data?.name}</span>
-									<span className="truncate text-xs text-muted-foreground">
-										Free
-									</span>
-								</div>
-							</SidebarMenuButton>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-2xl py-1.5 px-0"
-							side="bottom"
-							align="center"
-							sideOffset={4}
-						>
-							<DropdownMenuLabel className="p-0 font-normal mx-2.5">
-								<div className="flex items-center gap-2 pl-2.5 pr-8 py-1.5 text-left text-sm">
-									<NavAvatar avatarClassName="size-5" />
-
-									<div className="grid flex-1 text-left text-sm leading-tight">
-										<span className="truncate font-medium">{data?.name}</span>
+									<div className="grid flex-1 text-left leading-tight">
+										<span className="truncate text-sm">{data?.name}</span>
+										<span className="truncate text-xs text-muted-foreground">
+											Free
+										</span>
 									</div>
-								</div>
-							</DropdownMenuLabel>
-							<DropdownMenuSeparator className="mx-4 my-1" />
-							<DropdownMenuGroup>
+								</SidebarMenuButton>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-2xl py-1.5 px-0"
+								side="bottom"
+								align="center"
+								sideOffset={4}
+							>
+								<DropdownMenuLabel className="p-0 font-normal mx-2.5">
+									<div className="flex items-center gap-2 pl-2.5 pr-8 py-1.5 text-left text-sm">
+										<NavAvatar avatarClassName="size-5" />
+
+										<div className="grid flex-1 text-left text-sm leading-tight">
+											<span className="truncate font-medium">{data?.name}</span>
+										</div>
+									</div>
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator className="mx-4 my-1" />
+								<DropdownMenuGroup>
+									<DropdownMenuItem
+										onClick={() => onValueChangeModalSettings(true)}
+										className="pl-2.5 pr-8 h-9 flex items-center cursor-pointer mx-2.5 gap-1.5 text-primary"
+									>
+										<SharedIcon
+											icon={Settings02Icon}
+											className="size-5 text-primary"
+										/>
+										Settings
+									</DropdownMenuItem>
+								</DropdownMenuGroup>
+
+								<DropdownMenuSeparator className="mx-4 my-1" />
+
 								<DropdownMenuItem
-									onClick={() => onValueChangeModalSettings(true)}
-									className="pl-2.5 pr-8 h-9 flex items-center cursor-pointer mx-2.5 gap-1.5 text-primary"
+									onClick={() => onValueChangeModalLogout(true)}
+									className="w-full rounded-tmedium cursor-pointer pl-2.5 pr-8 h-9 flex items-center mx-2.5 gap-1.5 text-primary"
 								>
 									<SharedIcon
-										icon={Settings02Icon}
+										icon={Logout05Icon}
 										className="size-5 text-primary"
 									/>
-									Settings
+									Log out
 								</DropdownMenuItem>
-							</DropdownMenuGroup>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</SidebarMenuItem>
+				</SidebarMenu>
 
-							<DropdownMenuSeparator className="mx-4 my-1" />
-
-							<DropdownMenuItem
-								onClick={() => onValueChangeModalLogout(true)}
-								className="w-full rounded-tmedium cursor-pointer pl-2.5 pr-8 h-9 flex items-center mx-2.5 gap-1.5 text-primary"
-							>
-								<SharedIcon
-									icon={Logout05Icon}
-									className="size-5 text-primary"
-								/>
-								Log out
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</SidebarMenuItem>
-			</SidebarMenu>
-
-			<ModalNavUserLogout
-				isOpenModalLogout={isOpenModalLogout}
-				onValueChangeModalLogout={onValueChangeModalLogout}
-			/>
-			<ModalNavUserSettings
-				isOpenModalSettings={isOpenModalSettings}
-				onValueChangeModalSettings={onValueChangeModalSettings}
-			/>
+				<ModalNavUserLogout
+					isOpenModalLogout={isOpenModalLogout}
+					onValueChangeModalLogout={onValueChangeModalLogout}
+				/>
+				<ModalNavUserSettings
+					isOpenModalSettings={isOpenModalSettings}
+					onValueChangeModalSettings={onValueChangeModalSettings}
+				/>
+			</Authenticated>
+			<Unauthenticated>
+				{state === "collapsed" ? (
+					<SignInButton>
+						<SidebarMenuButton
+							size="lg"
+							className="group py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							asChild
+						>
+							<Button variant="default" className="size-9 rounded-full">
+								<SharedIcon icon={LoginSquare02Icon} />
+							</Button>
+						</SidebarMenuButton>
+					</SignInButton>
+				) : (
+					<Button
+						className="rounded-tlarge px-3 h-9 cursor-pointer gap-2"
+						asChild
+					>
+						<Link to="/auth">
+							<SharedIcon icon={LoginSquare02Icon} />
+							<span>Log in</span>
+						</Link>
+					</Button>
+				)}
+			</Unauthenticated>
+			<AuthLoading>
+				{state === "collapsed" ? (
+					<Skeleton className="rounded-full size-9" />
+				) : (
+					<Skeleton className="rounded-tlarge h-9 w-full" />
+				)}
+			</AuthLoading>
 		</>
 	);
 }

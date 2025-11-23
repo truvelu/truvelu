@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEditableTitle } from "@/hooks/use-editable-title";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
-import { createArrayMock } from "@/lib/arrayUtils";
+import { createArrayMock } from "@/lib/array-utils";
 import { useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
 	Archive03Icon,

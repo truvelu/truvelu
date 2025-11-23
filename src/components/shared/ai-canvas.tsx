@@ -29,7 +29,7 @@ import {
 	MoreHorizontalIcon,
 	TaskDaily02Icon,
 } from "@hugeicons/core-free-icons";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction } from "convex/react";
@@ -105,8 +105,8 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	const threadId = canvas?.data?.threadId ?? "";
 	const roomId = canvas?.data?.roomId ?? "";
 
-	const { data: canvasMetadata } = useSuspenseQuery(
-		convexQuery(api.chat.queries.getMetadata, { threadId }),
+	const { data: canvasMetadata } = useQuery(
+		convexQuery(api.chat.queries.getMetadata, threadId ? { threadId } : "skip"),
 	);
 
 	const { editableRef, isEditing, startEditing, handleKeyDown, handleBlur } =

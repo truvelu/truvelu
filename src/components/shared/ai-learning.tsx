@@ -6,7 +6,7 @@ import {
 	Calendar04Icon,
 	Folder01Icon,
 } from "@hugeicons/core-free-icons";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useEffect } from "react";
@@ -64,11 +64,16 @@ function AiLearning() {
 
 	const { userId } = useAuth();
 
-	const { data: learning, isPending: isLearningPending } = useSuspenseQuery(
-		convexQuery(api.learning.queries.getLearningByRoomId, {
-			userId,
-			uuid: roomId,
-		}),
+	const { data: learning, isPending: isLearningPending } = useQuery(
+		convexQuery(
+			api.learning.queries.getLearningByRoomId,
+			userId
+				? {
+						userId,
+						uuid: roomId,
+					}
+				: "skip",
+		),
 	);
 
 	const { results: learningChatsContent, status } = useConvexPaginatedQuery(

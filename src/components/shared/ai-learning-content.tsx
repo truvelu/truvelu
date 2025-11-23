@@ -13,7 +13,7 @@ import {
 	Message01Icon,
 	StopIcon,
 } from "@hugeicons/core-free-icons";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
@@ -36,11 +36,16 @@ const AiLearningContentResult = memo(() => {
 	const learningId = params?.learningId ?? "";
 
 	const { userId } = useAuth();
-	const { data: chat } = useSuspenseQuery(
-		convexQuery(api.chat.queries.getChat, {
-			userId,
-			uuid: chatRoomId,
-		}),
+	const { data: chat } = useQuery(
+		convexQuery(
+			api.chat.queries.getChat,
+			userId
+				? {
+						userId,
+						uuid: chatRoomId,
+					}
+				: "skip",
+		),
 	);
 
 	const threadId = chat?.threadId ?? "";

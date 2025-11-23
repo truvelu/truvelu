@@ -72,13 +72,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				rel: "stylesheet",
 				href: appCss,
 			},
-			{
-				rel: "stylesheet",
-				href: "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css",
-				integrity:
-					"sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV",
-				crossOrigin: "anonymous",
-			},
 		],
 	}),
 
@@ -98,9 +91,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 	component: RootComponent,
 
-	errorComponent: (e) => <ErrorClient error={e} />,
+	errorComponent: (props) => {
+		return <ErrorClient {...props} />;
+	},
 
-	notFoundComponent: () => <ErrorClient type="not-found" />,
+	notFoundComponent: () => {
+		return <ErrorClient type="not-found" />;
+	},
+
+	ssr: false,
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {

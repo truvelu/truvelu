@@ -1,5 +1,5 @@
+import { createArrayMock } from "@/lib/array-utils";
 import { cn } from "@/lib/utils";
-import { createArrayMock } from "@lib/arrayUtils";
 import { Skeleton } from "../ui/skeleton";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 
