@@ -98,6 +98,12 @@ const AiActions = memo((props: AiActionsProps) => {
 		mutationFn: useConvexMutation(api.discussion.mutations.createDiscussion),
 	});
 
+	console.log({
+		discussionMessages,
+		discussion,
+		discussionThread: discussion?.threadId,
+	});
+
 	const textPart = useMemo(
 		() => message.parts.find((part) => part.type === MessageType.TEXT),
 		[message.parts],
