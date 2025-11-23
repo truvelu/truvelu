@@ -95,8 +95,9 @@ export const AppSidebar = React.memo(
 					)}
 				</SidebarHeader>
 
+				<NavMain />
+
 				<SidebarContent>
-					<NavMain />
 					<NavExplore />
 					<NavLearning />
 					<NavChat />

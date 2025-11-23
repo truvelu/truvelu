@@ -191,7 +191,10 @@ export function NavUser() {
 							<DropdownMenuTrigger asChild>
 								<SidebarMenuButton
 									size="lg"
-									className="group py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+									className={cn(
+										"group py-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+										state === "collapsed" ? "rounded-full!" : "rounded-lg!",
+									)}
 								>
 									<NavAvatar className="group-data-[collapsible=icon]:min-w-9 group-data-[collapsible=icon]:min-h-9" />
 

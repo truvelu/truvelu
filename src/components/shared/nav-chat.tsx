@@ -71,7 +71,7 @@ const NavChatItem = ({
 		});
 
 	return (
-		<SidebarMenuItem>
+		<SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
 			<SidebarMenuButton
 				tooltip={chat?.title}
 				className="cursor-pointer rounded-tlarge py-0"
@@ -93,7 +93,7 @@ const NavChatItem = ({
 						onClick: (e) => {
 							e.preventDefault();
 							e.stopPropagation();
-							return;
+							return false;
 						},
 					}}
 				>
@@ -153,7 +153,7 @@ const NavChatItem = ({
 					</DropdownMenuItem>
 
 					<DropdownMenuItem
-						className="!text-destructive p-2.5 rounded-xl"
+						className="text-destructive! p-2.5 rounded-xl"
 						onClick={() => {
 							if (!chat?._id) return;
 							deleteChat({ threadId: chat._id });
@@ -226,7 +226,7 @@ export function NavChat() {
 					<Collapsible defaultOpen className="group/collapsible">
 						<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
 							<SidebarGroupLabel asChild>
-								<CollapsibleTrigger className="gap-1 cursor-pointer">
+								<CollapsibleTrigger className="gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
 									Chats
 									<SharedIcon
 										icon={ArrowRight01Icon}

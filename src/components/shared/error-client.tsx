@@ -31,7 +31,7 @@ export function ErrorClient({ type = "error", ...props }: ErrorClientProps) {
 			: "The page you are looking for does not exist.";
 
 	return (
-		<Empty className="from-muted/50 to-background h-svh lg:h-lvh bg-linear-to-b from-30%">
+		<Empty className="from-background dark:from-muted/50 to-gray-100 dark:to-background h-svh lg:h-lvh bg-linear-to-b from-30%">
 			<EmptyHeader>
 				<EmptyMedia variant="icon">
 					<SharedIcon icon={AlertSquareIcon} />
@@ -42,7 +42,7 @@ export function ErrorClient({ type = "error", ...props }: ErrorClientProps) {
 					{JSON.stringify(error?.message)}
 				</blockquote>
 			</EmptyHeader>
-			<EmptyContent>
+			<EmptyContent className="flex-row justify-center">
 				<Button
 					variant="outline"
 					size="sm"
@@ -58,6 +58,20 @@ export function ErrorClient({ type = "error", ...props }: ErrorClientProps) {
 					<SharedIcon icon={type === "error" ? RefreshIcon : Home07Icon} />
 					{type === "error" ? "Refresh" : "Go to Home"}
 				</Button>
+
+				{type === "error" && (
+					<Button
+						variant="outline"
+						size="sm"
+						className="cursor-pointer"
+						onClick={() => {
+							navigate({ to: "/" });
+						}}
+					>
+						<SharedIcon icon={Home07Icon} />
+						Go to Home
+					</Button>
+				)}
 			</EmptyContent>
 		</Empty>
 	);

@@ -11,11 +11,11 @@ import SharedIcon from "./shared-icon";
 
 export function NavExplore() {
 	return (
-		<SidebarGroup className="group-data-[collapsible=icon]:hidden">
+		<SidebarGroup>
 			<SidebarGroupLabel>Explore</SidebarGroupLabel>
 			<SidebarGroupContent>
 				<SidebarMenu>
-					<SidebarMenuItem>
+					<SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
 						<SidebarMenuButton
 							tooltip="Community"
 							className="cursor-pointer rounded-tlarge"

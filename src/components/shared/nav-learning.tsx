@@ -89,11 +89,11 @@ const NavNewLearningItem = () => {
 	});
 
 	return (
-		<SidebarMenuItem>
+		<SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
 			<Dialog open={openDialog} onOpenChange={setOpenDialog}>
 				<DialogTrigger asChild>
 					<SidebarMenuButton
-						tooltip="Learning"
+						tooltip="New learning"
 						className="cursor-pointer rounded-tlarge py-0"
 					>
 						<SharedIcon icon={FolderAddIcon} />
@@ -259,7 +259,7 @@ const NavLearningItem = ({
 			open={collapsibleOpen}
 			className="group/collapsible"
 		>
-			<SidebarMenuItem>
+			<SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
 				<div className="flex-1 justify-between flex flex-row items-center gap-1">
 					<SidebarMenuButton
 						tooltip={learning?.title ?? "Learning"}
@@ -460,7 +460,7 @@ export function NavLearning() {
 				<Collapsible defaultOpen className="group/collapsible">
 					<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
 						<SidebarGroupLabel asChild>
-							<CollapsibleTrigger className="gap-1 cursor-pointer">
+							<CollapsibleTrigger className="gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
 								Learnings
 								<SharedIcon
 									icon={ArrowRight01Icon}
