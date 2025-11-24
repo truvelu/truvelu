@@ -1,3 +1,4 @@
+import { useCanvasOpenStatus } from "@/hooks/use-canvas";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -36,22 +37,16 @@ function AiLearning() {
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
 	const isMobile = useIsMobile();
+	const openCanvas = useCanvasOpenStatus();
 
-	const { upsertCanvas, getCanvas, removeCanvas, setOpenCanvas, openCanvas } =
+	const { upsertCanvas, getCanvas, removeCanvas, setOpenCanvas } =
 		useCanvasStore(
 			useShallow(
-				({
+				({ upsertCanvas, getCanvas, removeCanvas, setOpenCanvas }) => ({
 					upsertCanvas,
 					getCanvas,
 					removeCanvas,
 					setOpenCanvas,
-					openCanvas,
-				}) => ({
-					upsertCanvas,
-					getCanvas,
-					removeCanvas,
-					setOpenCanvas,
-					openCanvas,
 				}),
 			),
 		);
