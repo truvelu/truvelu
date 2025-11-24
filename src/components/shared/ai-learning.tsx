@@ -37,11 +37,24 @@ function AiLearning() {
 	const matchRoute = useMatchRoute();
 	const isMobile = useIsMobile();
 
-	const { upsertCanvas } = useCanvasStore(
-		useShallow(({ upsertCanvas }) => ({
-			upsertCanvas,
-		})),
-	);
+	const { upsertCanvas, getCanvas, removeCanvas, setOpenCanvas, openCanvas } =
+		useCanvasStore(
+			useShallow(
+				({
+					upsertCanvas,
+					getCanvas,
+					removeCanvas,
+					setOpenCanvas,
+					openCanvas,
+				}) => ({
+					upsertCanvas,
+					getCanvas,
+					removeCanvas,
+					setOpenCanvas,
+					openCanvas,
+				}),
+			),
+		);
 
 	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
 	const pendingChatRoute = matchRoute({
@@ -115,16 +128,35 @@ function AiLearning() {
 		({
 			type,
 			data,
-		}: { type: CanvasType; data: { threadId: string; roomId: string } }) => {
-			upsertCanvas({
+		}: {
+			type: CanvasType;
+			data: { threadId: string; roomId: string; title?: string };
+		}) => {
+			const threadId = data.threadId;
+			const roomId = data.roomId;
+			const title = data.title;
+			const existingCanvas = getCanvas({
+				roomId,
+				threadId,
 				type,
-				data: {
-					roomId,
-					threadId: data.threadId,
-				},
 			});
+
+			if (!!existingCanvas?.length && !openCanvas) {
+				setOpenCanvas(roomId, true);
+			} else if (!!existingCanvas?.length && openCanvas) {
+				removeCanvas({
+					type,
+					roomId,
+					threadId,
+				});
+			} else {
+				upsertCanvas({
+					type,
+					data: { threadId, roomId, title },
+				});
+			}
 		},
-		[upsertCanvas, roomId],
+		[upsertCanvas, getCanvas, removeCanvas, setOpenCanvas, openCanvas],
 	);
 
 	useEffect(() => {
@@ -210,6 +242,9 @@ function AiLearning() {
 																		learningChatPanelByRoomId?.at(0)?.data
 																			?.threadId ?? "",
 																	roomId,
+																	title:
+																		learningChatPanelByRoomId?.at(0)?.title ??
+																		"",
 																},
 															})
 														}
