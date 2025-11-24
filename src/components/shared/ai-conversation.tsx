@@ -498,6 +498,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 								<AiLearningPreferenceInput threadId={threadId} />
 							) : (
 								<AiPromptInput
+									type={type}
 									onSubmit={handleSubmit}
 									isInputStatusLoading={isInputStatusLoading}
 								/>

@@ -208,8 +208,8 @@ export function NavUser() {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent
 								className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-2xl py-1.5 px-0"
-								side="bottom"
-								align="center"
+								side={state === "collapsed" ? "right" : "top"}
+								align={state === "collapsed" ? "end" : "center"}
 								sideOffset={4}
 							>
 								<DropdownMenuLabel className="p-0 font-normal mx-2.5">

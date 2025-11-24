@@ -21,6 +21,8 @@ import {
 	Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
+import type { streamSectionValidator } from "convex/schema";
+import type { Infer } from "convex/values";
 import {
 	type ChangeEvent,
 	type FormEvent,
@@ -45,10 +47,12 @@ import SharedIcon from "./shared-icon";
 
 interface AiPromptInputProps extends PromptInputProps {
 	isInputStatusLoading: boolean;
+	type?: Infer<typeof streamSectionValidator>;
 }
 
 export const AiPromptInput = memo(
 	({
+		type = "thread",
 		onSubmit,
 		onChange,
 		isInputStatusLoading,
@@ -117,50 +121,52 @@ export const AiPromptInput = memo(
 							</PromptInputActionMenuContent>
 						</PromptInputActionMenu>
 
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="rounded-tlarge px-5">
-									<SharedIcon
-										icon={
-											MODE.find((item) => item.type === mode)
-												?.icon as IconSvgElement
-										}
-									/>
-									{MODE.find((item) => item.type === mode)?.label}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								className="w-fit rounded-tmedium p-1"
-								align="start"
-							>
-								<DropdownMenuRadioGroup
-									value={mode}
-									onValueChange={(value) =>
-										setMode(value as (typeof MODE)[number]["type"])
-									}
+						{type === "learning-creation" && (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="rounded-tlarge px-5">
+										<SharedIcon
+											icon={
+												MODE.find((item) => item.type === mode)
+													?.icon as IconSvgElement
+											}
+										/>
+										{MODE.find((item) => item.type === mode)?.label}
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									className="w-fit rounded-tmedium p-1"
+									align="start"
 								>
-									{MODE.map((item) => (
-										<DropdownMenuRadioItem
-											key={item.type}
-											value={item.type}
-											withIcon={false}
-											className="justify-between rounded-tmedium"
-										>
-											<div className="flex items-center gap-2">
-												<SharedIcon icon={item.icon} />
-												<p>{item.label}</p>
-											</div>
+									<DropdownMenuRadioGroup
+										value={mode}
+										onValueChange={(value) =>
+											setMode(value as (typeof MODE)[number]["type"])
+										}
+									>
+										{MODE.map((item) => (
+											<DropdownMenuRadioItem
+												key={item.type}
+												value={item.type}
+												withIcon={false}
+												className="justify-between rounded-tmedium"
+											>
+												<div className="flex items-center gap-2">
+													<SharedIcon icon={item.icon} />
+													<p>{item.label}</p>
+												</div>
 
-											<span className="pointer-events-none flex size-3.5 items-center justify-center">
-												<DropdownMenuItemIndicator>
-													<SharedIcon icon={Tick02Icon} size={8} />
-												</DropdownMenuItemIndicator>
-											</span>
-										</DropdownMenuRadioItem>
-									))}
-								</DropdownMenuRadioGroup>
-							</DropdownMenuContent>
-						</DropdownMenu>
+												<span className="pointer-events-none flex size-3.5 items-center justify-center">
+													<DropdownMenuItemIndicator>
+														<SharedIcon icon={Tick02Icon} size={8} />
+													</DropdownMenuItemIndicator>
+												</span>
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
 					</PromptInputTools>
 					<BtnLoginOrChild>
 						<PromptInputSubmit
