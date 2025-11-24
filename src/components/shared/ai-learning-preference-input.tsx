@@ -1,4 +1,3 @@
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useConvexMutation } from "@convex-dev/react-query";
 import { Settings05Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
@@ -17,12 +16,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../ui/dialog";
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerTitle,
-} from "../ui/drawer";
 import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
 import { Textarea } from "../ui/textarea";
 import SharedIcon from "./shared-icon";
@@ -42,8 +35,6 @@ const formSchema = z.object({
 export const AiLearningPreferenceInput = ({
 	threadId,
 }: { threadId: string }) => {
-	const isMobile = useIsMobile();
-
 	const [isOpen, setIsOpen] = useState(false);
 
 	const { userId } = useAuth();
@@ -106,286 +97,160 @@ export const AiLearningPreferenceInput = ({
 				</div>
 			</div>
 
-			{isMobile ? (
-				<Drawer open={isOpen} onOpenChange={setIsOpen}>
-					<DrawerContent className="h-svh">
-						<DrawerTitle />
-						<DrawerDescription />
+			<Dialog open={isOpen} onOpenChange={setIsOpen}>
+				<DialogContent className="h-full max-w-none sm:max-w-lg rounded-none md:rounded-tmedium max-h-svh md:max-h-[90lvh] px-0">
+					<DialogHeader className="sticky top-0 bg-background px-4 sm:px-5.5">
+						<DialogTitle>Create new course</DialogTitle>
+						<DialogDescription>
+							Course will be created based on your learning preferences. You can
+							always edit it later.
+						</DialogDescription>
+					</DialogHeader>
 
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								form.handleSubmit();
-							}}
-							className="space-y-1.5"
+					<form
+						id="learning-preference-form"
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+						className="space-y-1.5 overflow-y-auto px-4 sm:px-1.5 [scrollbar-gutter:stable_both-edges]"
+					>
+						<FieldGroup>
+							<form.Field name="topic">
+								{(field) => {
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
+									return (
+										<Field data-invalid={isInvalid}>
+											<FieldLabel htmlFor={field.name}>
+												Topic to learn
+											</FieldLabel>
+											<Textarea
+												id={field.name}
+												name={field.name}
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												aria-invalid={isInvalid}
+												placeholder="Tell us about the topic you want to learn"
+												autoComplete="off"
+											/>
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
+										</Field>
+									);
+								}}
+							</form.Field>
+						</FieldGroup>
+
+						<FieldGroup>
+							<form.Field name="userLevel">
+								{(field) => {
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
+									return (
+										<Field data-invalid={isInvalid}>
+											<FieldLabel htmlFor={field.name}>
+												Your level of understanding
+											</FieldLabel>
+											<Textarea
+												id={field.name}
+												name={field.name}
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												aria-invalid={isInvalid}
+												placeholder="Tell us about your level of understanding"
+												autoComplete="off"
+											/>
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
+										</Field>
+									);
+								}}
+							</form.Field>
+						</FieldGroup>
+
+						<FieldGroup>
+							<form.Field name="goal">
+								{(field) => {
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
+									return (
+										<Field data-invalid={isInvalid}>
+											<FieldLabel htmlFor={field.name}>Your goal</FieldLabel>
+											<Textarea
+												id={field.name}
+												name={field.name}
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												aria-invalid={isInvalid}
+												placeholder="Tell us about your goal"
+												autoComplete="off"
+											/>
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
+										</Field>
+									);
+								}}
+							</form.Field>
+						</FieldGroup>
+
+						<FieldGroup>
+							<form.Field name="duration">
+								{(field) => {
+									const isInvalid =
+										field.state.meta.isTouched && !field.state.meta.isValid;
+									return (
+										<Field data-invalid={isInvalid}>
+											<FieldLabel htmlFor={field.name}>Duration</FieldLabel>
+											<Textarea
+												id={field.name}
+												name={field.name}
+												value={field.state.value}
+												onBlur={field.handleBlur}
+												onChange={(e) => field.handleChange(e.target.value)}
+												aria-invalid={isInvalid}
+												placeholder="Tell us about the duration you want to learn"
+												autoComplete="off"
+											/>
+											{isInvalid && (
+												<FieldError errors={field.state.meta.errors} />
+											)}
+										</Field>
+									);
+								}}
+							</form.Field>
+						</FieldGroup>
+					</form>
+
+					<DialogFooter>
+						<Field
+							orientation="horizontal"
+							className="justify-end px-4 sm:px-5.5"
 						>
-							<FieldGroup>
-								<form.Field name="topic">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>
-													Topic to learn
-												</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about the topic you want to learn"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="userLevel">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>
-													Your level of understanding
-												</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about your level of understanding"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="goal">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Your goal</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about your goal"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="duration">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Duration</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about the duration you want to learn"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-						</form>
-					</DrawerContent>
-				</Drawer>
-			) : (
-				<Dialog open={isOpen} onOpenChange={setIsOpen}>
-					<DialogContent className="rounded-tmedium h-full max-h-svh md:max-h-[90lvh]">
-						<DialogHeader className="sticky top-0 bg-background">
-							<DialogTitle>Create new course</DialogTitle>
-							<DialogDescription>
-								Course will be created based on your learning preferences. You
-								can always edit it later.
-							</DialogDescription>
-						</DialogHeader>
-
-						<form
-							id="learning-preference-form"
-							onSubmit={(e) => {
-								e.preventDefault();
-								form.handleSubmit();
-							}}
-							className="space-y-1.5 overflow-y-auto"
-						>
-							<FieldGroup>
-								<form.Field name="topic">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>
-													Topic to learn
-												</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about the topic you want to learn"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="userLevel">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>
-													Your level of understanding
-												</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about your level of understanding"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="goal">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Your goal</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about your goal"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-
-							<FieldGroup>
-								<form.Field name="duration">
-									{(field) => {
-										const isInvalid =
-											field.state.meta.isTouched && !field.state.meta.isValid;
-										return (
-											<Field data-invalid={isInvalid}>
-												<FieldLabel htmlFor={field.name}>Duration</FieldLabel>
-												<Textarea
-													id={field.name}
-													name={field.name}
-													value={field.state.value}
-													onBlur={field.handleBlur}
-													onChange={(e) => field.handleChange(e.target.value)}
-													aria-invalid={isInvalid}
-													placeholder="Tell us about the duration you want to learn"
-													autoComplete="off"
-												/>
-												{isInvalid && (
-													<FieldError errors={field.state.meta.errors} />
-												)}
-											</Field>
-										);
-									}}
-								</form.Field>
-							</FieldGroup>
-						</form>
-
-						<DialogFooter>
-							<Field orientation="horizontal">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => form.reset()}
-								>
-									Reset
-								</Button>
-								<Button
-									type="submit"
-									disabled={sendLearningPreference.isPending}
-									form="learning-preference-form"
-								>
-									Submit
-								</Button>
-							</Field>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
-			)}
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => form.reset()}
+							>
+								Reset
+							</Button>
+							<Button
+								type="submit"
+								disabled={sendLearningPreference.isPending}
+								form="learning-preference-form"
+							>
+								Submit
+							</Button>
+						</Field>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 };

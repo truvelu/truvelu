@@ -491,9 +491,12 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 			/>
 
 			{!isLearningCreationRoute && (
-				<div ref={inputRef} className={cn("absolute inset-x-0 bottom-0 mx-4")}>
+				<div
+					ref={inputRef}
+					className={cn("absolute inset-x-0 bottom-0 mx-4 bg-background")}
+				>
 					<ContainerWithMargin>
-						<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-background")}>
+						<ContainerWithMaxWidth className={cn("pt-1 pb-2 flex-1")}>
 							{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
 								<AiLearningPreferenceInput threadId={threadId} />
 							) : (

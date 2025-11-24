@@ -1,21 +1,27 @@
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { CanvasType, useCanvasStore } from "@/zustand/canvas";
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
-	ArrowMoveUpRightIcon,
+	BookOpen01Icon,
 	Calendar04Icon,
 	Folder01Icon,
+	SidebarBottomIcon,
+	SidebarRightIcon,
 } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../provider/auth-provider";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
 	Empty,
+	EmptyContent,
 	EmptyDescription,
 	EmptyHeader,
 	EmptyMedia,
@@ -29,6 +35,13 @@ function AiLearning() {
 	const roomId = useGetRoomId();
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
+	const isMobile = useIsMobile();
+
+	const { upsertCanvas } = useCanvasStore(
+		useShallow(({ upsertCanvas }) => ({
+			upsertCanvas,
+		})),
+	);
 
 	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
 	const pendingChatRoute = matchRoute({
@@ -85,6 +98,33 @@ function AiLearning() {
 				}
 			: "skip",
 		{ initialNumItems: 20 },
+	);
+
+	const { results: learningChatPanelByRoomId } = useConvexPaginatedQuery(
+		api.learning.queries.getLearningsChatPanelsByRoomId,
+		isLearningRoute && !!roomId
+			? {
+					userId,
+					uuid: roomId,
+				}
+			: "skip",
+		{ initialNumItems: 20 },
+	);
+
+	const handleOpenListItem = useCallback(
+		({
+			type,
+			data,
+		}: { type: CanvasType; data: { threadId: string; roomId: string } }) => {
+			upsertCanvas({
+				type,
+				data: {
+					roomId,
+					threadId: data.threadId,
+				},
+			});
+		},
+		[upsertCanvas, roomId],
 	);
 
 	useEffect(() => {
@@ -144,11 +184,11 @@ function AiLearning() {
 									{learningChatsContent?.length === 0 && (
 										<Empty>
 											<EmptyHeader>
-												<EmptyMedia className="relative h-20 w-full">
+												<EmptyMedia className="h-16 w-full">
 													<SharedIcon
-														icon={ArrowMoveUpRightIcon}
+														icon={BookOpen01Icon}
 														strokeWidth={1}
-														className="size-20 absolute top-1/2 left-1/2 -translate-x-1/6 -translate-y-1/2 text-secondary-foreground/30"
+														className="size-16 text-secondary-foreground/30"
 													/>
 												</EmptyMedia>
 												<EmptyTitle>No Course Yet</EmptyTitle>
@@ -157,6 +197,34 @@ function AiLearning() {
 													by generate your first course by start chatting inside
 													the chat section.
 												</EmptyDescription>
+												<EmptyContent>
+													<Button
+														key={learning?._id ?? ""}
+														variant="default"
+														className="w-fit rounded-tmedium px-2.5 cursor-pointer flex gap-1.5 justify-start"
+														onClick={() =>
+															handleOpenListItem({
+																type: CanvasType.LEARNING_CREATION,
+																data: {
+																	threadId:
+																		learningChatPanelByRoomId?.at(0)?.data
+																			?.threadId ?? "",
+																	roomId,
+																},
+															})
+														}
+													>
+														<SharedIcon
+															icon={
+																isMobile ? SidebarBottomIcon : SidebarRightIcon
+															}
+															className="size-4"
+														/>
+														<span className="text-sm font-normal truncate">
+															Start Generating Course
+														</span>
+													</Button>
+												</EmptyContent>
 											</EmptyHeader>
 										</Empty>
 									)}
