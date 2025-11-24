@@ -5,7 +5,6 @@
 
 import { abortStream } from "@convex-dev/agent";
 import { v } from "convex/values";
-import { v7 as uuidv7 } from "uuid";
 import { api, components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
@@ -16,6 +15,7 @@ import {
 	chatStatusValidator,
 	learningPreferenceValidator,
 } from "../schema";
+import { createChatService } from "./services";
 
 /**
  * Create a new chat
@@ -29,22 +29,13 @@ export const createChat = mutation({
 		summary: v.optional(v.string()),
 	},
 	handler: async (ctx, { agentType, userId, type, title, summary }) => {
-		const firstTitle = "New Chat";
-		const agent = createAgent({ agentType });
-		const { threadId } = await agent.createThread(ctx, {
+		return await createChatService(ctx, {
+			agentType,
 			userId,
-			title: title ?? firstTitle,
-			summary: summary ?? "",
-		});
-		const roomId = uuidv7();
-		const _chatId = await ctx.db.insert("chats", {
-			userId,
-			threadId,
 			type,
-			status: "ready",
-			uuid: roomId,
+			title,
+			summary,
 		});
-		return { id: _chatId, threadId, roomId };
 	},
 });
 
