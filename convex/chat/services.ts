@@ -34,7 +34,7 @@ export async function createChatService(
 		userId,
 		threadId,
 		type,
-		status: "ready",
+		status: { type: "ready", message: "Ready to start conversation" },
 		uuid: roomId,
 	});
 	return { id: _chatId, threadId, roomId };

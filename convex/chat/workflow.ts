@@ -27,8 +27,7 @@ export const createLearningWorkflow = workflow.define({
 		await Promise.all([
 			step.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId: args.threadId,
-				status: "streaming",
-				statusMessage: "Generating learning plan",
+				status: { type: "streaming", message: "Generating learning plan" },
 			}),
 			step.runMutation(internal.plan.mutations.updatePlanStatus, {
 				planId: lastPlanWithMetadata.plan._id,
@@ -56,8 +55,7 @@ export const createLearningWorkflow = workflow.define({
 
 		await step.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId: args.threadId,
-			status: "streaming",
-			statusMessage: "Performing web search",
+			status: { type: "streaming", message: "Performing web search" },
 		});
 
 		// Step 3: Perform web search to find educational resources
@@ -76,8 +74,7 @@ export const createLearningWorkflow = workflow.define({
 
 		await step.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId: args.threadId,
-			status: "streaming",
-			statusMessage: "Generating learning list",
+			status: { type: "streaming", message: "Generating learning list" },
 		});
 
 		// Step 4: Generate the learning list from search results
@@ -96,8 +93,7 @@ export const createLearningWorkflow = workflow.define({
 
 		await step.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId: args.threadId,
-			status: "streaming",
-			statusMessage: "Streaming learning content",
+			status: { type: "streaming", message: "Streaming learning content" },
 		});
 
 		// Step 5: Stream generate the detailed learning content
@@ -117,7 +113,7 @@ export const createLearningWorkflow = workflow.define({
 		await Promise.all([
 			step.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId: args.threadId,
-				status: "ready",
+				status: { type: "ready", message: "Ready" },
 			}),
 			step.runMutation(internal.plan.mutations.updatePlanStatus, {
 				planId: lastPlanWithMetadata.plan._id,

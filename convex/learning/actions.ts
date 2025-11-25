@@ -190,7 +190,7 @@ export const streamGenerateLearningContent = internalAction({
 					await Promise.all([
 						ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 							threadId,
-							status: "ready",
+							status: { type: "ready", message: "Ready" },
 						}),
 						ctx.runMutation(
 							api.learning.mutations.updateLearningChatMetadataPlanStatus,
@@ -240,8 +240,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: "streaming",
-			statusMessage: "Waiting for user's response",
+			status: { type: "streaming", message: "Waiting for user's response" },
 		});
 
 		const streamer = new DeltaStreamer(
@@ -285,7 +284,10 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 				streamer.fail(JSON.stringify(error));
 				await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 					threadId,
-					status: "error",
+					status: {
+						type: "error",
+						message: "Failed to generate greeting message",
+					},
 				});
 			},
 			abortSignal: streamer.abortController.signal,

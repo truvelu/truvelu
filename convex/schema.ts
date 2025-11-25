@@ -33,10 +33,26 @@ export const agentTypeValidator = v.union(
 );
 
 export const chatStatusValidator = v.union(
-	v.literal("ready"),
-	v.literal("submitted"),
-	v.literal("streaming"),
-	v.literal("error"),
+	v.object({
+		type: v.literal("ready"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("submitted"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("streaming"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("error"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("aborted"),
+		message: v.optional(v.string()),
+	}),
 );
 
 export const activeStatusValidator = v.union(
@@ -90,7 +106,6 @@ export default defineSchema({
 		threadId: v.string(),
 		userId: v.string(),
 		type: SectionTypeValidator,
-		statusMessage: v.optional(v.string()),
 		status: v.optional(chatStatusValidator),
 	})
 		.index("by_threadId", ["threadId"])

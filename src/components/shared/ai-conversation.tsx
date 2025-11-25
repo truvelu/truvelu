@@ -175,24 +175,28 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		mutationFn: useConvexMutation(api.chat.mutations.abortStreamByOrder),
 	});
 
-	const chatStatus = useMemo(() => chat?.status ?? "ready", [chat]);
+	const chatStatus = useMemo(() => chat?.status, [chat]);
 	const discussionStatus = useMemo(
-		() => chatByThreadId?.status ?? "ready",
+		() => chatByThreadId?.status,
 		[chatByThreadId],
 	);
 
 	const roomStatus = useMemo(
-		() => (isMainThread ? chatStatus : discussionStatus),
+		() =>
+			(isMainThread ? chatStatus : discussionStatus) ?? {
+				type: "ready",
+				message: "Ready to start conversation",
+			},
 		[isMainThread, discussionStatus, chatStatus],
 	);
 
 	const chatStatusMessage = useMemo(
-		() => chat?.statusMessage ?? "",
-		[chat?.statusMessage],
+		() => roomStatus?.message ?? "",
+		[roomStatus?.message],
 	);
 	const discussionStatusMessage = useMemo(
-		() => chatByThreadId?.statusMessage ?? "",
-		[chatByThreadId?.statusMessage],
+		() => chatByThreadId?.status?.message ?? "",
+		[chatByThreadId?.status?.message],
 	);
 	const roomStatusMessage = useMemo(
 		() => (isMainThread ? chatStatusMessage : discussionStatusMessage),
@@ -213,8 +217,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	);
 	const isInputStatusLoading = useMemo(
 		() =>
-			roomStatus === "submitted" ||
-			roomStatus === "streaming" ||
+			roomStatus?.type === "submitted" ||
+			roomStatus?.type === "streaming" ||
 			!!messageThatIsStreaming,
 		[roomStatus, messageThatIsStreaming],
 	);
@@ -462,7 +466,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 												type={type}
 												isInputStatusLoading={isInputStatusLoading}
 											/>
-											{roomStatus === "streaming" &&
+											{roomStatus?.type === "streaming" &&
 												!messageThatIsStreamingTextPartHasValue &&
 												messageArray.length - 1 === index && (
 													<div className="flex items-center justify-start flex-1 h-9">

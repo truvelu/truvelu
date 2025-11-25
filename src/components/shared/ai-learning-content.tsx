@@ -93,11 +93,19 @@ const AiLearningContentResult = memo(() => {
 		mutationFn: useConvexMutation(api.chat.mutations.abortStreamByOrder),
 	});
 
-	const chatStatus = useMemo(() => chat?.status ?? "ready", [chat]);
+	const chatStatus = useMemo(
+		() => chat?.status ?? { type: "ready", message: "Ready" },
+		[chat],
+	);
+
+	const chatStatusType = useMemo(
+		() => chatStatus?.type ?? "ready",
+		[chatStatus?.type],
+	);
 
 	const chatStatusMessage = useMemo(
-		() => chat?.statusMessage ?? "",
-		[chat?.statusMessage],
+		() => chatStatus?.message ?? "",
+		[chatStatus?.message],
 	);
 
 	const messageThatIsStreaming = useMemo(
@@ -114,10 +122,10 @@ const AiLearningContentResult = memo(() => {
 	);
 	const isInputStatusLoading = useMemo(
 		() =>
-			chatStatus === "submitted" ||
-			chatStatus === "streaming" ||
+			chatStatusType === "submitted" ||
+			chatStatusType === "streaming" ||
 			!!messageThatIsStreaming,
-		[chatStatus, messageThatIsStreaming],
+		[chatStatusType, messageThatIsStreaming],
 	);
 	const messageThatIsStreamingTextPartHasValue = useMemo(() => {
 		const parts = messageThatIsStreaming?.parts ?? [];
@@ -196,7 +204,7 @@ const AiLearningContentResult = memo(() => {
 												type="thread"
 												isInputStatusLoading={isInputStatusLoading}
 											/>
-											{chatStatus === "streaming" &&
+											{chatStatusType === "streaming" &&
 												!messageThatIsStreamingTextPartHasValue &&
 												messageArray.length - 1 === index && (
 													<div className="flex items-center justify-start flex-1 h-9">

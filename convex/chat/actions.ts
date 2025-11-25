@@ -541,7 +541,7 @@ export const streamAsync = internalAction({
 		// Update status to streaming
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: "streaming",
+			status: { type: "streaming", message: "Generating content..." },
 		});
 
 		// Type "ask": Just use regular LLM without tools
@@ -561,7 +561,7 @@ export const streamAsync = internalAction({
 			await askResult?.consumeStream();
 			await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
-				status: "ready",
+				status: { type: "ready", message: "Ready" },
 			});
 			return;
 		}
@@ -591,7 +591,7 @@ export const streamAsync = internalAction({
 
 			await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
-				status: "ready",
+				status: { type: "ready", message: "Ready" },
 			});
 		}
 	},
@@ -645,8 +645,10 @@ export const streamUserLearningPreference = internalAction({
 			}),
 			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
-				status: "error",
-				statusMessage: "Failed to generate learning content.",
+				status: {
+					type: "error",
+					message: "Failed to generate learning content.",
+				},
 			}),
 		]);
 
@@ -677,8 +679,10 @@ export const streamUserLearningPreference = internalAction({
 				streamer.fail(JSON.stringify(error));
 				await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 					threadId,
-					status: "error",
-					statusMessage: "Failed to generate learning content.",
+					status: {
+						type: "error",
+						message: "Failed to generate learning content.",
+					},
 				});
 			},
 			abortSignal: streamer.abortController.signal,

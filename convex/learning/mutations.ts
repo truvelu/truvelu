@@ -53,7 +53,7 @@ export const createLearningPanel = mutation({
 			uuid: uuidv7(),
 			threadId,
 			userId,
-			status: "ready",
+			status: { type: "ready", message: "Ready to start conversation" },
 			type: "plan",
 		});
 
@@ -127,7 +127,7 @@ export const createLearningContent = mutation({
 				uuid: uuidv7(),
 				threadId,
 				userId,
-				status: "ready",
+				status: { type: "ready", message: "Ready to start conversation" },
 				type: "content",
 			});
 

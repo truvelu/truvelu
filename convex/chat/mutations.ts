@@ -46,9 +46,8 @@ export const patchChatStatus = internalMutation({
 	args: {
 		threadId: v.string(),
 		status: chatStatusValidator,
-		statusMessage: v.optional(v.string()),
 	},
-	handler: async (ctx, { threadId, status, statusMessage }) => {
+	handler: async (ctx, { threadId, status }) => {
 		const chat = await ctx.db
 			.query("chats")
 			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
@@ -58,7 +57,7 @@ export const patchChatStatus = internalMutation({
 			throw new Error("Chat not found");
 		}
 
-		await ctx.db.patch(chat._id, { status, statusMessage });
+		await ctx.db.patch(chat._id, { status });
 	},
 });
 
@@ -80,7 +79,7 @@ export const sendChatMessage = mutation({
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: "submitted",
+			status: { type: "submitted", message: "Sending message..." },
 		});
 
 		const { messageId, message } = await agent.saveMessage(ctx, {
@@ -132,7 +131,10 @@ export const sendLearningPreference = mutation({
 		await Promise.all([
 			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
-				status: "submitted",
+				status: {
+					type: "submitted",
+					message: "Sending learning preference...",
+				},
 			}),
 			ctx.runMutation(
 				api.plan.mutations.upsertPlanMetadataLearningRequirements,
@@ -173,7 +175,7 @@ export const abortStreamByOrder = mutation({
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: "ready",
+			status: { type: "aborted", message: "Aborted stream" },
 		});
 
 		return isAborted;
