@@ -46,6 +46,10 @@ export const chatStatusValidator = v.union(
 		message: v.optional(v.string()),
 	}),
 	v.object({
+		type: v.literal("need_approval"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
 		type: v.literal("error"),
 		message: v.optional(v.string()),
 	}),

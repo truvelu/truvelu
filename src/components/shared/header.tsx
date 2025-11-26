@@ -70,7 +70,7 @@ export const Header = () => {
 							variant="ghost"
 							className="rounded-full has-[>svg]:p-0 size-7 cursor-pointer"
 						>
-							<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
+							<SharedIcon icon={MoreHorizontalIcon} className="size-5" />
 						</Button>
 
 						<Separator
@@ -85,7 +85,7 @@ export const Header = () => {
 						>
 							<SharedIcon
 								icon={isMobile ? SidebarBottomIcon : SidebarRightIcon}
-								className="size-4"
+								className="size-5"
 							/>
 						</Button>
 					</div>

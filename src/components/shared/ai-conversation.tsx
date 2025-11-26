@@ -502,7 +502,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 					<ContainerWithMargin>
 						<ContainerWithMaxWidth className={cn("pt-1 pb-2 flex-1")}>
 							{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
-								<AiLearningPreferenceInput threadId={threadId} />
+								<AiLearningPreferenceInput
+									threadId={threadId}
+									isInputStatusLoading={isInputStatusLoading}
+								/>
 							) : (
 								<AiPromptInput
 									type={type}

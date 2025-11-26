@@ -168,13 +168,13 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 						<>
 							{canvas.type === CanvasType.THREAD && (
 								<div className="size-5 flex items-center justify-center">
-									<SharedIcon icon={GridIcon} className="size-3.5" />
+									<SharedIcon icon={GridIcon} className="size-4" />
 								</div>
 							)}
 
 							{canvas.type === CanvasType.LEARNING_CREATION && (
 								<div className="size-5 flex items-center justify-center">
-									<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
+									<SharedIcon icon={TaskDaily02Icon} className="size-4" />
 								</div>
 							)}
 
@@ -366,7 +366,7 @@ const AiCanvasHeader = memo(
 							size="icon"
 							className="cursor-pointer rounded-md size-7"
 						>
-							<SharedIcon icon={Add01Icon} className="size-4" />
+							<SharedIcon icon={Add01Icon} className="size-5" />
 						</Button>
 					)}
 
@@ -379,7 +379,7 @@ const AiCanvasHeader = memo(
 							>
 								<SharedIcon
 									icon={isLearningRoute ? Clock02Icon : GridIcon}
-									className="size-3.5"
+									className="size-5"
 								/>
 							</Button>
 						</CanvasTabTriggerWithActiveState>
@@ -394,7 +394,7 @@ const AiCanvasHeader = memo(
 								setOpenCanvas(roomId, false);
 							}}
 						>
-							<SharedIcon icon={Cancel01Icon} className="size-4" />
+							<SharedIcon icon={Cancel01Icon} className="size-5" />
 						</Button>
 					) : (
 						<DropdownMenu
@@ -408,7 +408,7 @@ const AiCanvasHeader = memo(
 									size="icon"
 									className="cursor-pointer rounded-md size-7"
 								>
-									<SharedIcon icon={MoreHorizontalIcon} className="size-4" />
+									<SharedIcon icon={MoreHorizontalIcon} className="size-5" />
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent

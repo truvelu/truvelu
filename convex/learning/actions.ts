@@ -240,7 +240,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: { type: "streaming", message: "Waiting for user's response" },
+			status: { type: "need_approval", message: "Waiting for user's response" },
 		});
 
 		const streamer = new DeltaStreamer(
@@ -266,7 +266,7 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 		const response = streamText({
 			model: titleGenerationAgent.options.languageModel,
 			prompt:
-				"Greet the learner in a friendly and engaging way. After that ask the user about learning preferences. The learning preferences form can be accessed in the bottom of the screen. Make the output maximum in 2 sentence.",
+				"Greet the learner in a friendly and engaging way. Ask the user about learning preferences that can be accessed in the bottom of the screen. Make the greetings message output maximum in 30 words.",
 			onFinish: async (completion) => {
 				const text = completion.text;
 				await contentGenerationAgent.saveMessage(ctx, {

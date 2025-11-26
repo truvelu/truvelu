@@ -248,7 +248,7 @@ function AiLearning() {
 															icon={
 																isMobile ? SidebarBottomIcon : SidebarRightIcon
 															}
-															className="size-4"
+															className="size-5"
 														/>
 														<span className="text-sm font-normal truncate">
 															Start Generating Course

@@ -14,6 +14,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
 import {
@@ -28,7 +29,7 @@ import { api } from "convex/_generated/api";
 import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
 import { useState } from "react";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Skeleton } from "../ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ModeToggle } from "./mode-toggle";
@@ -86,22 +87,37 @@ const ModalNavUserSettings = ({
 	isOpenModalSettings: boolean;
 	onValueChangeModalSettings: (open: boolean) => void;
 }) => {
+	const isMobile = useIsMobile();
+
 	return (
 		<Dialog
 			open={isOpenModalSettings}
 			onOpenChange={onValueChangeModalSettings}
 		>
 			<DialogContent
-				className="col-auto col-start-2 row-auto row-start-2 h-full w-full text-start rounded-2xl flex flex-col focus:outline-hidden overflow-hidden max-h-[85vh] max-md:min-h-[60vh] md:h-[600px] md:max-w-[680px] p-0"
+				className="gap-0 col-auto col-start-2 row-auto row-start-2 h-full w-full text-start rounded-2xl flex flex-col focus:outline-hidden overflow-hidden max-h-[85vh] max-md:min-h-[60vh] md:h-[600px] md:max-w-[680px] p-0"
 				showCloseButton={false}
 			>
+				<DialogHeader className="flex-row h-header md:hidden p-2.5 pl-4 text-base items-center justify-between border-b border-border">
+					<DialogTitle className="text-left font-normal">Settings</DialogTitle>
+
+					<Button
+						variant="ghost"
+						size="icon"
+						className="rounded-lg cursor-pointer hover:bg-accent-foreground/10"
+						onClick={() => onValueChangeModalSettings(false)}
+					>
+						<SharedIcon icon={Cancel01Icon} />
+					</Button>
+				</DialogHeader>
+
 				<div className="grow overflow-y-auto">
 					<Tabs
-						defaultValue="General"
-						className="flex h-full flex-col md:flex-row gap-0"
-						orientation="vertical"
+						defaultValue="general"
+						className="flex md:h-full flex-col md:flex-row gap-0"
+						orientation={isMobile ? "horizontal" : "vertical"}
 					>
-						<TabsList className="p-0 flex flex-1 justify-start flex-row flex-wrap select-none max-md:overflow-x-auto max-md:border-b max-md:p-1.5 md:max-w-[210px] md:min-w-[180px] md:flex-col rounded-none h-full w-full border-0 bg-accent">
+						<TabsList className="p-0 flex flex-1 h-full justify-start flex-row flex-wrap select-none max-md:overflow-x-auto max-md:border-b max-md:p-1.5 md:max-w-[210px] md:min-w-[180px] md:flex-col rounded-none w-full border-0 bg-accent border-border">
 							<div className="py-3 px-2.5 max-md:hidden w-full">
 								<Button
 									variant="ghost"
@@ -115,7 +131,7 @@ const ModalNavUserSettings = ({
 
 							<TabsTrigger
 								value="general"
-								className="flex-none w-[calc(100%-1.25rem)] h-9 bg-primary-foreground shadow-none! border-none font-normal flex gap-1.5 justify-start"
+								className="flex-none w-auto md:w-[calc(100%-1.25rem)] h-9 bg-primary-foreground shadow-none! border-none font-normal flex gap-1.5 justify-start"
 							>
 								<SharedIcon icon={Settings02Icon} className="size-5" />
 								General
