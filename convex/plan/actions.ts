@@ -9,11 +9,10 @@ import type { Doc } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
 
 /**
- * Get the last plan with metadata details by threadId
- * This is a reusable action that ensures metadata exists and returns full details
- * Use this in AI tools to avoid duplication
+ * Get the last plan with all details by threadId
+ * This is a reusable action that returns full details including embedded learningRequirements
  */
-export const getLastPlanWithMetadataByThreadId = internalAction({
+export const getLastPlanWithDetailsByThreadId = internalAction({
 	args: {
 		threadId: v.string(),
 		userId: v.string(),
@@ -23,12 +22,9 @@ export const getLastPlanWithMetadataByThreadId = internalAction({
 		args,
 	): Promise<{
 		plan: Doc<"plans">;
-		metadata: Doc<"planMetadata"> & {
-			detail: {
-				learningRequirement?: Doc<"planMetadataLearningRequirements"> | null;
-				planMetadataSearchQueries?: Doc<"planMetadataSearchQueries">[];
-				planMetadataSearchResults?: Doc<"planMetadataSearchResults">[];
-			};
+		detail: {
+			learningRequirement: Doc<"plans">["learningRequirements"];
+			planSearchResults: Doc<"planSearchResults">[];
 		};
 	}> => {
 		// Get the last plan
@@ -40,28 +36,22 @@ export const getLastPlanWithMetadataByThreadId = internalAction({
 			},
 		);
 
-		// Ensure planMetadata exists
-		await ctx.runMutation(api.plan.mutations.createOrGetPlanMetadata, {
-			planId: lastPlan._id,
-			userId: args.userId,
-		});
-
-		// Get full metadata details
-		const planMetadataDetail = await ctx.runQuery(
-			api.plan.queries.getPlanMetadataDetail,
+		// Get search results
+		const planSearchResults: Doc<"planSearchResults">[] = await ctx.runQuery(
+			api.plan.queries.getPlanSearchResults,
 			{
 				planId: lastPlan._id,
 				userId: args.userId,
 			},
 		);
 
-		if (!planMetadataDetail.data) {
-			throw new Error("Plan metadata detail not found");
-		}
-
 		return {
 			plan: lastPlan,
-			metadata: planMetadataDetail.data,
+			detail: {
+				// learningRequirements is now embedded in the plan
+				learningRequirement: lastPlan.learningRequirements,
+				planSearchResults,
+			},
 		};
 	},
 });

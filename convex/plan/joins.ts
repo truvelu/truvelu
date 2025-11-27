@@ -1,5 +1,5 @@
 /**
- * Join queries for plan with related tables (planItems, planMetadata)
+ * Join queries for plan with related tables (planItems, planSearchResults)
  * Single responsibility: Combined read operations across plan relationships
  */
 
@@ -158,7 +158,7 @@ export const batchGetByChatIds = internalQuery({
 });
 
 /**
- * Delete plan and all its items
+ * Delete plan and all its items and search results
  */
 export const deleteById = internalMutation({
 	args: {
@@ -174,12 +174,27 @@ export const deleteById = internalMutation({
 			)
 			.collect();
 
-		await Promise.all(items.map((item) => ctx.db.delete(item._id)));
+		// Fetch and delete all search results
+		const searchResults = await ctx.db
+			.query("planSearchResults")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
+
+		await Promise.all([
+			...items.map((item) => ctx.db.delete(item._id)),
+			...searchResults.map((result) => ctx.db.delete(result._id)),
+		]);
 
 		// Delete the plan
 		await ctx.db.delete(args.planId);
 
-		return { deletedCount: 1, itemsDeletedCount: items.length };
+		return {
+			deletedCount: 1,
+			itemsDeletedCount: items.length,
+			searchResultsDeletedCount: searchResults.length,
+		};
 	},
 });
 
@@ -206,10 +221,10 @@ export const batchDeleteByChatIds = internalMutation({
 		const flatPlans = planResults.flat();
 
 		if (flatPlans.length === 0) {
-			return { deletedCount: 0, itemsDeletedCount: 0 };
+			return { deletedCount: 0, itemsDeletedCount: 0, searchResultsDeletedCount: 0 };
 		}
 
-		// Fetch all items for these plans
+		// Fetch all items and search results for these plans
 		const itemPromises = flatPlans.map((plan) =>
 			ctx.db
 				.query("planItems")
@@ -219,11 +234,28 @@ export const batchDeleteByChatIds = internalMutation({
 				.collect(),
 		);
 
-		const itemResults = await Promise.all(itemPromises);
-		const flatItems = itemResults.flat();
+		const searchResultPromises = flatPlans.map((plan) =>
+			ctx.db
+				.query("planSearchResults")
+				.withIndex("by_planId_and_userId", (q) =>
+					q.eq("planId", plan._id).eq("userId", args.userId),
+				)
+				.collect(),
+		);
 
-		// Delete all items first
-		await Promise.all(flatItems.map((item) => ctx.db.delete(item._id)));
+		const [itemResults, searchResultResults] = await Promise.all([
+			Promise.all(itemPromises),
+			Promise.all(searchResultPromises),
+		]);
+
+		const flatItems = itemResults.flat();
+		const flatSearchResults = searchResultResults.flat();
+
+		// Delete all items and search results first
+		await Promise.all([
+			...flatItems.map((item) => ctx.db.delete(item._id)),
+			...flatSearchResults.map((result) => ctx.db.delete(result._id)),
+		]);
 
 		// Delete all plans
 		await Promise.all(flatPlans.map((plan) => ctx.db.delete(plan._id)));
@@ -231,6 +263,7 @@ export const batchDeleteByChatIds = internalMutation({
 		return {
 			deletedCount: flatPlans.length,
 			itemsDeletedCount: flatItems.length,
+			searchResultsDeletedCount: flatSearchResults.length,
 		};
 	},
 });

@@ -57,7 +57,9 @@ export const getDiscussionsByRoomId = query({
 			// Get all chats for this user (includes both main chats and discussion chats)
 			ctx.db
 				.query("chats")
-				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.withIndex("by_type_and_userId", (q) =>
+					q.eq("type", "discussion").eq("userId", args.userId),
+				)
 				.collect(),
 			ctx.db
 				.query("chats")
@@ -102,8 +104,7 @@ export const getDiscussionsByRoomId = query({
 			.filter((thread) => {
 				// Exclude discussions (canvas chats) from main chat list
 				return (
-					thread.data !== undefined &&
-					discussionChatIds.has(thread.data._id)
+					thread.data !== undefined && discussionChatIds.has(thread.data._id)
 				);
 			});
 
@@ -113,4 +114,3 @@ export const getDiscussionsByRoomId = query({
 		};
 	},
 });
-

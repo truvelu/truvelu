@@ -9,7 +9,7 @@ import { api, components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
 import {
-	SectionTypeValidator,
+	chatTypeValidator,
 	agentTypeValidator,
 	chatModeValidator,
 	chatStatusValidator,
@@ -24,7 +24,7 @@ export const createChat = mutation({
 	args: {
 		agentType: agentTypeValidator,
 		userId: v.string(),
-		type: SectionTypeValidator,
+		type: chatTypeValidator,
 		title: v.optional(v.string()),
 		summary: v.optional(v.string()),
 	},
@@ -109,6 +109,9 @@ export const sendChatMessage = mutation({
 	},
 });
 
+/**
+ * Send learning preference and update plan's embedded learningRequirements
+ */
 export const sendLearningPreference = mutation({
 	args: {
 		threadId: v.string(),
@@ -116,7 +119,7 @@ export const sendLearningPreference = mutation({
 		payload: learningPreferenceValidator,
 	},
 	handler: async (ctx, { threadId, userId, payload }) => {
-		const getLastPlan = await ctx.runQuery(
+		const lastPlan = await ctx.runQuery(
 			api.plan.queries.getLastPlanByThreadId,
 			{
 				threadId,
@@ -124,27 +127,28 @@ export const sendLearningPreference = mutation({
 			},
 		);
 
-		if (!getLastPlan) {
+		if (!lastPlan) {
 			throw new Error("Last plan not found");
 		}
 
-		await Promise.all([
-			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
-				threadId,
-				status: {
-					type: "submitted",
-					message: "Sending learning preference...",
-				},
-			}),
-			ctx.runMutation(
-				api.plan.mutations.upsertPlanMetadataLearningRequirements,
-				{
-					planId: getLastPlan._id,
-					userId,
-					data: payload,
-				},
-			),
-		]);
+		// Update the plan's embedded learningRequirements
+		await ctx.db.patch(lastPlan._id, {
+			learningRequirements: {
+				topic: payload.topic ?? undefined,
+				userLevel: payload.userLevel ?? undefined,
+				goal: payload.goal ?? undefined,
+				duration: payload.duration ?? undefined,
+				other: payload.other,
+			},
+		});
+
+		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
+			threadId,
+			status: {
+				type: "submitted",
+				message: "Sending learning preference...",
+			},
+		});
 
 		await ctx.scheduler.runAfter(
 			0,

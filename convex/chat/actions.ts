@@ -8,7 +8,7 @@ import { generateObject, generateText, streamText } from "ai";
 import { v } from "convex/values";
 import z from "zod";
 import { api, components, internal } from "../_generated/api";
-import type { Doc, Id } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import { action, internalAction } from "../_generated/server";
 import { toolResultCreator } from "../_helpers";
 import { createAgent } from "../agent";
@@ -111,28 +111,24 @@ export const generateSearchQueriesTool = internalAction({
 	handler: async (ctx, { threadId, userId, agentType }): Promise<string> => {
 		const agent = createAgent({ agentType });
 
-		// Get plan with metadata details using reusable function
+		// Get plan with details using the new action
 		const planData: {
 			plan: Doc<"plans">;
-			metadata: Doc<"planMetadata"> & {
-				detail: {
-					learningRequirement?: Doc<"planMetadataLearningRequirements"> | null;
-					planMetadataSearchQueries?: Doc<"planMetadataSearchQueries">[];
-					planMetadataSearchResults?: Doc<"planMetadataSearchResults">[];
-				};
+			detail: {
+				learningRequirement: Doc<"plans">["learningRequirements"];
+				planSearchResults: Doc<"planSearchResults">[];
 			};
 		} = await ctx.runAction(
-			internal.plan.actions.getLastPlanWithMetadataByThreadId,
+			internal.plan.actions.getLastPlanWithDetailsByThreadId,
 			{ threadId, userId },
 		);
-		const plan = planData.plan;
-		const metadata = planData.metadata;
+		const learningRequirement = planData.detail.learningRequirement;
 
 		const searchQueriesObject = await generateObject({
 			model: agent.options.languageModel,
 			system: agent.options.instructions,
 			prompt: `
-				<metadata>${JSON.stringify(metadata?.detail?.learningRequirement)}</metadata>
+				<metadata>${JSON.stringify(learningRequirement)}</metadata>
 				<the-ask>Generate a search query for the user's learning plan based on the metadata.</the-ask>`,
 			schema: z.object({
 				queriesOptions: z
@@ -156,15 +152,10 @@ export const generateSearchQueriesTool = internalAction({
 			}),
 		});
 
-		await ctx.runMutation(api.plan.mutations.upsertPlanMetadataSearchQuery, {
-			planId: plan._id,
-			userId,
-			data: searchQueriesObject.object.queriesOptions,
-		});
-
+		// We'll save the actual search results when we run the web search
 		const result = JSON.stringify({
 			data: {
-				planMetadataSearchQuery: searchQueriesObject?.object,
+				searchQueries: searchQueriesObject?.object,
 			},
 			message:
 				"Search queries generated successfully. Next continue to call the webSearch tool to find relevant, high-quality educational resources about the search query.",
@@ -199,25 +190,36 @@ export const webSearchTool = internalAction({
 			throw new Error("EXA_API_KEY environment variable not set");
 		}
 
-		// Get plan with metadata details using reusable function
+		// Get plan with details
 		const planData: {
 			plan: Doc<"plans">;
-			metadata: Doc<"planMetadata"> & {
-				detail: {
-					learningRequirement?: Doc<"planMetadataLearningRequirements"> | null;
-					planMetadataSearchQueries?: Doc<"planMetadataSearchQueries">[];
-					planMetadataSearchResults?: Doc<"planMetadataSearchResults">[];
-				};
+			detail: {
+				learningRequirement: Doc<"plans">["learningRequirements"];
+				planSearchResults: Doc<"planSearchResults">[];
 			};
 		} = await ctx.runAction(
-			internal.plan.actions.getLastPlanWithMetadataByThreadId,
+			internal.plan.actions.getLastPlanWithDetailsByThreadId,
 			{ threadId, userId },
 		);
 		const plan = planData.plan;
-		const metadata = planData.metadata;
+		const learningRequirement = planData.detail.learningRequirement;
 
-		const planMetadataSearchQueries =
-			metadata?.detail?.planMetadataSearchQueries ?? [];
+		// Generate search queries based on learning requirements
+		const searchQueriesObject = await generateObject({
+			model: agent.options.languageModel,
+			system: agent.options.instructions,
+			prompt: `
+				<metadata>${JSON.stringify(learningRequirement)}</metadata>
+				<the-ask>Generate search queries for the user's learning plan.</the-ask>`,
+			schema: z.object({
+				queriesOptions: z.array(
+					z.object({
+						query: z.string(),
+						numResults: z.number().default(3),
+					}),
+				),
+			}),
+		});
 
 		try {
 			// Dynamic import to avoid bundling issues
@@ -225,88 +227,64 @@ export const webSearchTool = internalAction({
 			const exa = new Exa(exaApiKey);
 
 			const searchResultsToSave: Array<{
-				planMetadataSearchQueryId: Id<"planMetadataSearchQueries">;
-				title?: string | null;
-				url?: string | null;
-				image?: string | null;
-				content?: string | null;
-				publishedDate?: string | null;
-				score?: number | null;
+				query?: string;
+				title?: string;
+				url?: string;
+				image?: string;
+				content?: string;
+				publishedDate?: string;
+				score?: number;
 			}> = [];
 
-			for (const planMetadataSearchQuery of planMetadataSearchQueries) {
-				const { results } = await exa.search(planMetadataSearchQuery?.query, {
+			for (const searchQuery of searchQueriesObject.object.queriesOptions) {
+				const { results } = await exa.search(searchQuery.query, {
 					useAutoprompt: true,
-					numResults: planMetadataSearchQuery?.other?.numResults ?? 3,
+					numResults: searchQuery.numResults ?? 3,
 				});
-				const processedResults = results.map(
-					(result: {
-						title: string | null;
-						url: string | null;
-						image?: string | null;
-						publishedDate?: string | null;
-						score?: number | null;
-					}) => ({
-						planMetadataSearchQueryId: planMetadataSearchQuery._id,
-						title: result.title,
-						url: result.url,
-						image: result.image ?? null,
-						content: null,
-						publishedDate: result.publishedDate ?? null,
-						score: result.score ?? null,
-					}),
-				);
+
+				const processedResults = results.map((result) => ({
+					query: searchQuery.query ?? "",
+					title: result.title ?? "",
+					url: result.url ?? "",
+					image: result.image ?? "",
+					content: result.text ?? "",
+					publishedDate: result.publishedDate ?? "",
+					score: result.score ?? 0,
+				}));
+
 				searchResultsToSave.push(...processedResults);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
-
-				// Save search results to database
-				await ctx.runMutation(
-					api.plan.mutations.upsertPlanMetadataSearchResult,
-					{
-						planId: plan._id,
-						userId,
-						data: {
-							searchResult: searchResultsToSave,
-							other: {},
-						},
-					},
-				);
-
-				const result = JSON.stringify({
-					data: searchResultsToSave.map((r) => ({
-						title: r.title,
-						url: r.url,
-						image: r.image,
-					})),
-					message: "Web search is done. Continue to generate learning list.",
-				});
-
-				await agent.saveMessages(ctx, {
-					threadId,
-					messages: toolResultCreator("webSearch", result),
-					skipEmbeddings: true,
-				});
-
-				return result;
 			}
+
+			// Save search results to database using the new consolidated table
+			await ctx.runMutation(api.plan.mutations.upsertPlanSearchResults, {
+				planId: plan._id,
+				userId,
+				data: searchResultsToSave,
+			});
+
+			const result = JSON.stringify({
+				data: searchResultsToSave.map((r) => ({
+					title: r.title,
+					url: r.url,
+					image: r.image,
+				})),
+				message: "Web search is done. Continue to generate learning list.",
+			});
+
+			await agent.saveMessages(ctx, {
+				threadId,
+				messages: toolResultCreator("webSearch", result),
+				skipEmbeddings: true,
+			});
+
+			return result;
 		} catch (error) {
 			console.error("Exa search error:", error);
 			throw new Error(
 				`Web search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 			);
 		}
-
-		const result = JSON.stringify({
-			message: "No search queries found.",
-		});
-
-		await agent.saveMessages(ctx, {
-			threadId,
-			messages: toolResultCreator("webSearch", result),
-			skipEmbeddings: true,
-		});
-
-		return result;
 	},
 });
 
@@ -323,24 +301,20 @@ export const generateLearningListTool = internalAction({
 	handler: async (ctx, { threadId, userId, agentType }): Promise<string> => {
 		const agent = createAgent({ agentType });
 
-		// Get plan with metadata details using reusable function
+		// Get plan with details
 		const planData: {
 			plan: Doc<"plans">;
-			metadata: Doc<"planMetadata"> & {
-				detail: {
-					learningRequirement?: Doc<"planMetadataLearningRequirements"> | null;
-					planMetadataSearchQueries?: Doc<"planMetadataSearchQueries">[];
-					planMetadataSearchResults?: Doc<"planMetadataSearchResults">[];
-				};
+			detail: {
+				learningRequirement: Doc<"plans">["learningRequirements"];
+				planSearchResults: Doc<"planSearchResults">[];
 			};
 		} = await ctx.runAction(
-			internal.plan.actions.getLastPlanWithMetadataByThreadId,
+			internal.plan.actions.getLastPlanWithDetailsByThreadId,
 			{ threadId, userId },
 		);
-		const metadata = planData.metadata;
 
-		const learningRequirement = metadata?.detail?.learningRequirement;
-		const searchResults = metadata?.detail?.planMetadataSearchResults;
+		const learningRequirement = planData.detail.learningRequirement;
+		const searchResults = planData.detail.planSearchResults;
 
 		const learningRequirementContent = `
 			<topic>${learningRequirement?.topic}<topic>
@@ -348,8 +322,9 @@ export const generateLearningListTool = internalAction({
 			<goal>${learningRequirement?.goal}<goal>
 			<duration>${learningRequirement?.duration}<duration>
 			<other>${JSON.stringify(learningRequirement?.other)}<other>`;
+
 		const searchResultsContent = searchResults?.map(
-			(result: Doc<"planMetadataSearchResults">, idx: number) =>
+			(result: Doc<"planSearchResults">, idx: number) =>
 				`<search_result_${idx}>
 			<title>${result.title}</title>
 			<url>${result.url}</url>
@@ -415,22 +390,23 @@ export const generateLearningListTool = internalAction({
 			throw new Error("Chat not found");
 		}
 
-		const learningChat = await ctx.runQuery(
-			api.learning.queries.getLearningChatByChatId,
+		// Get learning content by chat ID (using the new query)
+		const learningContent = await ctx.runQuery(
+			api.learning.queries.getLearningContentByChatId,
 			{ chatId: chat._id, userId },
 		);
 
-		if (!learningChat) {
-			throw new Error("Learning chat not found");
+		if (!learningContent) {
+			throw new Error("Learning content not found");
 		}
 
 		await Promise.all([
 			ctx.runMutation(api.learning.mutations.updateLearningTitle, {
-				learningId: learningChat.learningId,
+				learningId: learningContent.learningId,
 				title: learningTitleGeneratext.text,
 			}),
 			ctx.runMutation(api.learning.mutations.createLearningContent, {
-				learningId: learningChat.learningId,
+				learningId: learningContent.learningId,
 				userId,
 				data: learningListGenerateObject.object.learningList.map(
 					(item, index) => ({
@@ -483,23 +459,24 @@ export const streamGenerateLearningContentTool = internalAction({
 			throw new Error("Chat not found");
 		}
 
-		const learningChat = await ctx.runQuery(
-			api.learning.queries.getLearningChatByChatId,
+		// Get learning content by chat ID
+		const learningContent = await ctx.runQuery(
+			api.learning.queries.getLearningContentByChatId,
 			{
 				chatId: chat._id,
 				userId,
 			},
 		);
 
-		if (!learningChat) {
-			throw new Error("Learning chat not found");
+		if (!learningContent) {
+			throw new Error("Learning content not found");
 		}
 
 		await ctx.scheduler.runAfter(
 			0,
 			internal.learning.actions.streamGenerateLearningContent,
 			{
-				learningId: learningChat.learningId,
+				learningId: learningContent.learningId,
 				userId,
 			},
 		);
@@ -566,7 +543,7 @@ export const streamAsync = internalAction({
 			return;
 		}
 
-		// Type "agent": Check if learning chat metadata content exists
+		// Type "agent": Check if learning content exists
 		if (type === "agent") {
 			// If content exists: Just use LLM with understandUserAnswer tool for refinement
 			const learningResult = await agent.streamText(
@@ -616,8 +593,6 @@ export const streamUserLearningPreference = internalAction({
 			{
 				throttleMs: 100,
 				onAsyncAbort: async () => console.error("Aborted asynchronously"),
-				// This will collapse multiple tiny deltas into one if they're being sent
-				// in quick succession.
 				compress: compressUIMessageChunks,
 				abortSignal: undefined,
 			},
@@ -646,8 +621,8 @@ export const streamUserLearningPreference = internalAction({
 			ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 				threadId,
 				status: {
-					type: "error",
-					message: "Failed to generate learning content.",
+					type: "streaming",
+					message: "Processing learning preferences...",
 				},
 			}),
 		]);

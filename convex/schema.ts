@@ -47,6 +47,7 @@ export const chatStatusValidator = v.union(
 	}),
 	v.object({
 		type: v.literal("need_approval"),
+		value: v.union(v.literal("approved"), v.literal("rejected")),
 		message: v.optional(v.string()),
 	}),
 	v.object({
@@ -64,26 +65,7 @@ export const activeStatusValidator = v.union(
 	v.literal("archived"),
 );
 
-export const streamSectionValidator = v.union(
-	v.literal("thread"),
-	v.literal("discussion"),
-	v.literal("learning-creation"),
-);
-
-export const planStatusValidator = v.union(
-	v.literal("draft"),
-	v.literal("approved"),
-	v.literal("generating"),
-	v.literal("completed"),
-);
-
-export const learningChatStatusValidator = v.union(
-	v.literal("draft"),
-	v.literal("generating"),
-	v.literal("completed"),
-);
-
-export const SectionTypeValidator = v.union(
+export const chatTypeValidator = v.union(
 	v.literal("main"),
 	v.literal("discussion"),
 	v.literal("plan"),
@@ -93,15 +75,15 @@ export const SectionTypeValidator = v.union(
 export const freeObjectValidator = v.optional(v.union(v.string(), v.any()));
 
 export const learningPreferenceValidator = v.object({
-	topic: v.optional(v.union(v.string(), v.null())),
-	userLevel: v.optional(v.union(v.string(), v.null())),
-	goal: v.optional(v.union(v.string(), v.null())),
-	duration: v.optional(v.union(v.string(), v.null())),
+	topic: v.optional(v.string()),
+	userLevel: v.optional(v.string()),
+	goal: v.optional(v.string()),
+	duration: v.optional(v.string()),
 	other: freeObjectValidator,
 });
 
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
-export type SectionType = Infer<typeof SectionTypeValidator>;
+export type SectionType = Infer<typeof chatTypeValidator>;
 export type ChatMode = Infer<typeof chatModeValidator>;
 
 export default defineSchema({
@@ -109,19 +91,20 @@ export default defineSchema({
 		uuid: v.string(),
 		threadId: v.string(),
 		userId: v.string(),
-		type: SectionTypeValidator,
+		type: chatTypeValidator,
 		status: v.optional(chatStatusValidator),
 	})
 		.index("by_threadId", ["threadId"])
 		.index("by_userId", ["userId"])
 		.index("by_threadId_and_userId", ["threadId", "userId"])
-		.index("by_uuid_and_userId", ["uuid", "userId"]),
+		.index("by_uuid_and_userId", ["uuid", "userId"])
+		.index("by_type_and_userId", ["type", "userId"]),
 
 	discussions: defineTable({
 		chatId: v.id("chats"),
 		parentChatId: v.id("chats"),
 		messageId: v.string(),
-		userId: v.string(), // Owner (denormalized for performance/security)
+		userId: v.string(),
 	})
 		.index("by_chatId", ["chatId"])
 		.index("by_messageId", ["messageId"])
@@ -129,7 +112,7 @@ export default defineSchema({
 		.index("by_parentChatId", ["parentChatId"])
 		.index("by_parentChatId_and_userId", ["parentChatId", "userId"]),
 
-	learning: defineTable({
+	learnings: defineTable({
 		uuid: v.string(),
 		userId: v.string(),
 		title: v.optional(v.string()),
@@ -140,39 +123,20 @@ export default defineSchema({
 		.index("by_userId_and_activeStatus", ["userId", "activeStatus"])
 		.index("by_uuid_and_userId", ["uuid", "userId"]),
 
-	learningChats: defineTable({
-		learningId: v.id("learning"),
+	learningContents: defineTable({
+		learningId: v.id("learnings"),
 		chatId: v.id("chats"),
-		userId: v.string(),
-	})
-		.index("by_userId", ["userId"])
-		.index("by_chatId_and_userId", ["chatId", "userId"])
-		.index("by_learningId_and_userId", ["learningId", "userId"]),
-
-	learningChatMetadata: defineTable({
-		learningChatId: v.id("learningChats"),
-		userId: v.string(),
-	})
-		.index("by_learningChatId", ["learningChatId"])
-		.index("by_userId", ["userId"])
-		.index("by_learningChatId_and_userId", ["learningChatId", "userId"]),
-
-	learningChatMetadataContent: defineTable({
-		learningChatMetadataId: v.id("learningChatMetadata"),
 		userId: v.string(),
 		order: v.number(),
 		title: v.string(),
 		description: v.string(),
 		learningObjectives: v.array(v.string()),
 		priority: v.optional(v.string()),
-		status: learningChatStatusValidator,
+		status: chatStatusValidator,
 	})
-		.index("by_learningChatMetadataId", ["learningChatMetadataId"])
+		.index("by_learningId", ["learningId"])
 		.index("by_userId", ["userId"])
-		.index("by_learningChatMetadataId_and_userId", [
-			"learningChatMetadataId",
-			"userId",
-		])
+		.index("by_learningId_and_userId", ["learningId", "userId"])
 		.index("by_status", ["status"]),
 
 	plans: defineTable({
@@ -181,57 +145,33 @@ export default defineSchema({
 		userId: v.string(),
 		content: v.string(),
 		title: v.string(),
-		status: planStatusValidator,
+		learningRequirements: v.object({
+			topic: v.optional(v.string()),
+			userLevel: v.optional(v.string()),
+			goal: v.optional(v.string()),
+			duration: v.optional(v.string()),
+			other: freeObjectValidator,
+		}),
+		status: chatStatusValidator,
 	})
 		.index("by_userId", ["userId"])
 		.index("by_chatId_and_userId", ["chatId", "userId"]),
 
-	planMetadata: defineTable({
+	planSearchResults: defineTable({
 		planId: v.id("plans"),
+		query: v.optional(v.string()),
 		userId: v.string(),
+		title: v.optional(v.string()),
+		url: v.optional(v.string()),
+		image: v.optional(v.string()),
+		content: v.optional(v.string()),
+		publishedDate: v.optional(v.string()),
+		score: v.optional(v.number()),
+		other: freeObjectValidator,
 	})
 		.index("by_planId", ["planId"])
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"]),
-
-	planMetadataLearningRequirements: defineTable({
-		planMetadataId: v.id("planMetadata"),
-		userId: v.string(),
-		topic: v.optional(v.union(v.string(), v.null())),
-		userLevel: v.optional(v.union(v.string(), v.null())),
-		goal: v.optional(v.union(v.string(), v.null())),
-		duration: v.optional(v.union(v.string(), v.null())),
-		other: freeObjectValidator,
-	})
-		.index("by_planMetadataId", ["planMetadataId"])
-		.index("by_userId", ["userId"])
-		.index("by_planMetadataId_and_userId", ["planMetadataId", "userId"]),
-
-	planMetadataSearchQueries: defineTable({
-		planMetadataId: v.id("planMetadata"),
-		userId: v.string(),
-		query: v.string(),
-		other: freeObjectValidator,
-	})
-		.index("by_planMetadataId", ["planMetadataId"])
-		.index("by_userId", ["userId"])
-		.index("by_planMetadataId_and_userId", ["planMetadataId", "userId"]),
-
-	planMetadataSearchResults: defineTable({
-		planMetadataId: v.id("planMetadata"),
-		planMetadataSearchQueryId: v.id("planMetadataSearchQueries"),
-		userId: v.string(),
-		title: v.optional(v.union(v.string(), v.null())),
-		url: v.optional(v.union(v.string(), v.null())),
-		image: v.optional(v.union(v.string(), v.null())),
-		content: v.optional(v.union(v.string(), v.null())),
-		publishedDate: v.optional(v.union(v.string(), v.null())),
-		score: v.optional(v.union(v.number(), v.null())),
-		other: freeObjectValidator,
-	})
-		.index("by_planMetadataId", ["planMetadataId"])
-		.index("by_userId", ["userId"])
-		.index("by_planMetadataId_and_userId", ["planMetadataId", "userId"]),
 
 	planItems: defineTable({
 		planId: v.id("plans"),
@@ -239,7 +179,7 @@ export default defineSchema({
 		title: v.string(),
 		description: v.optional(v.string()),
 		order: v.number(),
-		status: planStatusValidator,
+		status: chatStatusValidator,
 	})
 		.index("by_planId", ["planId"])
 		.index("by_planId_and_userId", ["planId", "userId"]),

@@ -77,7 +77,7 @@ const CanvasTabTriggerWithActiveState = memo(
 		return (
 			<TabsTrigger
 				className={cn(
-					"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
+					"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border shadow-none!",
 					className,
 				)}
 				{...otherProps}
@@ -157,7 +157,7 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 				<CanvasTabTriggerWithActiveState
 					value={canvas.id}
 					className={cn(
-						"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border !shadow-none",
+						"cursor-pointer data-[state=active]:border data-[state=active]:border-sidebar-border shadow-none!",
 						"pl-1.5 rounded-tlarge gap-0.5 h-7 py-0",
 						!isActive ? "pr-4" : "pr-7",
 					)}
@@ -647,7 +647,7 @@ const AiCanvas = () => {
 					<Suspense fallback={<AiConversationSkeleton />}>
 						<AiConversation
 							additionalThreadId={data?.threadId ?? ""}
-							type="learning-creation"
+							type="plan"
 						/>
 					</Suspense>
 				);

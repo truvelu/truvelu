@@ -156,14 +156,14 @@ export const AiLearningPreferenceInput = ({
 
 	return (
 		<>
-			<div className="bg-background flex flex-col gap-1.5 p-2.5 rounded-tlarge border border-sidebar-border">
-				<div className="flex flex-col gap-0.5 px-2 pt-1">
+			<div className="bg-background flex gap-1.5 p-2.5 rounded-tlarge border border-sidebar-border h-[102px] m-px">
+				<div className="flex flex-col gap-0.5 px-2 pt-1 w-full">
 					<h1 className="text-base font-medium">Settings for new course</h1>
 					<p className="text-base text-muted-foreground">
 						You can always edit these settings later.
 					</p>
 				</div>
-				<div className="w-full flex justify-end">
+				<div className="w-fit flex items-end">
 					{isInputStatusLoading ? (
 						<Button className="size-9 rounded-full cursor-pointer">
 							<SharedIcon icon={StopIcon} className="animate-pulse" />

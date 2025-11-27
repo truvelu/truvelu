@@ -15,7 +15,7 @@ import { components } from "../_generated/api";
 import { query } from "../_generated/server";
 
 /**
- * Get all chats for a user (excludes discussions and learning chats)
+ * Get all chats for a user (excludes discussions and learning content chats)
  */
 export const getChats = query({
 	args: {
@@ -24,40 +24,21 @@ export const getChats = query({
 	},
 	handler: async (ctx, args) => {
 		// Fetch threads, discussions, and all user chats in parallel
-		const [threads, allDiscussions, allChats, allLearningChats] =
-			await Promise.all([
-				ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-					userId: args.userId,
-					paginationOpts: args.paginationOpts,
-				}),
-				// Get all discussion records for this user only (security & performance)
-				ctx.db
-					.query("discussions")
-					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-					.collect(),
-				// Get all chats for this user (includes both main chats and discussion chats)
-				ctx.db
-					.query("chats")
-					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-					.collect(),
-				// Get all learning chats for this user
-				ctx.db
-					.query("learningChats")
-					.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-					.collect(),
-			]);
+		const [threads, allChats] = await Promise.all([
+			ctx.runQuery(components.agent.threads.listThreadsByUserId, {
+				userId: args.userId,
+				paginationOpts: args.paginationOpts,
+			}),
+			// Get all chats for this user (includes both main chats and discussion chats)
+			ctx.db
+				.query("chats")
+				.withIndex("by_type_and_userId", (q) =>
+					q.eq("type", "main").eq("userId", args.userId),
+				)
+				.collect(),
+		]);
 
 		const { page, ...paginationInfo } = threads;
-
-		// Create a Set of discussion chat IDs for O(1) lookup
-		// We exclude discussions from the main chat list since they appear in the canvas
-		const discussionChatIds = new Set(
-			allDiscussions.map((discussion) => discussion.chatId),
-		);
-
-		const learningChatIds = new Set(
-			allLearningChats.map((learningChat) => learningChat.chatId),
-		);
 
 		// Create a Map of threadId -> chat for O(1) lookup
 		const chatsByThreadId = new Map(
@@ -72,12 +53,8 @@ export const getChats = query({
 				data: chatsByThreadId.get(thread._id),
 			}))
 			.filter((thread) => {
-				// Exclude discussions (canvas chats) from main chat list
-				return (
-					thread.data !== undefined &&
-					!discussionChatIds.has(thread.data._id) &&
-					!learningChatIds.has(thread.data._id)
-				);
+				// Exclude discussions (canvas chats) and learning content chats from main chat list
+				return thread.data !== undefined;
 			});
 
 		return {

@@ -9,8 +9,7 @@ import {
 	type ToolUIPart,
 	getToolName,
 } from "ai";
-import type { streamSectionValidator } from "convex/schema";
-import type { Infer } from "convex/values";
+import type { SectionType } from "convex/schema";
 import {
 	Fragment,
 	memo,
@@ -36,7 +35,7 @@ import {
 import AiActions from "./ai-actions";
 
 interface AiMessagesProps {
-	type: Infer<typeof streamSectionValidator>;
+	type: SectionType;
 	message: UIMessage;
 	isInputStatusLoading: boolean;
 }

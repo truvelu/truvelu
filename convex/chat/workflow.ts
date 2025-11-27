@@ -16,8 +16,8 @@ export const createLearningWorkflow = workflow.define({
 	},
 	returns: v.null(),
 	handler: async (step, args): Promise<null> => {
-		const lastPlanWithMetadata = await step.runAction(
-			internal.plan.actions.getLastPlanWithMetadataByThreadId,
+		const lastPlanWithDetails = await step.runAction(
+			internal.plan.actions.getLastPlanWithDetailsByThreadId,
 			{
 				threadId: args.threadId,
 				userId: args.userId,
@@ -30,8 +30,8 @@ export const createLearningWorkflow = workflow.define({
 				status: { type: "streaming", message: "Generating learning plan" },
 			}),
 			step.runMutation(internal.plan.mutations.updatePlanStatus, {
-				planId: lastPlanWithMetadata.plan._id,
-				status: "generating",
+				planId: lastPlanWithDetails.plan._id,
+				status: { type: "streaming", message: "Generating..." },
 			}),
 		]);
 
@@ -116,8 +116,8 @@ export const createLearningWorkflow = workflow.define({
 				status: { type: "ready", message: "Ready" },
 			}),
 			step.runMutation(internal.plan.mutations.updatePlanStatus, {
-				planId: lastPlanWithMetadata.plan._id,
-				status: "completed",
+				planId: lastPlanWithDetails.plan._id,
+				status: { type: "ready", message: "Completed" },
 			}),
 		]);
 

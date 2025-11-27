@@ -201,7 +201,7 @@ const AiLearningContentResult = memo(() => {
 										<Fragment key={`${message.id}`}>
 											<AiMessages
 												message={message}
-												type="thread"
+												type="main"
 												isInputStatusLoading={isInputStatusLoading}
 											/>
 											{chatStatusType === "streaming" &&

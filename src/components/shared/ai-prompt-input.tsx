@@ -21,8 +21,6 @@ import {
 	Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
-import type { streamSectionValidator } from "convex/schema";
-import type { Infer } from "convex/values";
 import {
 	type ChangeEvent,
 	type FormEvent,
@@ -45,14 +43,17 @@ import { Separator } from "../ui/separator";
 import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
+// Extended type for UI-specific chat types (includes database types + UI routing types)
+type UIConversationType = "main" | "discussion" | "plan" | "content" | "thread" | "learning-creation";
+
 interface AiPromptInputProps extends PromptInputProps {
 	isInputStatusLoading: boolean;
-	type?: Infer<typeof streamSectionValidator>;
+	type?: UIConversationType;
 }
 
 export const AiPromptInput = memo(
 	({
-		type = "thread",
+		type = "main",
 		onSubmit,
 		onChange,
 		isInputStatusLoading,

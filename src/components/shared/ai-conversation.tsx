@@ -13,8 +13,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ToolUIPart } from "ai";
 import { api } from "convex/_generated/api";
-import type { streamSectionValidator } from "convex/schema";
-import type { Infer } from "convex/values";
+import type { SectionType } from "convex/schema";
 import {
 	type FormEvent,
 	Fragment,
@@ -46,11 +45,11 @@ import SharedIcon from "./shared-icon";
 
 interface AiConversationProps {
 	additionalThreadId?: string;
-	type?: Infer<typeof streamSectionValidator>;
+	type?: SectionType;
 }
 
 const AiConversationContent = memo((props: AiConversationProps) => {
-	const { additionalThreadId, type = "thread" } = props;
+	const { additionalThreadId, type = "main" } = props;
 
 	const { userId } = useAuth();
 	const matchRoute = useMatchRoute();
@@ -95,7 +94,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	);
 
 	const threadId = additionalThreadId ?? chat?.threadId ?? "";
-	const isMainThread = type === "thread";
+	const isMainThread = type === "main";
 
 	const currentIndexRoute = matchRoute({ to: "/" });
 	const pendingIndexRoute = matchRoute({ to: "/", pending: true });
@@ -124,9 +123,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const isLearningCreationRoute =
 		isCurrentLearningCreationRoute || isPendingLearningCreationRoute;
 
-	const { data: hasLearningChatMetadataContent } = useQuery(
+	const { data: hasLearningContent } = useQuery(
 		convexQuery(
-			api.learningChatMetadata.queries.hasLearningChatMetadataContent,
+			api.learning.queries.hasLearningContent,
 			isLearningRoute && !!roomId
 				? {
 						userId,
@@ -149,7 +148,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	const { data: lastPlan } = useQuery(
 		convexQuery(
 			api.plan.queries.getLastPlanByThreadId,
-			type === "learning-creation" && threadId
+			type === "plan" && threadId
 				? {
 						threadId,
 						userId,
@@ -183,10 +182,11 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 
 	const roomStatus = useMemo(
 		() =>
-			(isMainThread ? chatStatus : discussionStatus) ?? {
+			(isMainThread ? chatStatus : discussionStatus) ??
+			({
 				type: "ready",
 				message: "Ready to start conversation",
-			},
+			} as const),
 		[isMainThread, discussionStatus, chatStatus],
 	);
 
@@ -219,8 +219,13 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 		() =>
 			roomStatus?.type === "submitted" ||
 			roomStatus?.type === "streaming" ||
+			roomStatus?.type === "need_approval" ||
 			!!messageThatIsStreaming,
 		[roomStatus, messageThatIsStreaming],
+	);
+	const isInputStatusNeedApproval = useMemo(
+		() => roomStatus?.type === "need_approval",
+		[roomStatus],
 	);
 	const messageThatIsStreamingTextPartHasValue = useMemo(() => {
 		const parts = messageThatIsStreaming?.parts ?? [];
@@ -241,8 +246,8 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 	}, [messageThatIsStreaming]);
 	const learningCreationTypeAndHasNotLearningChatMetadataContent =
 		useMemo(() => {
-			return type === "learning-creation" && !hasLearningChatMetadataContent;
-		}, [type, hasLearningChatMetadataContent]);
+			return type === "plan" && !hasLearningContent;
+		}, [type, hasLearningContent]);
 
 	const handleSubmitNewChat = useCallback(
 		async (message: PromptInputMessage, event: FormEvent<HTMLFormElement>) => {
@@ -302,7 +307,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 				roomId,
 				prompt: message.text ?? "",
 				type:
-					type === "learning-creation" && lastPlan?.status !== "completed"
+					type === "plan" && lastPlan?.status?.type !== "ready"
 						? "agent"
 						: "ask",
 				userId,
@@ -466,7 +471,7 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 												type={type}
 												isInputStatusLoading={isInputStatusLoading}
 											/>
-											{roomStatus?.type === "streaming" &&
+											{isInputStatusLoading &&
 												!messageThatIsStreamingTextPartHasValue &&
 												messageArray.length - 1 === index && (
 													<div className="flex items-center justify-start flex-1 h-9">
@@ -504,7 +509,9 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 							{learningCreationTypeAndHasNotLearningChatMetadataContent ? (
 								<AiLearningPreferenceInput
 									threadId={threadId}
-									isInputStatusLoading={isInputStatusLoading}
+									isInputStatusLoading={
+										isInputStatusLoading && !isInputStatusNeedApproval
+									}
 								/>
 							) : (
 								<AiPromptInput
@@ -522,10 +529,10 @@ const AiConversationContent = memo((props: AiConversationProps) => {
 });
 
 const AiConversation = memo(
-	({ type = "thread", ...props }: AiConversationProps) => {
+	({ type = "main", ...props }: AiConversationProps) => {
 		const roomId = useGetRoomId();
 
-		const isMainThread = type === "thread";
+		const isMainThread = type === "main";
 
 		return (
 			<Conversation

@@ -297,7 +297,9 @@ function AiLearning() {
 																"rounded-tlarge py-0 px-2.5 flex items-center justify-center h-6 bg-background ring-1 ring-sidebar-border text-sidebar-foreground",
 															)}
 														>
-															{item?.metadata?.status}
+															{typeof item?.metadata?.status === "object"
+																? item?.metadata?.status?.type
+																: item?.metadata?.status}
 														</Badge>
 													</div>
 

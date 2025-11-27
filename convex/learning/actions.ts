@@ -49,11 +49,11 @@ export const deleteLearningChat = internalAction({
 });
 
 /**
- * Stream generate learning content for all draft learning chats
+ * Stream generate learning content for all draft learning contents
  */
 export const streamGenerateLearningContent = internalAction({
 	args: {
-		learningId: v.id("learning"),
+		learningId: v.id("learnings"),
 		userId: v.string(),
 	},
 	handler: async (ctx, { learningId, userId }) => {
@@ -61,6 +61,7 @@ export const streamGenerateLearningContent = internalAction({
 			agentType: "course-content-generator",
 		});
 
+		// Get learning contents with draft status
 		const learningListData = await ctx.runQuery(
 			api.learning.queries.getLearningChatsContentByLearningIdThatStatusDraft,
 			{
@@ -74,12 +75,13 @@ export const streamGenerateLearningContent = internalAction({
 
 			if (!threadId) return;
 
+			// Update learning content status to generating
 			await ctx.runMutation(
-				api.learning.mutations.updateLearningChatMetadataPlanStatus,
+				api.learning.mutations.updateLearningContentStatus,
 				{
-					learningChatId: data._id,
+					learningContentId: data._id,
 					userId,
-					status: "generating",
+					status: { type: "streaming", message: "Generating content..." },
 				},
 			);
 
@@ -148,8 +150,6 @@ export const streamGenerateLearningContent = internalAction({
 				{
 					throttleMs: 100,
 					onAsyncAbort: async () => console.error("Aborted asynchronously"),
-					// This will collapse multiple tiny deltas into one if they're being sent
-					// in quick succession.
 					compress: compressUIMessageChunks,
 					abortSignal: undefined,
 				},
@@ -193,11 +193,11 @@ export const streamGenerateLearningContent = internalAction({
 							status: { type: "ready", message: "Ready" },
 						}),
 						ctx.runMutation(
-							api.learning.mutations.updateLearningChatMetadataPlanStatus,
+							api.learning.mutations.updateLearningContentStatus,
 							{
-								learningChatId: data._id,
+								learningContentId: data._id,
 								userId,
-								status: "completed",
+								status: { type: "ready", message: "Completed" },
 							},
 						),
 					]);
@@ -240,7 +240,11 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,
-			status: { type: "need_approval", message: "Waiting for user's response" },
+			status: {
+				type: "need_approval",
+				value: "approved",
+				message: "Waiting for user's response",
+			},
 		});
 
 		const streamer = new DeltaStreamer(
@@ -249,8 +253,6 @@ export const generateGreetingMessageForLearnerAsync = internalAction({
 			{
 				throttleMs: 100,
 				onAsyncAbort: async () => console.error("Aborted asynchronously"),
-				// This will collapse multiple tiny deltas into one if they're being sent
-				// in quick succession.
 				compress: compressUIMessageChunks,
 				abortSignal: undefined,
 			},

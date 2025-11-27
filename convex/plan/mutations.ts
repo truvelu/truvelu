@@ -4,229 +4,164 @@
  */
 
 import { v } from "convex/values";
-import { api } from "../_generated/api";
-import type { Doc } from "../_generated/dataModel";
 import { internalMutation, mutation } from "../_generated/server";
-import { freeObjectValidator, planStatusValidator } from "../schema";
+import { chatStatusValidator, freeObjectValidator } from "../schema";
 
 /**
- * Create or get existing plan metadata
+ * Update plan's embedded learningRequirements
  */
-export const createOrGetPlanMetadata = mutation({
-	args: {
-		planId: v.id("plans"),
-		userId: v.string(),
-	},
-	handler: async (ctx, args): Promise<{ data: Doc<"planMetadata"> | null }> => {
-		let planMetadata: Doc<"planMetadata"> | null = null;
-		planMetadata = await ctx.db
-			.query("planMetadata")
-			.withIndex("by_planId_and_userId", (q) =>
-				q.eq("planId", args.planId).eq("userId", args.userId),
-			)
-			.unique();
-
-		if (!planMetadata) {
-			const _planMetadataId = await ctx.db.insert("planMetadata", {
-				planId: args.planId,
-				userId: args.userId,
-			});
-			planMetadata = await ctx.db.get(_planMetadataId);
-		}
-
-		return { data: planMetadata };
-	},
-});
-
-/**
- * Upsert plan metadata learning requirements
- */
-export const upsertPlanMetadataLearningRequirements = mutation({
+export const updatePlanLearningRequirements = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 		data: v.object({
-			topic: v.optional(v.union(v.string(), v.null())),
-			userLevel: v.optional(v.union(v.string(), v.null())),
-			goal: v.optional(v.union(v.string(), v.null())),
-			duration: v.optional(v.union(v.string(), v.null())),
+			topic: v.optional(v.string()),
+			userLevel: v.optional(v.string()),
+			goal: v.optional(v.string()),
+			duration: v.optional(v.string()),
 			other: freeObjectValidator,
 		}),
 	},
 	handler: async (ctx, args) => {
-		const planMetadata = (await ctx.runMutation(
-			api.plan.mutations.createOrGetPlanMetadata,
-			{
-				planId: args.planId,
-				userId: args.userId,
+		const plan = await ctx.db.get(args.planId);
+
+		if (!plan || plan.userId !== args.userId) {
+			throw new Error("Plan not found");
+		}
+
+		await ctx.db.patch(args.planId, {
+			learningRequirements: {
+				topic: args.data.topic,
+				userLevel: args.data.userLevel,
+				goal: args.data.goal,
+				duration: args.data.duration,
+				other: args.data.other,
 			},
-		)) as { data: Doc<"planMetadata"> | null };
-
-		if (!planMetadata.data) {
-			throw new Error("Plan metadata not found");
-		}
-
-		const planMetadataId = planMetadata.data._id;
-
-		const learningRequirements = await ctx.db
-			.query("planMetadataLearningRequirements")
-			.withIndex("by_planMetadataId_and_userId", (q) =>
-				q.eq("planMetadataId", planMetadataId).eq("userId", args.userId),
-			)
-			.unique();
-
-		let learningRequirementsId = learningRequirements?._id;
-		const payload = {
-			topic: args.data.topic,
-			userLevel: args.data.userLevel,
-			goal: args.data.goal,
-			duration: args.data.duration,
-			other: args.data.other,
-		};
-
-		if (!learningRequirementsId) {
-			learningRequirementsId = await ctx.db.insert(
-				"planMetadataLearningRequirements",
-				{
-					planMetadataId: planMetadataId,
-					userId: args.userId,
-					...payload,
-				},
-			);
-		} else {
-			await ctx.db.patch(learningRequirementsId, {
-				...payload,
-			});
-		}
+		});
 
 		return {
 			status: 200,
-			data: { learningRequirementsId },
 			message: "Learning requirements updated successfully",
 		};
 	},
 });
 
 /**
- * Upsert plan metadata search queries
+ * Upsert plan search results (with optional query embedded)
  */
-export const upsertPlanMetadataSearchQuery = mutation({
+export const upsertPlanSearchResults = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 		data: v.array(
 			v.object({
-				query: v.string(),
+				query: v.optional(v.string()),
+				title: v.optional(v.string()),
+				url: v.optional(v.string()),
+				image: v.optional(v.string()),
+				content: v.optional(v.string()),
+				publishedDate: v.optional(v.string()),
+				score: v.optional(v.number()),
 				other: freeObjectValidator,
 			}),
 		),
 	},
 	handler: async (ctx, args) => {
-		const planMetadata = (await ctx.runMutation(
-			api.plan.mutations.createOrGetPlanMetadata,
-			{
-				planId: args.planId,
-				userId: args.userId,
-			},
-		)) as { data: Doc<"planMetadata"> | null };
+		const plan = await ctx.db.get(args.planId);
 
-		if (!planMetadata.data) {
-			throw new Error("Plan metadata not found");
+		if (!plan || plan.userId !== args.userId) {
+			throw new Error("Plan not found");
 		}
 
-		const planMetadataId = planMetadata.data._id;
+		const searchResultIds = await Promise.all(
+			args.data.map(async (item) => {
+				// Check if result with same URL already exists
+				if (item.url) {
+					const existing = await ctx.db
+						.query("planSearchResults")
+						.withIndex("by_planId_and_userId", (q) =>
+							q.eq("planId", args.planId).eq("userId", args.userId),
+						)
+						.filter((q) => q.eq(q.field("url"), item.url))
+						.first();
 
-		const payload = args.data.map((d) => ({
-			query: d.query,
-			other: d.other,
-		}));
+					if (existing) {
+						await ctx.db.patch(existing._id, {
+							query: item.query,
+							title: item.title,
+							url: item.url,
+							image: item.image,
+							content: item.content,
+							publishedDate: item.publishedDate,
+							score: item.score,
+							other: item.other,
+						});
+						return existing._id;
+					}
+				}
 
-		const planMetadataSearchQueries = await Promise.all(
-			payload.map(async (query) => {
-				return await ctx.db.insert("planMetadataSearchQueries", {
-					planMetadataId: planMetadataId,
+				return await ctx.db.insert("planSearchResults", {
+					planId: args.planId,
 					userId: args.userId,
-					...query,
+					query: item.query,
+					title: item.title,
+					url: item.url,
+					image: item.image,
+					content: item.content,
+					publishedDate: item.publishedDate,
+					score: item.score,
+					other: item.other,
 				});
 			}),
 		);
 
 		return {
-			data: { planMetadataSearchQueries },
+			data: { searchResultIds },
 		};
 	},
 });
 
 /**
- * Upsert plan metadata search results
+ * Update plan status
  */
-export const upsertPlanMetadataSearchResult = mutation({
-	args: {
-		planId: v.id("plans"),
-		userId: v.string(),
-		data: v.object({
-			searchResult: v.array(
-				v.object({
-					planMetadataSearchQueryId: v.id("planMetadataSearchQueries"),
-					title: v.optional(v.union(v.string(), v.null())),
-					url: v.optional(v.union(v.string(), v.null())),
-					image: v.optional(v.union(v.string(), v.null())),
-					content: v.optional(v.union(v.string(), v.null())),
-					publishedDate: v.optional(v.union(v.string(), v.null())),
-					score: v.optional(v.union(v.number(), v.null())),
-				}),
-			),
-			other: freeObjectValidator,
-		}),
-	},
-	handler: async (ctx, args) => {
-		const planMetadata = (await ctx.runMutation(
-			api.plan.mutations.createOrGetPlanMetadata,
-			{
-				planId: args.planId,
-				userId: args.userId,
-			},
-		)) as { data: Doc<"planMetadata"> | null };
-
-		if (!planMetadata.data) {
-			throw new Error("Plan metadata not found");
-		}
-
-		const planMetadataId = planMetadata.data._id;
-
-		const payload = args.data.searchResult?.map((searchResult) => ({
-			planMetadataSearchQueryId: searchResult.planMetadataSearchQueryId,
-			title: searchResult.title,
-			url: searchResult.url,
-			image: searchResult.image,
-			content: searchResult.content,
-			publishedDate: searchResult.publishedDate,
-			score: searchResult.score,
-			other: args.data.other,
-		}));
-
-		const planMetadataSearchResult = await Promise.all(
-			payload.map(async (searchResult) => {
-				return await ctx.db.insert("planMetadataSearchResults", {
-					planMetadataId: planMetadataId,
-					userId: args.userId,
-					...searchResult,
-				});
-			}),
-		);
-
-		return {
-			data: { planMetadataSearchResult },
-		};
-	},
-});
-
 export const updatePlanStatus = internalMutation({
 	args: {
 		planId: v.id("plans"),
-		status: planStatusValidator,
+		status: chatStatusValidator,
 	},
 	handler: async (ctx, { planId, status }) => {
 		await ctx.db.patch(planId, { status });
+	},
+});
+
+/**
+ * Create a new plan
+ */
+export const createPlan = mutation({
+	args: {
+		chatId: v.id("chats"),
+		userId: v.string(),
+		title: v.string(),
+		content: v.optional(v.string()),
+		parentId: v.optional(v.id("plans")),
+	},
+	handler: async (ctx, args) => {
+		const planId = await ctx.db.insert("plans", {
+			chatId: args.chatId,
+			userId: args.userId,
+			title: args.title,
+			content: args.content ?? "",
+			parentId: args.parentId,
+			learningRequirements: {
+				topic: undefined,
+				userLevel: undefined,
+				goal: undefined,
+				duration: undefined,
+				other: undefined,
+			},
+			status: { type: "ready", message: "Draft plan" },
+		});
+
+		return { planId };
 	},
 });

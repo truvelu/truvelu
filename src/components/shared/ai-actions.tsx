@@ -14,8 +14,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
-import type { streamSectionValidator } from "convex/schema";
-import type { Infer } from "convex/values";
+import type { SectionType } from "convex/schema";
 import { memo, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Action, Actions } from "../ai-elements/actions";
@@ -24,7 +23,7 @@ import { useSidebar } from "../ui/sidebar";
 import SharedIcon from "./shared-icon";
 
 interface AiActionsProps {
-	type: Infer<typeof streamSectionValidator>;
+	type: SectionType;
 	message: UIMessage;
 	hoveredId: string;
 }
@@ -52,7 +51,7 @@ const AiActions = memo((props: AiActionsProps) => {
 			),
 		);
 
-	const isMainThread = type === "thread";
+	const isMainThread = type === "main";
 
 	const { userId } = useAuth();
 	const { data: chat } = useQuery({

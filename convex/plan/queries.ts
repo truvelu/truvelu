@@ -7,59 +7,36 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 
 /**
- * Get plan metadata details with all related data
+ * Get plan details with embedded learningRequirements and search results
  */
-export const getPlanMetadataDetail = query({
+export const getPlanDetail = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const planMetadata = await ctx.db
-			.query("planMetadata")
-			.withIndex("by_planId_and_userId", (q) =>
-				q.eq("planId", args.planId).eq("userId", args.userId),
-			)
-			.unique();
+		const plan = await ctx.db.get(args.planId);
 
-		if (!planMetadata) {
+		if (!plan || plan.userId !== args.userId) {
 			throw new Error(
-				`Plan metadata not found, planId: ${args.planId}, userId: ${args.userId}, data: ${JSON.stringify(planMetadata)}`,
+				`Plan not found, planId: ${args.planId}, userId: ${args.userId}`,
 			);
 		}
 
-		const [
-			learningRequirement,
-			planMetadataSearchQueries,
-			planMetadataSearchResults,
-		] = await Promise.all([
-			ctx.db
-				.query("planMetadataLearningRequirements")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.unique(),
-			ctx.db
-				.query("planMetadataSearchQueries")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.collect(),
-			ctx.db
-				.query("planMetadataSearchResults")
-				.withIndex("by_planMetadataId_and_userId", (q) =>
-					q.eq("planMetadataId", planMetadata._id).eq("userId", args.userId),
-				)
-				.collect(),
-		]);
+		// Get search results for this plan
+		const planSearchResults = await ctx.db
+			.query("planSearchResults")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
 
 		return {
 			data: {
-				...planMetadata,
+				...plan,
 				detail: {
-					learningRequirement,
-					planMetadataSearchQueries,
-					planMetadataSearchResults,
+					learningRequirement: plan.learningRequirements,
+					planSearchResults,
 				},
 			},
 		};
@@ -123,5 +100,23 @@ export const getPlanByChatIdAndUserId = query({
 		}
 
 		return plan;
+	},
+});
+
+/**
+ * Get plan search results by plan ID
+ */
+export const getPlanSearchResults = query({
+	args: {
+		planId: v.id("plans"),
+		userId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("planSearchResults")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
 	},
 });
