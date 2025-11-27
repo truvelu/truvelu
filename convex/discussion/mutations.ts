@@ -6,7 +6,7 @@
 import { vMessage } from "@convex-dev/agent";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
 import { createChatService } from "../chat/services";
 import { agentTypeValidator } from "../schema";
@@ -62,16 +62,20 @@ export const createDiscussion = mutation({
 /**
  * Delete a discussion
  */
-export const deleteDiscussion = mutation({
+export const deleteDiscussion = internalMutation({
 	args: {
 		threadId: v.string(),
+		userId: v.string(),
 	},
-	handler: async (ctx, { threadId }) => {
+	handler: async (ctx, { threadId, userId }) => {
 		// Find the discussion's chat by threadId
-		const discussionChat = await ctx.db
-			.query("chats")
-			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
-			.unique();
+		const discussionChat = await ctx.runQuery(
+			api.chat.queries.getChatByThreadIdAndUserId,
+			{
+				threadId,
+				userId,
+			},
+		);
 
 		if (!discussionChat) {
 			throw new Error("Discussion chat not found");
@@ -88,10 +92,6 @@ export const deleteDiscussion = mutation({
 		}
 
 		await Promise.all([
-			// Delete the thread
-			ctx.scheduler.runAfter(0, api.chat.actions.deleteChat, {
-				threadId,
-			}),
 			// Delete the discussion record
 			ctx.db.delete(discussion._id),
 			// Delete the discussion's chat record

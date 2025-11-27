@@ -44,16 +44,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import SharedIcon from "./shared-icon";
 
+const userLevelEnum = z.enum(["beginner", "amateur", "professional", "expert"]);
+const courseTypeEnum = z.enum(["crash_course", "full_course"]);
+
 const formSchema = z.object({
 	topic: z
 		.string()
-		.min(5, "Topic must be at least 5 characters.")
+		.min(1, "Topic is required.")
 		.max(32, "Topic must be at most 32 characters."),
-	userLevel: z
-		.string()
-		.min(5, "Level understanding must be at least 5 characters."),
-	goal: z.string().min(5, "Goal must be at least 5 characters."),
-	duration: z.string().min(5, "Duration must be at least 5 characters."),
+	userLevel: z.union([
+		userLevelEnum,
+		z.string().min(1, "Level of understanding is required."),
+	]),
+	goal: z.string().min(1, "Goal is required."),
+	courseType: z.union([
+		courseTypeEnum,
+		z.string().min(1, "Type of course is required."),
+	]),
 	resources: z.array(z.any()),
 	simpleUrls: z.array(
 		z.object({
@@ -88,11 +95,11 @@ export const AiLearningPreferenceInput = ({
 	const form = useForm({
 		defaultValues: {
 			topic: "",
-			userLevel: "",
+			userLevel: "beginner",
 			goal: "",
-			duration: "",
+			courseType: "crash_course",
 			resources: [] as File[],
-			simpleUrls: [{ url: "" }],
+			simpleUrls: [] as { url: string }[],
 			advancedUrls: [] as {
 				url: string;
 				ignoreSitemap?: boolean;
@@ -133,7 +140,7 @@ export const AiLearningPreferenceInput = ({
 						topic: value.topic,
 						userLevel: value.userLevel,
 						goal: value.goal,
-						duration: value.duration,
+						duration: value.courseType,
 						other: {
 							resources: value.resources,
 							urls,
@@ -394,7 +401,7 @@ export const AiLearningPreferenceInput = ({
 								<Separator />
 
 								<FieldGroup>
-									<form.Field name="duration">
+									<form.Field name="courseType">
 										{(field) => {
 											const isInvalid =
 												field.state.meta.isTouched && !field.state.meta.isValid;
@@ -435,7 +442,7 @@ export const AiLearningPreferenceInput = ({
 															].map((item) => (
 																<FieldLabel
 																	key={item.value}
-																	htmlFor={`duration-${item.value}`}
+																	htmlFor={`courseType-${item.value}`}
 																>
 																	<Field orientation="horizontal">
 																		<FieldContent>
@@ -446,23 +453,23 @@ export const AiLearningPreferenceInput = ({
 																		</FieldContent>
 																		<RadioGroupItem
 																			value={item.value}
-																			id={`duration-${item.value}`}
+																			id={`courseType-${item.value}`}
 																		/>
 																	</Field>
 																</FieldLabel>
 															))}
 
-															<FieldLabel htmlFor="duration-custom">
+															<FieldLabel htmlFor="courseType-custom">
 																<Field orientation="horizontal">
 																	<FieldContent>
 																		<FieldTitle>Custom</FieldTitle>
 																		<FieldDescription>
-																			Specify your own duration/type
+																			Specify your own course type
 																		</FieldDescription>
 																	</FieldContent>
 																	<RadioGroupItem
 																		value="custom"
-																		id="duration-custom"
+																		id="courseType-custom"
 																	/>
 																</Field>
 															</FieldLabel>
@@ -475,7 +482,7 @@ export const AiLearningPreferenceInput = ({
 																		? ""
 																		: field.state.value
 																}
-																placeholder="Describe your desired duration/type..."
+																placeholder="Describe your desired course type..."
 																className="mt-2"
 																onChange={(e) =>
 																	field.handleChange(e.target.value)
@@ -656,11 +663,6 @@ export const AiLearningPreferenceInput = ({
 															size="icon"
 															className="shrink-0 text-muted-foreground hover:text-destructive"
 															onClick={() => field.removeValue(index)}
-															disabled={
-																field.state.value.length === 1 &&
-																index === 0 &&
-																field.state.value[0].url === ""
-															}
 														>
 															<SharedIcon
 																icon={Delete01Icon}

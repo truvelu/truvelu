@@ -48,6 +48,7 @@ const NavChatItem = ({
 }) => {
 	const roomId = useGetRoomId();
 	const navigate = useNavigate();
+	const { userId } = useAuth();
 
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -154,9 +155,9 @@ const NavChatItem = ({
 
 					<DropdownMenuItem
 						className="text-destructive! p-2.5 rounded-xl"
-						onClick={() => {
+						onClick={async () => {
 							if (!chat?._id) return;
-							deleteChat({ threadId: chat._id });
+							await deleteChat({ threadId: chat._id, userId });
 							if (roomId === chat?.data?.uuid) {
 								navigate({
 									to: "/",

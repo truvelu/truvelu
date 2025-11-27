@@ -9,10 +9,10 @@ import { api, components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
 import {
-	chatTypeValidator,
 	agentTypeValidator,
 	chatModeValidator,
 	chatStatusValidator,
+	chatTypeValidator,
 	learningPreferenceValidator,
 } from "../schema";
 import { createChatService } from "./services";
@@ -183,5 +183,36 @@ export const abortStreamByOrder = mutation({
 		});
 
 		return isAborted;
+	},
+});
+
+export const deleteChat = internalMutation({
+	args: {
+		chatId: v.id("chats"),
+		userId: v.string(),
+	},
+	handler: async (ctx, { chatId, userId }) => {
+		const chat = await ctx.db.get(chatId);
+		const discussionChat = await ctx.runQuery(
+			api.discussion.queries.getDiscussionByParentChatId,
+			{
+				chatId,
+				userId,
+			},
+		);
+
+		if (!chat) {
+			throw new Error("Chat not found");
+		}
+		if (chat.userId !== userId) {
+			throw new Error("Unauthorized: You don't own this chat");
+		}
+		await Promise.all([
+			...discussionChat.map((discussion) => ctx.db.delete(discussion._id)),
+		]);
+		await Promise.all([
+			...discussionChat.map((discussion) => ctx.db.delete(discussion.chatId)),
+		]);
+		await ctx.db.delete(chatId);
 	},
 });

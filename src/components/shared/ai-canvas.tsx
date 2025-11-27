@@ -13,11 +13,7 @@ import {
 	CanvasType,
 	useCanvasStore,
 } from "@/zustand/canvas";
-import {
-	convexQuery,
-	useConvexMutation,
-	useConvexPaginatedQuery,
-} from "@convex-dev/react-query";
+import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
 	Add01Icon,
 	Cancel01Icon,
@@ -29,7 +25,7 @@ import {
 	MoreHorizontalIcon,
 	TaskDaily02Icon,
 } from "@hugeicons/core-free-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction } from "convex/react";
@@ -89,6 +85,7 @@ const CanvasTabTriggerWithActiveState = memo(
 );
 
 const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
+	const { userId } = useAuth();
 	const { upsertCanvas, removeCanvas } = useCanvasStore(
 		useShallow(({ upsertCanvas, removeCanvas }) => ({
 			upsertCanvas,
@@ -97,10 +94,7 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	);
 
 	const updateChatTitle = useAction(api.chat.actions.updateChatTitle);
-	const deleteDiscussion = useMutation({
-		mutationKey: ["deleteDiscussion"],
-		mutationFn: useConvexMutation(api.discussion.mutations.deleteDiscussion),
-	});
+	const deleteDiscussion = useAction(api.discussion.actions.deleteDiscussion);
 
 	const threadId = canvas?.data?.threadId ?? "";
 	const roomId = canvas?.data?.roomId ?? "";
@@ -225,16 +219,10 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							className="p-2.5 rounded-xl"
-							onClick={() => {
+							onClick={async () => {
 								if (!threadId) return;
-								deleteDiscussion.mutate(
-									{ threadId },
-									{
-										onSuccess: () => {
-											handleRemoveCanvas();
-										},
-									},
-								);
+								await deleteDiscussion({ threadId, userId });
+								handleRemoveCanvas();
 							}}
 						>
 							<SharedIcon icon={Delete02Icon} className="text-destructive" />

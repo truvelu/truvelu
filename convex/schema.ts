@@ -47,7 +47,13 @@ export const chatStatusValidator = v.union(
 	}),
 	v.object({
 		type: v.literal("need_approval"),
-		value: v.union(v.literal("approved"), v.literal("rejected")),
+		value: v.union(
+			v.literal("pending"),
+			v.literal("approved"),
+			v.literal("rejected"),
+			v.literal("answered"),
+			v.literal("skipped"),
+		),
 		message: v.optional(v.string()),
 	}),
 	v.object({
@@ -140,8 +146,9 @@ export default defineSchema({
 		.index("by_status", ["status"]),
 
 	plans: defineTable({
-		parentId: v.optional(v.id("plans")),
 		chatId: v.id("chats"),
+		learningId: v.id("learnings"),
+		parentId: v.optional(v.id("plans")),
 		userId: v.string(),
 		content: v.string(),
 		title: v.string(),
@@ -155,7 +162,8 @@ export default defineSchema({
 		status: chatStatusValidator,
 	})
 		.index("by_userId", ["userId"])
-		.index("by_chatId_and_userId", ["chatId", "userId"]),
+		.index("by_chatId_and_userId", ["chatId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
 	planSearchResults: defineTable({
 		planId: v.id("plans"),

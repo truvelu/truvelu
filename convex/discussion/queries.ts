@@ -114,3 +114,17 @@ export const getDiscussionsByRoomId = query({
 		};
 	},
 });
+
+export const getDiscussionByParentChatId = query({
+	args: {
+		chatId: v.id("chats"),
+		userId: v.string(),
+	},
+	handler: async (ctx, { chatId, userId }) => {
+		return await ctx.db
+			.query("discussions")
+			.withIndex("by_parentChatId", (q) => q.eq("parentChatId", chatId))
+			.filter((q) => q.eq(q.field("userId"), userId))
+			.collect();
+	},
+});

@@ -133,35 +133,3 @@ export const updatePlanStatus = internalMutation({
 		await ctx.db.patch(planId, { status });
 	},
 });
-
-/**
- * Create a new plan
- */
-export const createPlan = mutation({
-	args: {
-		chatId: v.id("chats"),
-		userId: v.string(),
-		title: v.string(),
-		content: v.optional(v.string()),
-		parentId: v.optional(v.id("plans")),
-	},
-	handler: async (ctx, args) => {
-		const planId = await ctx.db.insert("plans", {
-			chatId: args.chatId,
-			userId: args.userId,
-			title: args.title,
-			content: args.content ?? "",
-			parentId: args.parentId,
-			learningRequirements: {
-				topic: undefined,
-				userLevel: undefined,
-				goal: undefined,
-				duration: undefined,
-				other: undefined,
-			},
-			status: { type: "ready", message: "Draft plan" },
-		});
-
-		return { planId };
-	},
-});

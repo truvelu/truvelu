@@ -8,7 +8,7 @@ import { v7 as uuidv7 } from "uuid";
 import { internal } from "../_generated/api";
 import { mutation } from "../_generated/server";
 import { createAgent } from "../agent";
-import { chatTypeValidator, chatStatusValidator } from "../schema";
+import { chatStatusValidator, chatTypeValidator } from "../schema";
 
 /**
  * Create a new learning panel with initial setup
@@ -71,6 +71,7 @@ export const createLearningPanel = mutation({
 				status: { type: "ready", message: "Draft plan" },
 				userId,
 				chatId: _chatId,
+				learningId: _learningId,
 			}),
 			ctx.scheduler.runAfter(
 				0,
@@ -192,7 +193,9 @@ export const archiveLearning = mutation({
 
 		const chatIds = learningContents.map((lc) => lc.chatId);
 
-		const chats = await Promise.all(chatIds.map((chatId) => ctx.db.get(chatId)));
+		const chats = await Promise.all(
+			chatIds.map((chatId) => ctx.db.get(chatId)),
+		);
 		const chatThreadIds = chats.map((chat) => chat?.threadId).filter(Boolean);
 
 		await Promise.all([
@@ -240,25 +243,35 @@ export const deleteLearning = mutation({
 			)
 			.collect();
 
-		const chatIds = learningContents.map((lc) => lc.chatId);
+		const learningContentChatIds = learningContents.map((lc) => lc.chatId);
 
-		const [chats, plans] = await Promise.all([
-			Promise.all(chatIds.map((chatId) => ctx.db.get(chatId))),
+		const [learningContentChats, plansByLearningId] = await Promise.all([
 			Promise.all(
-				chatIds.flatMap((chatId) =>
-					ctx.db
-						.query("plans")
-						.withIndex("by_chatId_and_userId", (q) =>
-							q.eq("chatId", chatId).eq("userId", userId),
-						)
-						.collect(),
+				learningContentChatIds.map((learningContentChatId) =>
+					ctx.db.get(learningContentChatId),
 				),
 			),
+			ctx.db
+				.query("plans")
+				.withIndex("by_learningId_and_userId", (q) =>
+					q.eq("learningId", learningId).eq("userId", userId),
+				)
+				.collect(),
 		]);
 
-		const chatThreadIds = chats.map((chat) => chat?.threadId).filter(Boolean);
-		const flatPlans = plans.flat();
-		const planIds = flatPlans.map((plan) => plan?._id).filter(Boolean);
+		const learningContentChatThreadIds = learningContentChats
+			.map((learningContentChat) => learningContentChat?.threadId)
+			.filter(Boolean);
+		const planIds = plansByLearningId?.map((plan) => plan?._id);
+		const planChatIds = plansByLearningId?.map((plan) => plan?.chatId);
+
+		const planChatDatas = await Promise.all(
+			planChatIds?.map((planChatId) => ctx.db.get(planChatId)),
+		);
+
+		const planChatThreadIds = planChatDatas
+			?.map((planChat) => planChat?.threadId)
+			.filter(Boolean);
 
 		// Get plan items and search results
 		const [planItems, planSearchResults] = await Promise.all([
@@ -290,24 +303,39 @@ export const deleteLearning = mutation({
 			...flatPlanSearchResults.map((item) => ctx.db.delete(item._id)),
 		]);
 
-		// Level 2: Delete plans
-		await Promise.all([...flatPlans.map((plan) => ctx.db.delete(plan._id))]);
-
-		// Level 3: Delete learning contents
+		// Level 2: Delete plan chats and learning content chats
 		await Promise.all([
+			...planChatIds.map((planChatId) => ctx.db.delete(planChatId)),
+			...learningContentChatIds.map((learningContentChatId) =>
+				ctx.db.delete(learningContentChatId),
+			),
+		]);
+
+		// Level 3: Delete plans
+		await Promise.all([
+			...planIds.map((id) => ctx.db.delete(id)),
 			...learningContents.map((lc) => ctx.db.delete(lc._id)),
 		]);
 
 		// Level 4: Delete chats and schedule thread deletions
 		await Promise.all([
-			...chatIds.map((chatId) => ctx.db.delete(chatId)),
-			...chatThreadIds.map((threadId) => {
-				if (!threadId) return Promise.resolve();
+			...learningContentChatThreadIds.map((learningContentChatThreadId) => {
+				if (!learningContentChatThreadId) return Promise.resolve();
 				return ctx.scheduler.runAfter(
 					0,
 					internal.learning.actions.deleteLearningChat,
 					{
-						threadId,
+						threadId: learningContentChatThreadId,
+					},
+				);
+			}),
+			...planChatThreadIds.map((planChatThreadId) => {
+				if (!planChatThreadId) return Promise.resolve();
+				return ctx.scheduler.runAfter(
+					0,
+					internal.learning.actions.deleteLearningChat,
+					{
+						threadId: planChatThreadId,
 					},
 				);
 			}),

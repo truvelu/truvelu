@@ -16,6 +16,7 @@ import type * as chat_mutations from "../chat/mutations.js";
 import type * as chat_queries from "../chat/queries.js";
 import type * as chat_services from "../chat/services.js";
 import type * as chat_workflow from "../chat/workflow.js";
+import type * as discussion_actions from "../discussion/actions.js";
 import type * as discussion_mutations from "../discussion/mutations.js";
 import type * as discussion_queries from "../discussion/queries.js";
 import type * as http from "../http.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "chat/queries": typeof chat_queries;
   "chat/services": typeof chat_services;
   "chat/workflow": typeof chat_workflow;
+  "discussion/actions": typeof discussion_actions;
   "discussion/mutations": typeof discussion_mutations;
   "discussion/queries": typeof discussion_queries;
   http: typeof http;
