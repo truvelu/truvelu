@@ -186,12 +186,8 @@ function AiLearning() {
 						<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
 							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-background px-3 items-start md:items-center">
 								<div className="flex items-center gap-0.5 max-md:-translate-x-1">
-									<div className="flex items-center justify-center size-9">
-										<SharedIcon
-											icon={Folder01Icon}
-											size={36}
-											className="size-6"
-										/>
+									<div className="flex items-center justify-center aspect-square size-9 shrink-0">
+										<SharedIcon icon={Folder01Icon} className="size-6" />
 									</div>
 									<h1 className="text-xl text-balance text-center max-md:text-left">
 										{learning?.title}

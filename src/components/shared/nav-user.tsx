@@ -183,7 +183,8 @@ const NavAvatar = ({
 };
 
 export function NavUser() {
-	const { state } = useSidebar();
+	const { state, openMobile } = useSidebar();
+	const isMobile = useIsMobile();
 
 	const { data } = useQuery(convexQuery(api.auth.getCurrentUser, {}));
 
@@ -224,8 +225,16 @@ export function NavUser() {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent
 								className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-2xl py-1.5 px-0"
-								side={state === "collapsed" ? "right" : "top"}
-								align={state === "collapsed" ? "end" : "center"}
+								side={
+									state === "expanded" || (isMobile && openMobile)
+										? "top"
+										: "right"
+								}
+								align={
+									state === "expanded" || (isMobile && openMobile)
+										? "center"
+										: "end"
+								}
 								sideOffset={4}
 							>
 								<DropdownMenuLabel className="p-0 font-normal mx-2.5">

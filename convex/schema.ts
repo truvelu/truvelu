@@ -191,4 +191,15 @@ export default defineSchema({
 	})
 		.index("by_planId", ["planId"])
 		.index("by_planId_and_userId", ["planId", "userId"]),
+
+	planResources: defineTable({
+		planId: v.id("plans"),
+		userId: v.string(),
+		storageId: v.id("_storage"),
+		fileName: v.string(),
+		fileSize: v.number(),
+		mimeType: v.string(),
+	})
+		.index("by_planId", ["planId"])
+		.index("by_planId_and_userId", ["planId", "userId"]),
 });

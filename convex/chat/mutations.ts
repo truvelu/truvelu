@@ -111,6 +111,7 @@ export const sendChatMessage = mutation({
 
 /**
  * Send learning preference and update plan's embedded learningRequirements
+ * Also saves user-provided URLs to planSearchResults (deduplicates automatically)
  */
 export const sendLearningPreference = mutation({
 	args: {
@@ -141,6 +142,71 @@ export const sendLearningPreference = mutation({
 				other: payload.other,
 			},
 		});
+
+		// Extract and save user-provided URLs to planSearchResults
+		// This handles deduplication - if URL already exists, it won't be duplicated
+		if (
+			payload.other &&
+			typeof payload.other === "object" &&
+			"urls" in payload.other &&
+			Array.isArray(payload.other.urls)
+		) {
+			const urlsToSave = payload.other.urls
+				.filter(
+					(urlItem: unknown): urlItem is { url: string; search?: string } =>
+						typeof urlItem === "object" &&
+						urlItem !== null &&
+						"url" in urlItem &&
+						typeof (urlItem as { url: unknown }).url === "string" &&
+						(urlItem as { url: string }).url.trim() !== "",
+				)
+				.map((urlItem: { url: string; search?: string }) => ({
+					url: urlItem.url,
+					query: urlItem.search ?? undefined,
+					title: undefined,
+					image: undefined,
+					content: undefined,
+					publishedDate: undefined,
+					score: undefined,
+					other: undefined,
+				}));
+
+			if (urlsToSave.length > 0) {
+				await ctx.runMutation(api.plan.mutations.upsertPlanSearchResults, {
+					planId: lastPlan._id,
+					userId,
+					data: urlsToSave,
+				});
+			}
+		}
+
+		// Save uploaded file resources (PDFs)
+		if (
+			payload.other &&
+			typeof payload.other === "object" &&
+			"fileResources" in payload.other &&
+			Array.isArray(payload.other.fileResources)
+		) {
+			for (const fileResource of payload.other.fileResources) {
+				if (
+					typeof fileResource === "object" &&
+					fileResource !== null &&
+					"storageId" in fileResource &&
+					"fileName" in fileResource &&
+					"fileSize" in fileResource &&
+					"mimeType" in fileResource
+				) {
+					await ctx.runMutation(api.plan.mutations.savePlanResource, {
+						planId: lastPlan._id,
+						userId,
+						storageId: fileResource.storageId,
+						fileName: fileResource.fileName,
+						fileSize: fileResource.fileSize,
+						mimeType: fileResource.mimeType,
+					});
+				}
+			}
+		}
 
 		await ctx.runMutation(internal.chat.mutations.patchChatStatus, {
 			threadId,

@@ -4,6 +4,7 @@ import {
 	Delete01Icon,
 	File02Icon,
 	Link01Icon,
+	Loading03Icon,
 	Settings04Icon,
 	Settings05Icon,
 	StopIcon,
@@ -11,6 +12,8 @@ import {
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "convex/_generated/api";
+import type { Id } from "convex/_generated/dataModel";
+import { useMutation as useConvexDirectMutation } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
@@ -78,19 +81,55 @@ const formSchema = z.object({
 	),
 });
 
+// Type for uploaded file resource
+type UploadedFileResource = {
+	storageId: Id<"_storage">;
+	fileName: string;
+	fileSize: number;
+	mimeType: string;
+};
+
 export const AiLearningPreferenceInput = ({
 	threadId,
 	isInputStatusLoading,
 }: { threadId: string; isInputStatusLoading: boolean }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [showAdvancedMapping, setShowAdvancedMapping] = useState(false);
+	const [isUploading, setIsUploading] = useState(false);
 
 	const { userId } = useAuth();
+
+	const generateUploadUrl = useConvexDirectMutation(
+		api.plan.mutations.generateUploadUrl,
+	);
 
 	const sendLearningPreference = useMutation({
 		mutationKey: ["sendLearningPreference", threadId],
 		mutationFn: useConvexMutation(api.chat.mutations.sendLearningPreference),
 	});
+
+	// Upload a single file to Convex storage
+	const uploadFile = async (file: File): Promise<UploadedFileResource> => {
+		const uploadUrl = await generateUploadUrl();
+		const result = await fetch(uploadUrl, {
+			method: "POST",
+			headers: { "Content-Type": file.type },
+			body: file,
+		});
+
+		if (!result.ok) {
+			throw new Error(`Failed to upload ${file.name}`);
+		}
+
+		const { storageId } = await result.json();
+
+		return {
+			storageId,
+			fileName: file.name,
+			fileSize: file.size,
+			mimeType: file.type,
+		};
+	};
 
 	const form = useForm({
 		defaultValues: {
@@ -132,6 +171,25 @@ export const AiLearningPreferenceInput = ({
 					})),
 			];
 
+			// Upload PDF files to storage
+			let fileResources: UploadedFileResource[] = [];
+			if (value.resources.length > 0) {
+				setIsUploading(true);
+				try {
+					fileResources = await Promise.all(
+						value.resources.map((file) => uploadFile(file)),
+					);
+				} catch (error) {
+					toast.error(
+						error instanceof Error ? error.message : "Failed to upload files",
+						{ position: "top-center" },
+					);
+					setIsUploading(false);
+					return;
+				}
+				setIsUploading(false);
+			}
+
 			sendLearningPreference.mutate(
 				{
 					threadId,
@@ -142,8 +200,8 @@ export const AiLearningPreferenceInput = ({
 						goal: value.goal,
 						duration: value.courseType,
 						other: {
-							resources: value.resources,
 							urls,
+							fileResources,
 						},
 					},
 				},
@@ -508,7 +566,7 @@ export const AiLearningPreferenceInput = ({
 									<div className="flex flex-col gap-1">
 										<h3 className="text-sm font-medium">Upload Documents</h3>
 										<p className="text-xs text-muted-foreground">
-											Upload PDFs, docs, or other files to help context.
+											Upload PDF files to help provide context for your course.
 										</p>
 									</div>
 
@@ -519,14 +577,38 @@ export const AiLearningPreferenceInput = ({
 													<input
 														type="file"
 														multiple
+														accept="application/pdf"
 														className="absolute inset-0 opacity-0 cursor-pointer"
 														onChange={(e) => {
 															if (e.target.files) {
 																const newFiles = Array.from(e.target.files);
-																field.handleChange([
-																	...(field.state.value || []),
-																	...newFiles,
-																]);
+																// Filter for PDF files only
+																const pdfFiles = newFiles.filter(
+																	(file) => file.type === "application/pdf",
+																);
+																// Check file size (max 10MB)
+																const validFiles = pdfFiles.filter(
+																	(file) => file.size <= 10 * 1024 * 1024,
+																);
+
+																if (pdfFiles.length !== newFiles.length) {
+																	toast.error("Only PDF files are allowed", {
+																		position: "top-center",
+																	});
+																}
+																if (validFiles.length !== pdfFiles.length) {
+																	toast.error(
+																		"Some files exceed the 10MB size limit",
+																		{ position: "top-center" },
+																	);
+																}
+
+																if (validFiles.length > 0) {
+																	field.handleChange([
+																		...(field.state.value || []),
+																		...validFiles,
+																	]);
+																}
 															}
 														}}
 													/>
@@ -541,7 +623,7 @@ export const AiLearningPreferenceInput = ({
 															Click to upload or drag and drop
 														</p>
 														<p className="text-xs text-muted-foreground">
-															PDF, DOCX, TXT (max 10MB)
+															PDF only (max 10MB per file)
 														</p>
 													</div>
 												</div>
@@ -985,15 +1067,34 @@ export const AiLearningPreferenceInput = ({
 								type="button"
 								variant="outline"
 								onClick={() => form.reset()}
+								disabled={isUploading || sendLearningPreference.isPending}
 							>
 								Reset
 							</Button>
 							<Button
 								type="submit"
-								disabled={sendLearningPreference.isPending}
+								disabled={isUploading || sendLearningPreference.isPending}
 								form="learning-preference-form"
 							>
-								Submit
+								{isUploading ? (
+									<>
+										<SharedIcon
+											icon={Loading03Icon}
+											className="size-4 mr-1.5 animate-spin"
+										/>
+										Uploading...
+									</>
+								) : sendLearningPreference.isPending ? (
+									<>
+										<SharedIcon
+											icon={Loading03Icon}
+											className="size-4 mr-1.5 animate-spin"
+										/>
+										Submitting...
+									</>
+								) : (
+									"Submit"
+								)}
 							</Button>
 						</div>
 					</DialogFooter>

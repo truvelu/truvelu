@@ -110,7 +110,7 @@ const NavNewLearningItem = () => {
 						<Label className="flex items-start gap-2">
 							<Checkbox
 								id="toggle-2"
-								className="border-sidebar-border data-[state=checked]:border-black data-[state=checked]:bg-sidebar-primary data-[state=checked]:text-white"
+								className="border-sidebar-border data-[state=checked]:border-muted data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
 								checked={isAutogenerateTitle}
 								onCheckedChange={(checked) => {
 									setIsAutogenerateTitle(

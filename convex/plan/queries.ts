@@ -120,3 +120,41 @@ export const getPlanSearchResults = query({
 			.collect();
 	},
 });
+
+/**
+ * Get plan resources (PDF files) by plan ID
+ */
+export const getPlanResources = query({
+	args: {
+		planId: v.id("plans"),
+		userId: v.string(),
+	},
+	returns: v.array(
+		v.object({
+			_id: v.id("planResources"),
+			_creationTime: v.number(),
+			planId: v.id("plans"),
+			userId: v.string(),
+			storageId: v.id("_storage"),
+			fileName: v.string(),
+			fileSize: v.number(),
+			mimeType: v.string(),
+			url: v.union(v.string(), v.null()),
+		}),
+	),
+	handler: async (ctx, args) => {
+		const resources = await ctx.db
+			.query("planResources")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
+
+		return await Promise.all(
+			resources.map(async (resource) => ({
+				...resource,
+				url: await ctx.storage.getUrl(resource.storageId),
+			})),
+		);
+	},
+});

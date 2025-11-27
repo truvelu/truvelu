@@ -231,7 +231,7 @@ export const webSearchTool = internalAction({
 				queriesOptions: z.array(
 					z.object({
 						query: z.string(),
-						numResults: z.number().default(3),
+						numResults: z.number().max(3).default(3),
 					}),
 				),
 			}),
@@ -360,7 +360,6 @@ export const generateLearningListTool = internalAction({
 					prompt: `
 						<metadata>
 						<learning_requirement>${learningRequirementContent}</learning_requirement>
-						<search_results>${searchResultsContent?.join("\n\n")}</search_results>
 						</metadata>
 						<the-ask>Generate a title for the user's learning plan based on metadata. The title cannot be more than 50 characters.</the-ask>`,
 				}),
@@ -407,22 +406,22 @@ export const generateLearningListTool = internalAction({
 		}
 
 		// Get learning content by chat ID (using the new query)
-		const learningContent = await ctx.runQuery(
-			api.learning.queries.getLearningContentByChatId,
+		const lastPlan = await ctx.runQuery(
+			api.plan.queries.getPlanByChatIdAndUserId,
 			{ chatId: chat._id, userId },
 		);
 
-		if (!learningContent) {
-			throw new Error("Learning content not found");
+		if (!lastPlan) {
+			throw new Error("Plan not found");
 		}
 
 		await Promise.all([
 			ctx.runMutation(api.learning.mutations.updateLearningTitle, {
-				learningId: learningContent.learningId,
+				learningId: lastPlan.learningId,
 				title: learningTitleGeneratext.text,
 			}),
 			ctx.runMutation(api.learning.mutations.createLearningContent, {
-				learningId: learningContent.learningId,
+				learningId: lastPlan.learningId,
 				userId,
 				data: learningListGenerateObject.object.learningList.map(
 					(item, index) => ({
@@ -476,23 +475,23 @@ export const streamGenerateLearningContentTool = internalAction({
 		}
 
 		// Get learning content by chat ID
-		const learningContent = await ctx.runQuery(
-			api.learning.queries.getLearningContentByChatId,
+		const lastPlan = await ctx.runQuery(
+			api.plan.queries.getPlanByChatIdAndUserId,
 			{
 				chatId: chat._id,
 				userId,
 			},
 		);
 
-		if (!learningContent) {
-			throw new Error("Learning content not found");
+		if (!lastPlan) {
+			throw new Error("Plan not found");
 		}
 
 		await ctx.scheduler.runAfter(
 			0,
 			internal.learning.actions.streamGenerateLearningContent,
 			{
-				learningId: learningContent.learningId,
+				learningId: lastPlan.learningId,
 				userId,
 			},
 		);

@@ -8,7 +8,7 @@ export function AiConversationSkeleton() {
 			<div className={cn("absolute inset-x-0 bottom-0 mx-4")}>
 				<ContainerWithMargin>
 					<ContainerWithMaxWidth className={cn("pb-2 flex-1")}>
-						<Skeleton className="size-full h-[112px] rounded-tlarge bg-secondary" />
+						<Skeleton className="size-full h-[102px] my-px rounded-tlarge bg-secondary" />
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 			</div>

@@ -1,56 +1,56 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
- * Custom hook to track the height of an input element.
- * Uses ResizeObserver to monitor height changes and window resize events.
+ * Custom hook to track the size of an element.
+ * Uses a callback ref pattern to properly handle elements that mount/unmount.
+ * Uses ResizeObserver to monitor size changes and window resize events.
  *
  * @returns {Object} An object containing:
- *   - ref: Ref to attach to the input element
- *   - width: Current height of the input element in pixels
- *   - handleInputReady: Callback to manually trigger height calculation
+ *   - ref: Callback ref to attach to the element
+ *   - width: Current width of the element in pixels
+ *   - height: Current height of the element in pixels
  */
-// export function useInputHeight() {
 export function useGetComponentSize<T extends HTMLElement>() {
-	const ref = useRef<T>(null);
+	const [element, setElement] = useState<T | null>(null);
 	const [width, setWidth] = useState(0);
 	const [height, setHeight] = useState(0);
 
-	const handleInputReady = useCallback(() => {
-		if (ref.current) {
-			setHeight(ref.current.offsetHeight);
-			setWidth(ref.current.offsetWidth);
-		}
+	// Callback ref that tracks when the element mounts/unmounts
+	const ref = useCallback((node: T | null) => {
+		setElement(node);
 	}, []);
 
-	// Handle input height tracking with ResizeObserver and window resize
+	// Handle size tracking with ResizeObserver and window resize
 	useEffect(() => {
-		const component = ref.current;
-		if (!component) return;
+		if (!element) {
+			// Reset size when element unmounts
+			setWidth(0);
+			setHeight(0);
+			return;
+		}
 
-		const updateHeight = () => {
-			setHeight(component.offsetHeight);
-			setWidth(component.offsetWidth);
+		const updateSize = () => {
+			setHeight(element.offsetHeight);
+			setWidth(element.offsetWidth);
 		};
 
-		const ro = new ResizeObserver(updateHeight);
-		ro.observe(component);
+		// Initial measurement
+		updateSize();
 
-		window.addEventListener("resize", updateHeight);
+		const ro = new ResizeObserver(updateSize);
+		ro.observe(element);
+
+		window.addEventListener("resize", updateSize);
 
 		return () => {
 			ro.disconnect();
-			window.removeEventListener("resize", updateHeight);
+			window.removeEventListener("resize", updateSize);
 		};
-	}, []);
-
-	useEffect(() => {
-		handleInputReady();
-	}, [handleInputReady]);
+	}, [element]);
 
 	return {
 		ref,
 		width,
 		height,
-		handleInputReady,
 	};
 }

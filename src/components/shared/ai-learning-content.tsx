@@ -1,5 +1,6 @@
 import { MessageType } from "@/constants/messages";
 import { useGetRoomId } from "@/hooks/use-get-room-id";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useUIMessages } from "@convex-dev/agent/react";
 import {
@@ -25,12 +26,14 @@ import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
 import AiMessages from "./ai-messages";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
+import { HeaderBreadcrumbs } from "./header";
 import SharedIcon from "./shared-icon";
 
 const AiLearningContentResult = memo(() => {
 	const matchRoute = useMatchRoute();
 	const navigate = useNavigate();
 	const params = useParams({ strict: false });
+	const isMobile = useIsMobile();
 
 	const chatRoomId = params?.chatId ?? "";
 	const learningId = params?.learningId ?? "";
@@ -160,10 +163,21 @@ const AiLearningContentResult = memo(() => {
 				)}
 				key={chatRoomId}
 			>
+				{isLearningCreationRoute && isMobile && (
+					<ContainerWithMargin
+						asContent
+						className="sticky top-0 py-4 bg-background z-20 border-b border-border"
+					>
+						<ContainerWithMaxWidth>
+							<HeaderBreadcrumbs />
+						</ContainerWithMaxWidth>
+					</ContainerWithMargin>
+				)}
+
 				<ContainerWithMargin
 					asContent
 					style={{
-						paddingTop: "3rem",
+						paddingTop: isLearningCreationRoute && isMobile ? "0.5rem" : "3rem",
 						paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom) + 1rem)",
 					}}
 				>
@@ -225,96 +239,106 @@ const AiLearningContentResult = memo(() => {
 					</ContainerWithMaxWidth>
 				</ContainerWithMargin>
 
-				{!isLoading && !!messages?.length && (
-					<ContainerWithMargin>
-						<ContainerWithMaxWidth className={cn("pb-2 flex-1 bg-background")}>
-							<div className={cn("grid grid-cols-2 h-20 justify-between py-2")}>
-								<Button
-									variant="ghost"
-									className="rounded-md p-2 flex flex-col items-start h-fit cursor-pointer"
-									disabled={
-										isLoading ||
-										!learningChatsContent?.length ||
-										!currentLearningChatIndex
-									}
-									onClick={() => {
-										if (isLoading || !learningChatsContent?.length) return;
-										if (!currentLearningChatIndex) return;
-										navigate({
-											to: "/l/{-$learningId}/c/{-$chatId}",
-											params: {
-												learningId:
-													learningChatsContent[currentLearningChatIndex - 1]
-														.learningData?.uuid,
-												chatId:
-													learningChatsContent[currentLearningChatIndex - 1]
-														.chatData?.uuid,
-											},
-										});
-									}}
+				{!(
+					chat?.status?.type === "streaming" ||
+					chat?.status?.type === "submitted" ||
+					chat?.status?.type === "need_approval"
+				) &&
+					!isLoading &&
+					!!messages?.length && (
+						<ContainerWithMargin>
+							<ContainerWithMaxWidth
+								className={cn("pb-2 flex-1 bg-background")}
+							>
+								<div
+									className={cn("grid grid-cols-2 h-20 justify-between py-2")}
 								>
-									<div className="flex items-center gap-2">
-										<SharedIcon icon={ArrowLeft02Icon} />
-										<span className="text-sm font-medium text-accent-foreground">
-											Previous
-										</span>
-									</div>
-
-									<h1 className="text-xs font-medium">
-										{
-											learningChatsContent[currentLearningChatIndex - 1]
-												?.metadata?.title
+									<Button
+										variant="ghost"
+										className="rounded-md p-2 flex flex-col items-start h-fit cursor-pointer"
+										disabled={
+											isLoading ||
+											!learningChatsContent?.length ||
+											!currentLearningChatIndex
 										}
-									</h1>
-								</Button>
+										onClick={() => {
+											if (isLoading || !learningChatsContent?.length) return;
+											if (!currentLearningChatIndex) return;
+											navigate({
+												to: "/l/{-$learningId}/c/{-$chatId}",
+												params: {
+													learningId:
+														learningChatsContent[currentLearningChatIndex - 1]
+															.learningData?.uuid,
+													chatId:
+														learningChatsContent[currentLearningChatIndex - 1]
+															.chatData?.uuid,
+												},
+											});
+										}}
+									>
+										<div className="flex items-center gap-2">
+											<SharedIcon icon={ArrowLeft02Icon} />
+											<span className="text-sm font-medium text-accent-foreground">
+												Previous
+											</span>
+										</div>
 
-								<Button
-									variant="ghost"
-									className="rounded-md p-2 flex flex-col items-end h-fit cursor-pointer"
-									disabled={
-										isLoading ||
-										!learningChatsContent?.length ||
-										currentLearningChatIndex ===
-											learningChatsContent?.length - 1
-									}
-									onClick={() => {
-										if (isLoading || !learningChatsContent?.length) return;
-										if (
+										<h1 className="text-xs font-medium">
+											{
+												learningChatsContent[currentLearningChatIndex - 1]
+													?.metadata?.title
+											}
+										</h1>
+									</Button>
+
+									<Button
+										variant="ghost"
+										className="rounded-md p-2 flex flex-col items-end h-fit cursor-pointer"
+										disabled={
+											isLoading ||
+											!learningChatsContent?.length ||
 											currentLearningChatIndex ===
-											learningChatsContent?.length - 1
-										)
-											return;
-										navigate({
-											to: "/l/{-$learningId}/c/{-$chatId}",
-											params: {
-												learningId:
-													learningChatsContent[currentLearningChatIndex + 1]
-														.learningData?.uuid,
-												chatId:
-													learningChatsContent[currentLearningChatIndex + 1]
-														.chatData?.uuid,
-											},
-										});
-									}}
-								>
-									<div className="flex items-center gap-2">
-										<span className="text-sm font-medium text-accent-foreground">
-											Next
-										</span>
-										<SharedIcon icon={ArrowRight02Icon} />
-									</div>
-
-									<h1 className="text-xs font-medium">
-										{
-											learningChatsContent[currentLearningChatIndex + 1]
-												?.metadata?.title
+												learningChatsContent?.length - 1
 										}
-									</h1>
-								</Button>
-							</div>
-						</ContainerWithMaxWidth>
-					</ContainerWithMargin>
-				)}
+										onClick={() => {
+											if (isLoading || !learningChatsContent?.length) return;
+											if (
+												currentLearningChatIndex ===
+												learningChatsContent?.length - 1
+											)
+												return;
+											navigate({
+												to: "/l/{-$learningId}/c/{-$chatId}",
+												params: {
+													learningId:
+														learningChatsContent[currentLearningChatIndex + 1]
+															.learningData?.uuid,
+													chatId:
+														learningChatsContent[currentLearningChatIndex + 1]
+															.chatData?.uuid,
+												},
+											});
+										}}
+									>
+										<div className="flex items-center gap-2">
+											<span className="text-sm font-medium text-accent-foreground">
+												Next
+											</span>
+											<SharedIcon icon={ArrowRight02Icon} />
+										</div>
+
+										<h1 className="text-xs font-medium">
+											{
+												learningChatsContent[currentLearningChatIndex + 1]
+													?.metadata?.title
+											}
+										</h1>
+									</Button>
+								</div>
+							</ContainerWithMaxWidth>
+						</ContainerWithMargin>
+					)}
 			</div>
 
 			{isLearningCreationRoute && messageThatIsStreaming && (

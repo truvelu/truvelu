@@ -133,3 +133,90 @@ export const updatePlanStatus = internalMutation({
 		await ctx.db.patch(planId, { status });
 	},
 });
+
+/**
+ * Generate upload URL for PDF files
+ * Only allows PDF files
+ */
+export const generateUploadUrl = mutation({
+	args: {},
+	returns: v.string(),
+	handler: async (ctx) => {
+		return await ctx.storage.generateUploadUrl();
+	},
+});
+
+/**
+ * Save plan resource (PDF file reference)
+ * Called after file is uploaded to storage
+ */
+export const savePlanResource = mutation({
+	args: {
+		planId: v.id("plans"),
+		userId: v.string(),
+		storageId: v.id("_storage"),
+		fileName: v.string(),
+		fileSize: v.number(),
+		mimeType: v.string(),
+	},
+	returns: v.id("planResources"),
+	handler: async (ctx, args) => {
+		// Validate the plan exists and belongs to the user
+		const plan = await ctx.db.get(args.planId);
+		if (!plan || plan.userId !== args.userId) {
+			throw new Error("Plan not found or unauthorized");
+		}
+
+		// Validate file is PDF
+		if (args.mimeType !== "application/pdf") {
+			throw new Error("Only PDF files are allowed");
+		}
+
+		// Check if this file already exists (by storageId)
+		const existing = await ctx.db
+			.query("planResources")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.filter((q) => q.eq(q.field("storageId"), args.storageId))
+			.first();
+
+		if (existing) {
+			return existing._id;
+		}
+
+		return await ctx.db.insert("planResources", {
+			planId: args.planId,
+			userId: args.userId,
+			storageId: args.storageId,
+			fileName: args.fileName,
+			fileSize: args.fileSize,
+			mimeType: args.mimeType,
+		});
+	},
+});
+
+/**
+ * Delete plan resource
+ */
+export const deletePlanResource = mutation({
+	args: {
+		resourceId: v.id("planResources"),
+		userId: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		const resource = await ctx.db.get(args.resourceId);
+		if (!resource || resource.userId !== args.userId) {
+			throw new Error("Resource not found or unauthorized");
+		}
+
+		// Delete from storage
+		await ctx.storage.delete(resource.storageId);
+
+		// Delete the record
+		await ctx.db.delete(args.resourceId);
+
+		return null;
+	},
+});
