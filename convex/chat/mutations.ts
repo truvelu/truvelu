@@ -15,7 +15,7 @@ import {
 	chatTypeValidator,
 	learningPreferenceValidator,
 } from "../schema";
-import { createChatService } from "./services";
+import { _createChatService, _getOrThrowChat } from "./helpers";
 
 /**
  * Create a new chat
@@ -29,7 +29,7 @@ export const createChat = mutation({
 		summary: v.optional(v.string()),
 	},
 	handler: async (ctx, { agentType, userId, type, title, summary }) => {
-		return await createChatService(ctx, {
+		return await _createChatService(ctx, {
 			agentType,
 			userId,
 			type,
@@ -258,7 +258,7 @@ export const deleteChat = internalMutation({
 		userId: v.string(),
 	},
 	handler: async (ctx, { chatId, userId }) => {
-		const chat = await ctx.db.get(chatId);
+		await _getOrThrowChat(ctx, { chatId, userId });
 		const discussionChat = await ctx.runQuery(
 			api.discussion.queries.getDiscussionByParentChatId,
 			{
@@ -266,13 +266,6 @@ export const deleteChat = internalMutation({
 				userId,
 			},
 		);
-
-		if (!chat) {
-			throw new Error("Chat not found");
-		}
-		if (chat.userId !== userId) {
-			throw new Error("Unauthorized: You don't own this chat");
-		}
 		await Promise.all([
 			...discussionChat.map((discussion) => ctx.db.delete(discussion._id)),
 		]);

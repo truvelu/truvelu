@@ -1,7 +1,7 @@
 import type { SaveMessagesArgs } from "@convex-dev/agent";
 import { v4 as uuidv4 } from "uuid";
 
-export const toolResultCreator = (toolName: string, result: string) => {
+export const _createToolResult = (toolName: string, result: string) => {
 	const toolResultUUID = `call_${uuidv4().replace(/-/g, "")}`;
 	return [
 		{

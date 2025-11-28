@@ -9,6 +9,7 @@ import { internal } from "../_generated/api";
 import { mutation } from "../_generated/server";
 import { createAgent } from "../agent";
 import { chatStatusValidator, chatTypeValidator } from "../schema";
+import { _getOrThrowLearning, _getOrThrowLearningContent } from "./helpers";
 
 /**
  * Create a new learning panel with initial setup
@@ -227,13 +228,7 @@ export const deleteLearning = mutation({
 	},
 	handler: async (ctx, { learningId, userId }) => {
 		// SECURITY: Verify ownership before proceeding
-		const learning = await ctx.db.get(learningId);
-		if (!learning) {
-			throw new Error("Learning not found");
-		}
-		if (learning.userId !== userId) {
-			throw new Error("Unauthorized: You don't own this learning");
-		}
+		await _getOrThrowLearning(ctx, { learningId, userId });
 
 		// Get all learning contents for this learning
 		const learningContents = await ctx.db
@@ -358,11 +353,10 @@ export const updateLearningContentStatus = mutation({
 		status: chatStatusValidator,
 	},
 	handler: async (ctx, args) => {
-		const existingContent = await ctx.db.get(args.learningContentId);
-
-		if (!existingContent || existingContent.userId !== args.userId) {
-			throw new Error("Learning content not found");
-		}
+		await _getOrThrowLearningContent(ctx, {
+			learningContentId: args.learningContentId,
+			userId: args.userId,
+		});
 
 		await ctx.db.patch(args.learningContentId, {
 			status: args.status,

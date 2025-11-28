@@ -10,7 +10,7 @@ import z from "zod";
 import { api, components, internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 import { action, internalAction } from "../_generated/server";
-import { toolResultCreator } from "../_helpers";
+import { _createToolResult } from "../_helpers";
 import { createAgent } from "../agent";
 import {
 	agentTypeValidator,
@@ -179,7 +179,7 @@ export const generateSearchQueriesTool = internalAction({
 
 		await agent.saveMessages(ctx, {
 			threadId,
-			messages: toolResultCreator("generateSearchQueries", result),
+			messages: _createToolResult("generateSearchQueries", result),
 			skipEmbeddings: true,
 		});
 
@@ -290,7 +290,7 @@ export const webSearchTool = internalAction({
 
 			await agent.saveMessages(ctx, {
 				threadId,
-				messages: toolResultCreator("webSearch", result),
+				messages: _createToolResult("webSearch", result),
 				skipEmbeddings: true,
 			});
 
@@ -444,7 +444,7 @@ export const generateLearningListTool = internalAction({
 
 		await agent.saveMessages(ctx, {
 			threadId,
-			messages: toolResultCreator("generateLearningList", result),
+			messages: _createToolResult("generateLearningList", result),
 			skipEmbeddings: true,
 		});
 
@@ -503,7 +503,7 @@ export const streamGenerateLearningContentTool = internalAction({
 
 		await agent.saveMessages(ctx, {
 			threadId,
-			messages: toolResultCreator("streamGenerateLearningContent", result),
+			messages: _createToolResult("streamGenerateLearningContent", result),
 			skipEmbeddings: true,
 		});
 
@@ -623,7 +623,7 @@ export const streamUserLearningPreference = internalAction({
 		await Promise.all([
 			contentGenerationAgent.saveMessages(ctx, {
 				threadId,
-				messages: toolResultCreator(
+				messages: _createToolResult(
 					"streamUserLearningPreference",
 					JSON.stringify({
 						data: payload,

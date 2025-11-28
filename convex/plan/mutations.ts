@@ -6,6 +6,7 @@
 import { v } from "convex/values";
 import { internalMutation, mutation } from "../_generated/server";
 import { chatStatusValidator, freeObjectValidator } from "../schema";
+import { _getOrThrowPlan, _getOrThrowPlanResource } from "./helpers";
 
 /**
  * Update plan's embedded learningRequirements
@@ -23,11 +24,7 @@ export const updatePlanLearningRequirements = mutation({
 		}),
 	},
 	handler: async (ctx, args) => {
-		const plan = await ctx.db.get(args.planId);
-
-		if (!plan || plan.userId !== args.userId) {
-			throw new Error("Plan not found");
-		}
+		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
 
 		await ctx.db.patch(args.planId, {
 			learningRequirements: {
@@ -67,11 +64,7 @@ export const upsertPlanSearchResults = mutation({
 		),
 	},
 	handler: async (ctx, args) => {
-		const plan = await ctx.db.get(args.planId);
-
-		if (!plan || plan.userId !== args.userId) {
-			throw new Error("Plan not found");
-		}
+		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
 
 		const searchResultIds = await Promise.all(
 			args.data.map(async (item) => {
@@ -161,11 +154,7 @@ export const savePlanResource = mutation({
 	},
 	returns: v.id("planResources"),
 	handler: async (ctx, args) => {
-		// Validate the plan exists and belongs to the user
-		const plan = await ctx.db.get(args.planId);
-		if (!plan || plan.userId !== args.userId) {
-			throw new Error("Plan not found or unauthorized");
-		}
+		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
 
 		// Validate file is PDF
 		if (args.mimeType !== "application/pdf") {
@@ -206,10 +195,10 @@ export const deletePlanResource = mutation({
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		const resource = await ctx.db.get(args.resourceId);
-		if (!resource || resource.userId !== args.userId) {
-			throw new Error("Resource not found or unauthorized");
-		}
+		const resource = await _getOrThrowPlanResource(ctx, {
+			resourceId: args.resourceId,
+			userId: args.userId,
+		});
 
 		// Delete from storage
 		await ctx.storage.delete(resource.storageId);

@@ -5,6 +5,8 @@
 
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { _getOrThrowChatByThreadId } from "../chat/helpers";
+import { _getOrThrowPlan, _getOrThrowPlanByChatId } from "./helpers";
 
 /**
  * Get plan details with embedded learningRequirements and search results
@@ -15,13 +17,10 @@ export const getPlanDetail = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const plan = await ctx.db.get(args.planId);
-
-		if (!plan || plan.userId !== args.userId) {
-			throw new Error(
-				`Plan not found, planId: ${args.planId}, userId: ${args.userId}`,
-			);
-		}
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
 		// Get search results for this plan
 		const planSearchResults = await ctx.db
@@ -53,31 +52,15 @@ export const getLastPlanByThreadId = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		// Get chat by threadId
-		const chat = await ctx.db
-			.query("chats")
-			.withIndex("by_threadId_and_userId", (q) =>
-				q.eq("threadId", args.threadId).eq("userId", args.userId),
-			)
-			.unique();
+		const chat = await _getOrThrowChatByThreadId(ctx, {
+			threadId: args.threadId,
+			userId: args.userId,
+		});
 
-		if (!chat) {
-			throw new Error("Chat not found");
-		}
-
-		const lastPlan = await ctx.db
-			.query("plans")
-			.withIndex("by_chatId_and_userId", (q) =>
-				q.eq("chatId", chat._id).eq("userId", args.userId),
-			)
-			.order("desc")
-			.first();
-
-		if (!lastPlan) {
-			throw new Error("No plan found for this chat");
-		}
-
-		return lastPlan;
+		return await _getOrThrowPlanByChatId(ctx, {
+			chatId: chat._id,
+			userId: args.userId,
+		});
 	},
 });
 
@@ -87,19 +70,10 @@ export const getPlanByChatIdAndUserId = query({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const plan = await ctx.db
-			.query("plans")
-			.withIndex("by_chatId_and_userId", (q) =>
-				q.eq("chatId", args.chatId).eq("userId", args.userId),
-			)
-			.order("desc")
-			.first();
-
-		if (!plan) {
-			throw new Error("No plan found for this chat");
-		}
-
-		return plan;
+		return await _getOrThrowPlanByChatId(ctx, {
+			chatId: args.chatId,
+			userId: args.userId,
+		});
 	},
 });
 

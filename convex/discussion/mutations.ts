@@ -8,7 +8,7 @@ import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
 import { createAgent } from "../agent";
-import { createChatService } from "../chat/services";
+import { _createChatService } from "../chat/helpers";
 import { agentTypeValidator } from "../schema";
 
 /**
@@ -30,7 +30,7 @@ export const createDiscussion = mutation({
 		const agent = createAgent({ agentType });
 
 		// Create a chat record for this discussion
-		const { id: discussionChatId, threadId } = await createChatService(ctx, {
+		const { id: discussionChatId, threadId } = await _createChatService(ctx, {
 			agentType,
 			userId,
 			type: "discussion",
