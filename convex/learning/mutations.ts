@@ -13,6 +13,7 @@ import { _getOrThrowLearning, _getOrThrowLearningContent } from "./helpers";
 
 /**
  * Create a new learning panel with initial setup
+ * Now stores learningId and planId directly in the chat record
  */
 export const createLearningPanel = mutation({
 	args: {
@@ -50,29 +51,38 @@ export const createLearningPanel = mutation({
 			}),
 		]);
 
+		// Create chat with learningId (planId will be patched after plan creation)
 		const _chatId = await ctx.db.insert("chats", {
 			uuid: uuidv7(),
 			threadId,
 			userId,
 			status: { type: "ready", message: "Ready to start conversation" },
 			type: "plan",
+			learningId: _learningId,
+		});
+
+		const _planId = await ctx.db.insert("plans", {
+			title: "New Learning Plan",
+			content: "",
+			status: { type: "ready", message: "Draft plan" },
+			userId,
+			chatId: _chatId,
+			learningId: _learningId,
 		});
 
 		await Promise.all([
-			ctx.db.insert("plans", {
-				title: "New Learning Plan",
-				content: "",
-				learningRequirements: {
-					topic: undefined,
-					userLevel: undefined,
-					goal: undefined,
-					duration: undefined,
-					other: undefined,
-				},
-				status: { type: "ready", message: "Draft plan" },
+			// Update chat with planId
+			ctx.db.patch(_chatId, { planId: _planId }),
+			// Create initial learning requirements (empty)
+			ctx.db.insert("learningRequirements", {
+				planId: _planId,
 				userId,
-				chatId: _chatId,
 				learningId: _learningId,
+				topic: undefined,
+				userLevel: undefined,
+				goal: undefined,
+				duration: undefined,
+				other: undefined,
 			}),
 			ctx.scheduler.runAfter(
 				0,
@@ -100,7 +110,7 @@ export const createLearningPanel = mutation({
 
 /**
  * Create learning content items (courses/modules)
- * Now inserts directly into learningContents table
+ * Now stores learningId directly in the chat record
  */
 export const createLearningContent = mutation({
 	args: {
@@ -129,12 +139,14 @@ export const createLearningContent = mutation({
 					summary: item.description ?? "",
 				});
 
+				// Create chat with learningId directly
 				const _chatId = await ctx.db.insert("chats", {
 					uuid: uuidv7(),
 					threadId,
 					userId,
 					status: { type: "ready", message: "Ready to start conversation" },
 					type: "content",
+					learningId,
 				});
 
 				// Insert directly into learningContents (consolidated table)
@@ -240,19 +252,28 @@ export const deleteLearning = mutation({
 
 		const learningContentChatIds = learningContents.map((lc) => lc.chatId);
 
-		const [learningContentChats, plansByLearningId] = await Promise.all([
-			Promise.all(
-				learningContentChatIds.map((learningContentChatId) =>
-					ctx.db.get(learningContentChatId),
+		// Get all chats linked to this learning (plan chats, content chats, etc.)
+		const [learningContentChats, plansByLearningId, learningChats] =
+			await Promise.all([
+				Promise.all(
+					learningContentChatIds.map((learningContentChatId) =>
+						ctx.db.get(learningContentChatId),
+					),
 				),
-			),
-			ctx.db
-				.query("plans")
-				.withIndex("by_learningId_and_userId", (q) =>
-					q.eq("learningId", learningId).eq("userId", userId),
-				)
-				.collect(),
-		]);
+				ctx.db
+					.query("plans")
+					.withIndex("by_learningId_and_userId", (q) =>
+						q.eq("learningId", learningId).eq("userId", userId),
+					)
+					.collect(),
+				// Get all chats linked to this learning
+				ctx.db
+					.query("chats")
+					.withIndex("by_learningId_and_userId", (q) =>
+						q.eq("learningId", learningId).eq("userId", userId),
+					)
+					.collect(),
+			]);
 
 		const learningContentChatThreadIds = learningContentChats
 			.map((learningContentChat) => learningContentChat?.threadId)
@@ -268,55 +289,72 @@ export const deleteLearning = mutation({
 			?.map((planChat) => planChat?.threadId)
 			.filter(Boolean);
 
-		// Get plan items and search results (using renamed tables)
-		const [planItems, searchResults] = await Promise.all([
-			Promise.all(
-				planIds.flatMap((planId) =>
-					ctx.db
-						.query("planItems")
-						.withIndex("by_planId_and_userId", (q) =>
-							q.eq("planId", planId).eq("userId", userId),
-						)
-						.collect(),
+		// Get plan items, search results, learning requirements, and resources
+		const [planItems, searchResults, learningRequirements, resources] =
+			await Promise.all([
+				Promise.all(
+					planIds.flatMap((planId) =>
+						ctx.db
+							.query("planItems")
+							.withIndex("by_planId_and_userId", (q) =>
+								q.eq("planId", planId).eq("userId", userId),
+							)
+							.collect(),
+					),
 				),
-			),
-			Promise.all(
-				planIds.flatMap((planId) =>
-					ctx.db
-						.query("searchResults")
-						.withIndex("by_planId_and_userId", (q) =>
-							q.eq("planId", planId).eq("userId", userId),
-						)
-						.collect(),
+				Promise.all(
+					planIds.flatMap((planId) =>
+						ctx.db
+							.query("searchResults")
+							.withIndex("by_planId_and_userId", (q) =>
+								q.eq("planId", planId).eq("userId", userId),
+							)
+							.collect(),
+					),
 				),
-			),
-		]);
+				Promise.all(
+					planIds.flatMap((planId) =>
+						ctx.db
+							.query("learningRequirements")
+							.withIndex("by_planId_and_userId", (q) =>
+								q.eq("planId", planId).eq("userId", userId),
+							)
+							.collect(),
+					),
+				),
+				ctx.db
+					.query("resources")
+					.withIndex("by_learningId_and_userId", (q) =>
+						q.eq("learningId", learningId).eq("userId", userId),
+					)
+					.collect(),
+			]);
 
 		const flatPlanItems = planItems.flat();
 		const flatSearchResults = searchResults.flat();
+		const flatLearningRequirements = learningRequirements.flat();
 
 		// Delete all related records in proper order
-		// Level 1: Delete plan items and search results
+		// Level 1: Delete plan items, search results, learning requirements, resources
 		await Promise.all([
 			...flatPlanItems.map((item) => ctx.db.delete(item._id)),
 			...flatSearchResults.map((item) => ctx.db.delete(item._id)),
+			...flatLearningRequirements.map((item) => ctx.db.delete(item._id)),
+			...resources.map((item) => ctx.db.delete(item._id)),
 		]);
 
-		// Level 2: Delete plan chats and learning content chats
+		// Level 2: Delete all chats linked to this learning
 		await Promise.all([
-			...planChatIds.map((planChatId) => ctx.db.delete(planChatId)),
-			...learningContentChatIds.map((learningContentChatId) =>
-				ctx.db.delete(learningContentChatId),
-			),
+			...learningChats.map((chat) => ctx.db.delete(chat._id)),
 		]);
 
-		// Level 3: Delete plans
+		// Level 3: Delete plans and learning contents
 		await Promise.all([
 			...planIds.map((id) => ctx.db.delete(id)),
 			...learningContents.map((lc) => ctx.db.delete(lc._id)),
 		]);
 
-		// Level 4: Delete chats and schedule thread deletions
+		// Level 4: Schedule thread deletions
 		await Promise.all([
 			...learningContentChatThreadIds.map((learningContentChatThreadId) => {
 				if (!learningContentChatThreadId) return Promise.resolve();

@@ -98,27 +98,16 @@ export default defineSchema({
 		threadId: v.string(),
 		userId: v.string(),
 		type: chatTypeValidator,
+		parentChatId: v.optional(v.id("chats")),
+		linkedMessageId: v.optional(v.string()),
+		learningId: v.optional(v.id("learnings")),
+		planId: v.optional(v.id("plans")),
 		status: v.optional(chatStatusValidator),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_threadId_and_userId", ["threadId", "userId"])
 		.index("by_uuid_and_userId", ["uuid", "userId"])
-		.index("by_type_and_userId", ["type", "userId"]),
-
-	// Generalized chat metadata table (replaces discussions)
-	// Links chats to parent chats, messages, or learnings
-	chatMetadatas: defineTable({
-		chatId: v.id("chats"),
-		userId: v.string(),
-		// Optional: parent chat for discussion-type chats
-		parentChatId: v.optional(v.id("chats")),
-		// Optional: linked message ID for discussions on specific messages
-		linkedMessageId: v.optional(v.string()),
-		// Optional: linked learning for learning-related chats
-		learningId: v.optional(v.id("learnings")),
-	})
-		.index("by_userId", ["userId"])
-		.index("by_chatId_and_userId", ["chatId", "userId"])
+		.index("by_type_and_userId", ["type", "userId"])
 		.index("by_linkedMessageId_and_userId", ["linkedMessageId", "userId"])
 		.index("by_parentChatId_and_userId", ["parentChatId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
@@ -155,25 +144,28 @@ export default defineSchema({
 		userId: v.string(),
 		content: v.string(),
 		title: v.string(),
-		learningRequirements: v.object({
-			topic: v.optional(v.string()),
-			userLevel: v.optional(v.string()),
-			goal: v.optional(v.string()),
-			duration: v.optional(v.string()),
-			other: freeObjectValidator,
-		}),
 		status: chatStatusValidator,
 	})
 		.index("by_userId", ["userId"])
 		.index("by_chatId_and_userId", ["chatId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	// Renamed from planMappedSearchResults - now supports both plan and learning level
+	learningRequirements: defineTable({
+		userId: v.string(),
+		planId: v.id("plans"),
+		learningId: v.optional(v.id("learnings")),
+		topic: v.optional(v.string()),
+		userLevel: v.optional(v.string()),
+		goal: v.optional(v.string()),
+		duration: v.optional(v.string()),
+		other: freeObjectValidator,
+	})
+		.index("by_planId_and_userId", ["planId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
+
 	mappedSearchResults: defineTable({
 		userId: v.string(),
-		// Optional: link to specific plan
 		planId: v.optional(v.id("plans")),
-		// Optional: link to learning (for learning-level resources)
 		learningId: v.optional(v.id("learnings")),
 		url: v.optional(v.string()),
 		search: v.optional(v.string()),
@@ -185,14 +177,10 @@ export default defineSchema({
 		.index("by_planId_and_userId", ["planId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	// Renamed from planSearchResults - now supports both plan and learning level
 	searchResults: defineTable({
 		userId: v.string(),
-		// Optional: link to specific plan
 		planId: v.optional(v.id("plans")),
-		// Optional: link to learning (for learning-level resources)
 		learningId: v.optional(v.id("learnings")),
-		// Optional: reference to mapped URL
 		mappedUrlId: v.optional(v.id("mappedSearchResults")),
 		query: v.optional(v.string()),
 		title: v.optional(v.string()),
@@ -208,20 +196,17 @@ export default defineSchema({
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
 	planItems: defineTable({
-		planId: v.id("plans"),
 		userId: v.string(),
+		planId: v.id("plans"),
 		title: v.string(),
 		description: v.optional(v.string()),
 		order: v.number(),
 		status: chatStatusValidator,
 	}).index("by_planId_and_userId", ["planId", "userId"]),
 
-	// Renamed from planResources - now supports both plan and learning level
 	resources: defineTable({
 		userId: v.string(),
-		// Optional: link to specific plan
 		planId: v.optional(v.id("plans")),
-		// Optional: link to learning (for learning-level resources)
 		learningId: v.optional(v.id("learnings")),
 		storageId: v.id("_storage"),
 		fileName: v.string(),

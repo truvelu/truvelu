@@ -3,7 +3,7 @@
  * Single responsibility: Write operations for chat domain
  */
 
-import { abortStream } from "@convex-dev/agent";
+import { abortStream, vMessage } from "@convex-dev/agent";
 import { v } from "convex/values";
 import { api, components, internal } from "../_generated/api";
 import { internalMutation, mutation } from "../_generated/server";
@@ -19,6 +19,7 @@ import { _createChatService, _getOrThrowChat } from "./helpers";
 
 /**
  * Create a new chat
+ * Now stores learningId and planId directly in the chat record
  */
 export const createChat = mutation({
 	args: {
@@ -27,15 +28,69 @@ export const createChat = mutation({
 		type: chatTypeValidator,
 		title: v.optional(v.string()),
 		summary: v.optional(v.string()),
+		learningId: v.optional(v.id("learnings")),
+		planId: v.optional(v.id("plans")),
 	},
-	handler: async (ctx, { agentType, userId, type, title, summary }) => {
+	handler: async (ctx, { agentType, userId, type, title, summary, learningId, planId }) => {
 		return await _createChatService(ctx, {
 			agentType,
 			userId,
 			type,
 			title,
 			summary,
+			learningId,
+			planId,
 		});
+	},
+});
+
+/**
+ * Create a new discussion (chat linked to parent chat and message)
+ * Inherits learningId and planId from the parent chat
+ */
+export const createDiscussion = mutation({
+	args: {
+		parentChatId: v.id("chats"),
+		linkedMessageId: v.string(),
+		agentType: agentTypeValidator,
+		userId: v.string(),
+		messages: v.array(vMessage),
+	},
+	handler: async (
+		ctx,
+		{ parentChatId, linkedMessageId, messages, agentType, userId },
+	) => {
+		const firstTitle = "New Discussion";
+		const agent = createAgent({ agentType });
+
+		// Get parent chat to inherit learningId and planId
+		const parentChat = await ctx.db.get(parentChatId);
+
+		// Create a chat record for this discussion
+		const { id: discussionChatId, threadId } = await _createChatService(ctx, {
+			agentType,
+			userId,
+			type: "discussion",
+			title: firstTitle,
+			parentChatId,
+			linkedMessageId,
+			learningId: parentChat?.learningId,
+			planId: parentChat?.planId,
+		});
+
+		await Promise.all([
+			ctx.scheduler.runAfter(0, internal.chat.actions.updateThreadTitle, {
+				threadId,
+			}),
+			agent.saveMessages(ctx, {
+				threadId,
+				messages,
+				userId,
+				skipEmbeddings: true,
+			}),
+		]);
+
+		return { threadId };
 	},
 });
 
@@ -110,7 +165,7 @@ export const sendChatMessage = mutation({
 });
 
 /**
- * Send learning preference and update plan's embedded learningRequirements
+ * Send learning preference and update learningRequirements (separate table)
  * Also saves user-provided URLs to searchResults (deduplicates automatically)
  */
 export const sendLearningPreference = mutation({
@@ -132,9 +187,11 @@ export const sendLearningPreference = mutation({
 			throw new Error("Last plan not found");
 		}
 
-		// Update the plan's embedded learningRequirements
-		await ctx.db.patch(lastPlan._id, {
-			learningRequirements: {
+		// Upsert learning requirements in separate table
+		await ctx.runMutation(api.plan.mutations.upsertLearningRequirements, {
+			planId: lastPlan._id,
+			userId,
+			data: {
 				topic: payload.topic ?? undefined,
 				userLevel: payload.userLevel ?? undefined,
 				goal: payload.goal ?? undefined,
@@ -260,25 +317,42 @@ export const deleteChat = internalMutation({
 	handler: async (ctx, { chatId, userId }) => {
 		await _getOrThrowChat(ctx, { chatId, userId });
 
-		// Get chat metadata records that reference this chat as parent
-		const chatMetadatas = await ctx.runQuery(
-			api.chatMetadatas.queries.getChatMetadatasByParentChatId,
-			{
-				chatId,
-				userId,
-			},
-		);
+		// Get child chats (discussions) that reference this chat as parent
+		const childChats = await ctx.db
+			.query("chats")
+			.withIndex("by_parentChatId_and_userId", (q) =>
+				q.eq("parentChatId", chatId).eq("userId", userId),
+			)
+			.collect();
 
-		// Delete all chat metadata records
-		await Promise.all([
-			...chatMetadatas.map((metadata) => ctx.db.delete(metadata._id)),
-		]);
-
-		// Delete the child chats (discussion chats)
-		await Promise.all([
-			...chatMetadatas.map((metadata) => ctx.db.delete(metadata.chatId)),
-		]);
+		// Delete all child chats
+		await Promise.all(childChats.map((chat) => ctx.db.delete(chat._id)));
 
 		await ctx.db.delete(chatId);
+	},
+});
+
+/**
+ * Delete a discussion by thread ID
+ */
+export const deleteDiscussion = internalMutation({
+	args: {
+		threadId: v.string(),
+		userId: v.string(),
+	},
+	handler: async (ctx, { threadId, userId }) => {
+		// Find the discussion's chat by threadId
+		const discussionChat = await ctx.db
+			.query("chats")
+			.withIndex("by_threadId_and_userId", (q) =>
+				q.eq("threadId", threadId).eq("userId", userId),
+			)
+			.unique();
+
+		if (!discussionChat) {
+			throw new Error("Discussion chat not found");
+		}
+
+		await ctx.db.delete(discussionChat._id);
 	},
 });

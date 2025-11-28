@@ -262,6 +262,7 @@ export const getLearningChatsContentByLearningId = query({
 /**
  * Retrieves learning contents with draft status and enriches them with related data.
  * Optimized version using the new consolidated schema.
+ * Now queries learningRequirements from separate table.
  */
 export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 	args: {
@@ -317,7 +318,7 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 			}
 		}
 
-		// Get plan IDs and fetch search results (using renamed table)
+		// Get plan IDs and fetch search results and learning requirements
 		const planIds = [
 			...new Set(
 				Array.from(plansByChatId.values())
@@ -326,10 +327,18 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 			),
 		];
 
-		const allSearchResults = await ctx.db
-			.query("searchResults")
-			.withIndex("by_userId", (q) => q.eq("userId", args.userId))
-			.collect();
+		const [allSearchResults, allLearningRequirements] = await Promise.all([
+			ctx.db
+				.query("searchResults")
+				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
+				.collect(),
+			ctx.db
+				.query("learningRequirements")
+				.withIndex("by_learningId_and_userId", (q) =>
+					q.eq("learningId", args.learningId).eq("userId", args.userId),
+				)
+				.collect(),
+		]);
 
 		const searchResultsByPlanId = new Map<string, Doc<"searchResults">[]>();
 		for (const result of allSearchResults) {
@@ -342,6 +351,15 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 					resultList.push(result);
 				}
 			}
+		}
+
+		// Create a map of planId -> learningRequirements
+		const learningRequirementsByPlanId = new Map<
+			string,
+			Doc<"learningRequirements">
+		>();
+		for (const lr of allLearningRequirements) {
+			learningRequirementsByPlanId.set(lr.planId, lr);
 		}
 
 		// Enrich learning contents with related data
@@ -378,6 +396,11 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 					(a, b) => b._creationTime - a._creationTime,
 				)[0];
 
+				// Get learning requirements from separate table
+				const learningRequirements = learningRequirementsByPlanId.get(
+					lastPlan._id,
+				);
+
 				return {
 					...learningContent,
 					learningData: learning,
@@ -390,9 +413,9 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 						status: learningContent.status,
 					},
 					planData: lastPlan,
-					// learningRequirements is now embedded in plan
-					planMetadataLearningRequirementData: lastPlan.learningRequirements,
-					// query is now embedded in search results
+					// learningRequirements is now from separate table
+					planMetadataLearningRequirementData: learningRequirements ?? null,
+					// query is embedded in search results
 					planMetadataSearchQueryData: lastSearchResult?.query
 						? { query: lastSearchResult.query }
 						: null,

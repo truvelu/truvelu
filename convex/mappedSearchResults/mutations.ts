@@ -12,6 +12,7 @@ import { _getOrThrowMappedSearchResult } from "./helpers";
 
 /**
  * Create or update a mapped search result for a plan
+ * Now includes learningId from the plan
  * Returns the ID of the created/updated record
  */
 export const upsertMappedSearchResultForPlan = mutation({
@@ -25,8 +26,11 @@ export const upsertMappedSearchResultForPlan = mutation({
 		includeSubdomains: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
-		// Verify plan ownership
-		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
+		// Verify plan ownership and get learningId
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
 		// Check if this URL already exists for this plan
 		const existing = await ctx.db
@@ -48,9 +52,10 @@ export const upsertMappedSearchResultForPlan = mutation({
 			return existing._id;
 		}
 
-		// Create new record
+		// Create new record with learningId from plan
 		return await ctx.db.insert("mappedSearchResults", {
 			planId: args.planId,
+			learningId: plan.learningId, // Include learningId from plan
 			userId: args.userId,
 			url: args.url,
 			limit: args.limit,
@@ -117,6 +122,7 @@ export const upsertMappedSearchResultForLearning = mutation({
 
 /**
  * Batch upsert mapped search results for a plan
+ * Now includes learningId from the plan
  */
 export const upsertMappedSearchResultsForPlan = mutation({
 	args: {
@@ -136,8 +142,11 @@ export const upsertMappedSearchResultsForPlan = mutation({
 		mappedSearchResultIds: v.array(v.id("mappedSearchResults")),
 	}),
 	handler: async (ctx, args) => {
-		// Verify plan ownership
-		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
+		// Verify plan ownership and get learningId
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
 		const mappedSearchResultIds = await Promise.all(
 			args.data.map(async (item) => {
@@ -161,9 +170,10 @@ export const upsertMappedSearchResultsForPlan = mutation({
 					return existing._id;
 				}
 
-				// Create new record
+				// Create new record with learningId from plan
 				return await ctx.db.insert("mappedSearchResults", {
 					planId: args.planId,
+					learningId: plan.learningId, // Include learningId from plan
 					userId: args.userId,
 					url: item.url,
 					limit: item.limit,
@@ -209,4 +219,3 @@ export const deleteMappedSearchResult = mutation({
 		return null;
 	},
 });
-

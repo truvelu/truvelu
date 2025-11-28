@@ -95,9 +95,7 @@ const CanvasTabTrigger = memo(({ canvas, isActive }: CanvasTabTriggerProps) => {
 	);
 
 	const updateChatTitle = useAction(api.chat.actions.updateChatTitle);
-	const deleteDiscussion = useAction(
-		api.chatMetadatas.actions.deleteDiscussion,
-	);
+	const deleteDiscussion = useAction(api.chat.actions.deleteDiscussion);
 
 	const threadId = canvas?.data?.threadId ?? "";
 	const roomId = canvas?.data?.roomId ?? "";
@@ -536,7 +534,7 @@ const AiCanvasTabListContent = memo(() => {
 	);
 
 	const { results: discussionListByRoomId } = useConvexPaginatedQuery(
-		api.chatMetadatas.queries.getDiscussionsByRoomId,
+		api.chat.queries.getDiscussionsByRoomId,
 		isChatRoute && !!chatId
 			? {
 					userId,

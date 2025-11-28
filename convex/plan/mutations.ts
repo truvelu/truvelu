@@ -13,9 +13,10 @@ import {
 } from "./helpers";
 
 /**
- * Update plan's embedded learningRequirements
+ * Upsert learning requirements for a plan
+ * Now uses separate learningRequirements table
  */
-export const updatePlanLearningRequirements = mutation({
+export const upsertLearningRequirements = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -28,28 +29,58 @@ export const updatePlanLearningRequirements = mutation({
 		}),
 	},
 	handler: async (ctx, args) => {
-		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
-		await ctx.db.patch(args.planId, {
-			learningRequirements: {
+		// Check if learning requirements already exist for this plan
+		const existing = await ctx.db
+			.query("learningRequirements")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.unique();
+
+		if (existing) {
+			// Update existing record
+			await ctx.db.patch(existing._id, {
 				topic: args.data.topic,
 				userLevel: args.data.userLevel,
 				goal: args.data.goal,
 				duration: args.data.duration,
 				other: args.data.other,
-			},
+			});
+			return {
+				status: 200,
+				message: "Learning requirements updated successfully",
+				learningRequirementsId: existing._id,
+			};
+		}
+
+		// Create new record
+		const learningRequirementsId = await ctx.db.insert("learningRequirements", {
+			planId: args.planId,
+			userId: args.userId,
+			learningId: plan.learningId,
+			topic: args.data.topic,
+			userLevel: args.data.userLevel,
+			goal: args.data.goal,
+			duration: args.data.duration,
+			other: args.data.other,
 		});
 
 		return {
 			status: 200,
-			message: "Learning requirements updated successfully",
+			message: "Learning requirements created successfully",
+			learningRequirementsId,
 		};
 	},
 });
 
 /**
  * Upsert search results (with optional query embedded)
- * Now uses the renamed searchResults table
+ * Now uses the renamed searchResults table and includes learningId
  */
 export const upsertSearchResults = mutation({
 	args: {
@@ -69,7 +100,10 @@ export const upsertSearchResults = mutation({
 		),
 	},
 	handler: async (ctx, args) => {
-		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
 		const searchResultIds = await Promise.all(
 			args.data.map(async (item) => {
@@ -100,6 +134,7 @@ export const upsertSearchResults = mutation({
 
 				return await ctx.db.insert("searchResults", {
 					planId: args.planId,
+					learningId: plan.learningId, // Include learningId from plan
 					userId: args.userId,
 					query: item.query,
 					title: item.title,
@@ -147,7 +182,7 @@ export const generateUploadUrl = mutation({
 /**
  * Save resource (PDF file reference)
  * Called after file is uploaded to storage
- * Now uses the renamed resources table
+ * Now uses the renamed resources table and includes learningId
  */
 export const saveResource = mutation({
 	args: {
@@ -160,7 +195,10 @@ export const saveResource = mutation({
 	},
 	returns: v.id("resources"),
 	handler: async (ctx, args) => {
-		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
+		const plan = await _getOrThrowPlan(ctx, {
+			planId: args.planId,
+			userId: args.userId,
+		});
 
 		// Validate file is PDF
 		if (args.mimeType !== "application/pdf") {
@@ -182,6 +220,7 @@ export const saveResource = mutation({
 
 		return await ctx.db.insert("resources", {
 			planId: args.planId,
+			learningId: plan.learningId, // Include learningId from plan
 			userId: args.userId,
 			storageId: args.storageId,
 			fileName: args.fileName,

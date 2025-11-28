@@ -9,7 +9,8 @@ import { _getOrThrowChatByThreadId } from "../chat/helpers";
 import { _getOrThrowPlan, _getOrThrowPlanByChatId } from "./helpers";
 
 /**
- * Get plan details with embedded learningRequirements and search results
+ * Get plan details with learningRequirements and search results
+ * Now queries learningRequirements from separate table
  */
 export const getPlanDetail = query({
 	args: {
@@ -22,7 +23,15 @@ export const getPlanDetail = query({
 			userId: args.userId,
 		});
 
-		// Get search results for this plan (using renamed table)
+		// Get learning requirements from separate table
+		const learningRequirements = await ctx.db
+			.query("learningRequirements")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.unique();
+
+		// Get search results for this plan
 		const searchResults = await ctx.db
 			.query("searchResults")
 			.withIndex("by_planId_and_userId", (q) =>
@@ -34,7 +43,7 @@ export const getPlanDetail = query({
 			data: {
 				...plan,
 				detail: {
-					learningRequirement: plan.learningRequirements,
+					learningRequirement: learningRequirements,
 					searchResults,
 				},
 			},
@@ -74,6 +83,25 @@ export const getPlanByChatIdAndUserId = query({
 			chatId: args.chatId,
 			userId: args.userId,
 		});
+	},
+});
+
+/**
+ * Get learning requirements by plan ID
+ * New query for the separate learningRequirements table
+ */
+export const getLearningRequirements = query({
+	args: {
+		planId: v.id("plans"),
+		userId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("learningRequirements")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.unique();
 	},
 });
 

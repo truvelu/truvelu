@@ -52,12 +52,20 @@ export async function _createChatService(
 		type,
 		title,
 		summary,
+		parentChatId,
+		linkedMessageId,
+		learningId,
+		planId,
 	}: {
 		agentType: Infer<typeof agentTypeValidator>;
 		userId: string;
 		type: SectionType;
 		title?: string;
 		summary?: string;
+		parentChatId?: Id<"chats">;
+		linkedMessageId?: string;
+		learningId?: Id<"learnings">;
+		planId?: Id<"plans">;
 	},
 ) {
 	const firstTitle = "New Chat";
@@ -75,6 +83,10 @@ export async function _createChatService(
 		type,
 		status: { type: "ready", message: "Ready to start conversation" },
 		uuid: roomId,
+		parentChatId,
+		linkedMessageId,
+		learningId,
+		planId,
 	});
 	return { id: _chatId, threadId, roomId };
 }

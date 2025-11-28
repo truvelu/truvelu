@@ -115,6 +115,27 @@ export const deleteChat = action({
 });
 
 /**
+ * Delete a discussion (chat linked to a parent chat)
+ */
+export const deleteDiscussion = action({
+	args: {
+		threadId: v.string(),
+		userId: v.string(),
+	},
+	handler: async (ctx, { threadId, userId }) => {
+		const agent = createAgent({
+			agentType: "question-answering",
+		});
+
+		await ctx.runMutation(internal.chat.mutations.deleteDiscussion, {
+			threadId,
+			userId,
+		});
+		await agent.deleteThreadSync(ctx, { threadId });
+	},
+});
+
+/**
  * Tool: Generate search queries for learning plan
  */
 export const generateSearchQueriesTool = internalAction({
@@ -127,11 +148,11 @@ export const generateSearchQueriesTool = internalAction({
 	handler: async (ctx, { threadId, userId, agentType }): Promise<string> => {
 		const agent = createAgent({ agentType });
 
-		// Get plan with details using the new action
+		// Get plan with details using the action (learningRequirements from separate table)
 		const planData: {
 			plan: Doc<"plans">;
 			detail: {
-				learningRequirement: Doc<"plans">["learningRequirements"];
+				learningRequirement: Doc<"learningRequirements"> | null;
 				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(
@@ -206,11 +227,11 @@ export const webSearchTool = internalAction({
 			throw new Error("EXA_API_KEY environment variable not set");
 		}
 
-		// Get plan with details
+		// Get plan with details (learningRequirements from separate table)
 		const planData: {
 			plan: Doc<"plans">;
 			detail: {
-				learningRequirement: Doc<"plans">["learningRequirements"];
+				learningRequirement: Doc<"learningRequirements"> | null;
 				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(
@@ -272,7 +293,7 @@ export const webSearchTool = internalAction({
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 			}
 
-			// Save search results to database using the renamed table
+			// Save search results to database (now includes learningId automatically)
 			await ctx.runMutation(api.plan.mutations.upsertSearchResults, {
 				planId: plan._id,
 				userId,
@@ -317,11 +338,11 @@ export const generateLearningListTool = internalAction({
 	handler: async (ctx, { threadId, userId, agentType }): Promise<string> => {
 		const agent = createAgent({ agentType });
 
-		// Get plan with details
+		// Get plan with details (learningRequirements from separate table)
 		const planData: {
 			plan: Doc<"plans">;
 			detail: {
-				learningRequirement: Doc<"plans">["learningRequirements"];
+				learningRequirement: Doc<"learningRequirements"> | null;
 				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(

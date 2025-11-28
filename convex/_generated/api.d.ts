@@ -11,10 +11,6 @@
 import type * as _helpers from "../_helpers.js";
 import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
-import type * as chatMetadatas_actions from "../chatMetadatas/actions.js";
-import type * as chatMetadatas_helpers from "../chatMetadatas/helpers.js";
-import type * as chatMetadatas_mutations from "../chatMetadatas/mutations.js";
-import type * as chatMetadatas_queries from "../chatMetadatas/queries.js";
 import type * as chat_actions from "../chat/actions.js";
 import type * as chat_helpers from "../chat/helpers.js";
 import type * as chat_mutations from "../chat/mutations.js";
@@ -46,10 +42,6 @@ declare const fullApi: ApiFromModules<{
   _helpers: typeof _helpers;
   agent: typeof agent;
   auth: typeof auth;
-  "chatMetadatas/actions": typeof chatMetadatas_actions;
-  "chatMetadatas/helpers": typeof chatMetadatas_helpers;
-  "chatMetadatas/mutations": typeof chatMetadatas_mutations;
-  "chatMetadatas/queries": typeof chatMetadatas_queries;
   "chat/actions": typeof chat_actions;
   "chat/helpers": typeof chat_helpers;
   "chat/mutations": typeof chat_mutations;

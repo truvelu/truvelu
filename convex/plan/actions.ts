@@ -10,7 +10,7 @@ import { internalAction } from "../_generated/server";
 
 /**
  * Get the last plan with all details by threadId
- * This is a reusable action that returns full details including embedded learningRequirements
+ * This is a reusable action that returns full details including learningRequirements from separate table
  */
 export const getLastPlanWithDetailsByThreadId = internalAction({
 	args: {
@@ -23,7 +23,7 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 	): Promise<{
 		plan: Doc<"plans">;
 		detail: {
-			learningRequirement: Doc<"plans">["learningRequirements"];
+			learningRequirement: Doc<"learningRequirements"> | null;
 			searchResults: Doc<"searchResults">[];
 		};
 	}> => {
@@ -36,7 +36,14 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 			},
 		);
 
-		// Get search results (using renamed table)
+		// Get learning requirements from separate table
+		const learningRequirements: Doc<"learningRequirements"> | null =
+			await ctx.runQuery(api.plan.queries.getLearningRequirements, {
+				planId: lastPlan._id,
+				userId: args.userId,
+			});
+
+		// Get search results
 		const searchResults: Doc<"searchResults">[] = await ctx.runQuery(
 			api.plan.queries.getSearchResults,
 			{
@@ -48,8 +55,7 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 		return {
 			plan: lastPlan,
 			detail: {
-				// learningRequirements is now embedded in the plan
-				learningRequirement: lastPlan.learningRequirements,
+				learningRequirement: learningRequirements,
 				searchResults,
 			},
 		};

@@ -68,7 +68,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	});
 	const { data: discussion } = useQuery(
 		convexQuery(
-			api.chatMetadatas.queries.getChatMetadataByLinkedMessageId,
+			api.chat.queries.getDiscussionByLinkedMessageId,
 			message.id
 				? {
 						linkedMessageId: message.id,
@@ -94,7 +94,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	);
 	const createDiscussion = useMutation({
 		mutationKey: ["createDiscussion"],
-		mutationFn: useConvexMutation(api.chatMetadatas.mutations.createDiscussion),
+		mutationFn: useConvexMutation(api.chat.mutations.createDiscussion),
 	});
 
 	const textPart = useMemo(
