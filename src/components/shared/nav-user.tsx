@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Skeleton } from "../ui/skeleton";
@@ -182,7 +182,7 @@ const NavAvatar = ({
 	);
 };
 
-export function NavUser() {
+function NavUser() {
 	const { state, openMobile } = useSidebar();
 	const isMobile = useIsMobile();
 
@@ -321,3 +321,5 @@ export function NavUser() {
 		</>
 	);
 }
+
+export default memo(NavUser);

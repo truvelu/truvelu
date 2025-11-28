@@ -8,10 +8,11 @@ import {
 import { Search01Icon, TabletPenIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { Authenticated } from "convex/react";
+import { memo } from "react";
 import BtnLoginOrChild from "./btn-login-or-child";
 import SharedIcon from "./shared-icon";
 
-export function NavMain() {
+function NavMain() {
 	const navigate = useNavigate();
 
 	const handleNewChat = () => {
@@ -46,3 +47,5 @@ export function NavMain() {
 		</Authenticated>
 	);
 }
+
+export default memo(NavMain);

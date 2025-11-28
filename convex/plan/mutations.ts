@@ -6,7 +6,11 @@
 import { v } from "convex/values";
 import { internalMutation, mutation } from "../_generated/server";
 import { chatStatusValidator, freeObjectValidator } from "../schema";
-import { _getOrThrowPlan, _getOrThrowPlanResource } from "./helpers";
+import {
+	_getOrThrowPlan,
+	_getOrThrowPlanResource,
+	_getOrThrowPlanSearchResult,
+} from "./helpers";
 
 /**
  * Update plan's embedded learningRequirements
@@ -205,6 +209,27 @@ export const deletePlanResource = mutation({
 
 		// Delete the record
 		await ctx.db.delete(args.resourceId);
+
+		return null;
+	},
+});
+
+/**
+ * Delete plan search result (URL)
+ */
+export const deletePlanSearchResult = mutation({
+	args: {
+		searchResultId: v.id("planSearchResults"),
+		userId: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		await _getOrThrowPlanSearchResult(ctx, {
+			searchResultId: args.searchResultId,
+			userId: args.userId,
+		});
+
+		await ctx.db.delete(args.searchResultId);
 
 		return null;
 	},

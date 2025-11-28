@@ -33,7 +33,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { AuthLoading, Authenticated } from "convex/react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../provider/auth-provider";
@@ -417,7 +417,7 @@ const NavLearningItem = ({
 	);
 };
 
-export function NavLearning() {
+function NavLearning() {
 	const { userId } = useAuth();
 	const { state } = useSidebar();
 
@@ -460,7 +460,7 @@ export function NavLearning() {
 				<Collapsible defaultOpen className="group/collapsible">
 					<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
 						<SidebarGroupLabel asChild>
-							<CollapsibleTrigger className="gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
+							<CollapsibleTrigger className="w-fit gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
 								Learnings
 								<SharedIcon
 									icon={ArrowRight01Icon}
@@ -493,3 +493,5 @@ export function NavLearning() {
 		</>
 	);
 }
+
+export default memo(NavLearning);

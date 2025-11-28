@@ -165,8 +165,22 @@ export default defineSchema({
 		.index("by_chatId_and_userId", ["chatId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
+	planMappedSearchResults: defineTable({
+		planId: v.id("plans"),
+		userId: v.string(),
+		url: v.optional(v.string()),
+		search: v.optional(v.string()),
+		limit: v.optional(v.number()),
+		ignoreSitemap: v.optional(v.boolean()),
+		includeSubdomains: v.optional(v.boolean()),
+	})
+		.index("by_planId", ["planId"])
+		.index("by_userId", ["userId"])
+		.index("by_planId_and_userId", ["planId", "userId"]),
+
 	planSearchResults: defineTable({
 		planId: v.id("plans"),
+		mappedUrlId: v.optional(v.id("planMappedSearchResults")),
 		query: v.optional(v.string()),
 		userId: v.string(),
 		title: v.optional(v.string()),

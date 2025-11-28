@@ -27,6 +27,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { useAction } from "convex/react";
 import {
@@ -472,8 +473,14 @@ const AiCanvasHeader = memo(
 );
 
 const AiCanvasTabListContent = memo(() => {
-	const roomId = useGetRoomId();
+	const params = useParams({
+		structuralSharing: true,
+		strict: false,
+	});
 	const matchRoute = useMatchRoute();
+
+	const learningId = params?.learningId ?? "";
+	const chatId = params?.chatId ?? "";
 
 	const currentLearningRoute = matchRoute({ to: "/l/{-$learningId}" });
 	const pendingLearningRoute = matchRoute({
@@ -517,10 +524,10 @@ const AiCanvasTabListContent = memo(() => {
 
 	const { results: learningChatPanelByRoomId } = useConvexPaginatedQuery(
 		api.learning.queries.getLearningsChatPanelsByRoomId,
-		isLearningRoute && !!roomId
+		isLearningRoute && !!learningId
 			? {
 					userId,
-					uuid: roomId,
+					uuid: learningId,
 				}
 			: "skip",
 		{ initialNumItems: 20 },
@@ -528,10 +535,10 @@ const AiCanvasTabListContent = memo(() => {
 
 	const { results: discussionListByRoomId } = useConvexPaginatedQuery(
 		api.discussion.queries.getDiscussionsByRoomId,
-		isChatRoute && !!roomId
+		isChatRoute && !!chatId
 			? {
 					userId,
-					uuid: roomId,
+					uuid: chatId,
 				}
 			: "skip",
 		{ initialNumItems: 20 },
@@ -545,12 +552,12 @@ const AiCanvasTabListContent = memo(() => {
 			upsertCanvas({
 				type,
 				data: {
-					roomId,
+					roomId: data.roomId,
 					threadId: data.threadId,
 				},
 			});
 		},
-		[upsertCanvas, roomId],
+		[upsertCanvas],
 	);
 
 	return (
@@ -562,12 +569,16 @@ const AiCanvasTabListContent = memo(() => {
 							key={learning?._id ?? ""}
 							variant="ghost"
 							className="w-full rounded-tmedium px-2.5 cursor-pointer flex gap-1.5 justify-start"
-							onClick={() =>
+							onClick={() => {
+								if (!learningId) return;
 								handleOpenListItem({
 									type: CanvasType.LEARNING_CREATION,
-									data: { threadId: learning?.data?.threadId ?? "", roomId },
-								})
-							}
+									data: {
+										threadId: learning?.data?.threadId ?? "",
+										roomId: learningId,
+									},
+								});
+							}}
 						>
 							<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
 							<span className="text-sm font-normal truncate">
@@ -582,12 +593,16 @@ const AiCanvasTabListContent = memo(() => {
 							key={discussion?._id ?? ""}
 							variant="ghost"
 							className="w-full rounded-tmedium px-2.5 cursor-pointer flex gap-1.5 justify-start"
-							onClick={() =>
+							onClick={() => {
+								if (!chatId) return;
 								handleOpenListItem({
 									type: CanvasType.THREAD,
-									data: { threadId: discussion?.data?.threadId ?? "", roomId },
-								})
-							}
+									data: {
+										threadId: discussion?.data?.threadId ?? "",
+										roomId: chatId,
+									},
+								});
+							}}
 						>
 							<SharedIcon icon={TaskDaily02Icon} className="size-3.5" />
 							<span className="text-sm font-normal truncate">

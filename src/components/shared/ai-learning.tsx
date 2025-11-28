@@ -3,6 +3,7 @@ import { useGetRoomId } from "@/hooks/use-get-room-id";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { CanvasType, useCanvasStore } from "@/zustand/canvas";
+import { useResourceModalStore } from "@/zustand/resource-modal";
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import {
 	BookOpen01Icon,
@@ -29,6 +30,7 @@ import {
 	EmptyTitle,
 } from "../ui/empty";
 import { AiLearningSkeleton } from "./ai-learning-skeleton";
+import AiResourceModal from "./ai-resource-modal";
 import { ContainerWithMargin, ContainerWithMaxWidth } from "./container";
 import SharedIcon from "./shared-icon";
 
@@ -50,6 +52,10 @@ function AiLearning() {
 				}),
 			),
 		);
+
+	const openResourceModal = useResourceModalStore(
+		(state) => state.openResourceModal,
+	);
 
 	const chatRoute = matchRoute({ to: "/c/{-$chatId}" });
 	const pendingChatRoute = matchRoute({
@@ -119,6 +125,21 @@ function AiLearning() {
 		{ initialNumItems: 20 },
 	);
 
+	// Get the first chat's threadId for plan lookup
+	const firstThreadId = learningChatPanelByRoomId?.at(0)?.data?.threadId;
+
+	const { data: plan } = useQuery(
+		convexQuery(
+			api.plan.queries.getLastPlanByThreadId,
+			firstThreadId && userId
+				? {
+						threadId: firstThreadId,
+						userId,
+					}
+				: "skip",
+		),
+	);
+
 	const handleOpenListItem = useCallback(
 		({
 			type,
@@ -175,35 +196,42 @@ function AiLearning() {
 	}
 
 	return (
-		<div className="relative flex">
-			<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges] [overflow-anchor:none] transform-[translateZ(0)] will-change-scroll">
-				<ContainerWithMargin>
-					<ContainerWithMaxWidth
-						className={cn(
-							"flex-1 grid h-full grid-rows-[auto_min-content_min-content]",
-						)}
-					>
-						<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
-							<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-background px-3 items-start md:items-center">
-								<div className="flex items-center gap-0.5 max-md:-translate-x-1">
-									<div className="flex items-center justify-center aspect-square size-9 shrink-0">
-										<SharedIcon icon={Folder01Icon} className="size-6" />
+		<>
+			<AiResourceModal />
+			<div className="relative flex">
+				<div className="h-[calc(100svh-var(--spacing-header))] lg:h-[calc(100lvh-var(--spacing-header))] flex-1 overflow-y-auto pl-4 [overflow-anchor:none] transform-[translateZ(0)] will-change-scroll">
+					<ContainerWithMargin>
+						<ContainerWithMaxWidth
+							className={cn(
+								"flex-1 grid h-full grid-rows-[auto_min-content_min-content]",
+							)}
+						>
+							<div className="flex min-w-0 flex-col self-start px-4 sm:px-0">
+								<div className="z-20 sticky top-0 flex justify-between max-md:flex-col gap-0.5 max-md:gap-4 py-7 max-md:pt-4 bg-background px-3 items-start md:items-center">
+									<div className="flex items-center gap-0.5 max-md:-translate-x-1">
+										<div className="flex items-center justify-center aspect-square size-9 shrink-0">
+											<SharedIcon icon={Folder01Icon} className="size-6" />
+										</div>
+										<h1 className="text-xl text-balance text-center max-md:text-left">
+											{learning?.title}
+										</h1>
 									</div>
-									<h1 className="text-xl text-balance text-center max-md:text-left">
-										{learning?.title}
-									</h1>
+
+									<Button
+										variant="outline"
+										className="rounded-tlarge text-secondary-foreground"
+										disabled={!plan?._id || !firstThreadId}
+										onClick={() => {
+											if (plan?._id && firstThreadId) {
+												openResourceModal(plan._id, firstThreadId);
+											}
+										}}
+									>
+										Manage sources
+									</Button>
 								</div>
 
-								<Button
-									variant="outline"
-									className="rounded-tlarge text-secondary-foreground"
-								>
-									Manage sources
-								</Button>
-							</div>
-
-							<section className="pb-13">
-								<ol className="group divide-y" aria-busy="false">
+								<ol className="group divide-y pb-13" aria-busy="false">
 									{learningChatsContent?.length === 0 && (
 										<Empty>
 											<EmptyHeader>
@@ -258,7 +286,7 @@ function AiLearning() {
 									{learningChatsContent?.map((item) => (
 										<li
 											key={`${item.learningId}-${item.chatId}`}
-											className="group/project-item hover:bg-secondary active:bg-secondary flex min-h-16 cursor-pointer items-center px-3 py-4 text-sm select-none"
+											className="w-full group/project-item hover:bg-secondary active:bg-secondary flex min-h-16 cursor-pointer items-center px-3 py-4 text-sm select-none"
 										>
 											<Link
 												to={"/l/{-$learningId}/c/{-$chatId}"}
@@ -300,18 +328,12 @@ function AiLearning() {
 													</div>
 
 													{/* TITLE AND DESCRIPTION */}
-													<div className="flex w-full items-center gap-4 mb-0.5">
-														<div className="grow overflow-hidden">
-															<div className="text-sm font-medium">
-																{item?.metadata?.title ?? ""}
-															</div>
-															<div className="min-h-0 truncate text-sm">
-																{item?.metadata?.description ?? ""}
-															</div>
+													<div className="grow overflow-hidden mb-0.5">
+														<div className="text-sm font-medium">
+															{item?.metadata?.title ?? ""}
 														</div>
-
-														<div className="relative flex min-h-10 min-w-10 items-center justify-between text-sm">
-															<div className="absolute inset-0 flex items-center gap-1.5 translate-y-0 scale-95 opacity-0 group-hover/project-item:translate-y-0 group-hover/project-item:scale-100 group-hover/project-item:opacity-100"></div>
+														<div className="min-h-0 truncate text-sm">
+															{item?.metadata?.description ?? ""}
 														</div>
 													</div>
 
@@ -335,12 +357,12 @@ function AiLearning() {
 										</li>
 									))}
 								</ol>
-							</section>
-						</div>
-					</ContainerWithMaxWidth>
-				</ContainerWithMargin>
+							</div>
+						</ContainerWithMaxWidth>
+					</ContainerWithMargin>
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }
 

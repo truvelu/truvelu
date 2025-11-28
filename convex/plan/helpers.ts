@@ -57,3 +57,23 @@ export async function _getOrThrowPlanByChatId(
 	}
 	return plan;
 }
+
+/**
+ * Get a plan search result by ID or throw if not found/unauthorized
+ */
+export async function _getOrThrowPlanSearchResult(
+	ctx: ReadCtx,
+	{
+		searchResultId,
+		userId,
+	}: { searchResultId: Id<"planSearchResults">; userId: string },
+) {
+	const searchResult = await ctx.db.get(searchResultId);
+	if (!searchResult) {
+		throw new Error(`Plan search result not found: ${searchResultId}`);
+	}
+	if (searchResult.userId !== userId) {
+		throw new Error(`Unauthorized: You don't own this plan search result`);
+	}
+	return searchResult;
+}

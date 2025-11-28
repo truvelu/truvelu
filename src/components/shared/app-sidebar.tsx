@@ -1,6 +1,10 @@
-import { NavLearning } from "@/components/shared/nav-learning";
-import { NavMain } from "@/components/shared/nav-main";
-import { NavUser } from "@/components/shared/nav-user";
+import NavChat from "@/components/shared/nav-chat";
+import NavExplore from "@/components/shared/nav-explore";
+import NavLearning from "@/components/shared/nav-learning";
+import NavMain from "@/components/shared/nav-main";
+import NavUser from "@/components/shared/nav-user";
+import SharedIcon from "@/components/shared/shared-icon";
+import { Button } from "@/components/ui/button";
 import {
 	Sidebar,
 	SidebarContent,
@@ -13,10 +17,6 @@ import { cn } from "@/lib/utils";
 import { Cancel01Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
-import { Button } from "../ui/button";
-import { NavChat } from "./nav-chat";
-import { NavExplore } from "./nav-explore";
-import SharedIcon from "./shared-icon";
 
 export const AppSidebar = React.memo(
 	({

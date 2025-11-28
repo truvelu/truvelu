@@ -7,9 +7,10 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { BlockGameIcon } from "@hugeicons/core-free-icons";
+import { memo } from "react";
 import SharedIcon from "./shared-icon";
 
-export function NavExplore() {
+function NavExplore() {
 	return (
 		<SidebarGroup>
 			<SidebarGroupLabel>Explore</SidebarGroupLabel>
@@ -29,3 +30,5 @@ export function NavExplore() {
 		</SidebarGroup>
 	);
 }
+
+export default memo(NavExplore);

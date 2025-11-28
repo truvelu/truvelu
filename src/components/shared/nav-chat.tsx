@@ -23,7 +23,7 @@ import {
 import { Link, useNavigate } from "@tanstack/react-router";
 import { api } from "convex/_generated/api";
 import { AuthLoading, Authenticated, useAction } from "convex/react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../provider/auth-provider";
 import {
@@ -204,7 +204,7 @@ function NavChatSkeleton({ length = 10 }: { length?: number }) {
 	);
 }
 
-export function NavChat() {
+function NavChat() {
 	const { userId } = useAuth();
 	const { state } = useSidebar();
 
@@ -227,7 +227,7 @@ export function NavChat() {
 					<Collapsible defaultOpen className="group/collapsible">
 						<SidebarGroup className="group-data-[collapsible=icon]:opacity-0">
 							<SidebarGroupLabel asChild>
-								<CollapsibleTrigger className="gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
+								<CollapsibleTrigger className="w-fit gap-1 cursor-pointer group-data-[collapsible=icon]:hidden">
 									Chats
 									<SharedIcon
 										icon={ArrowRight01Icon}
@@ -257,3 +257,5 @@ export function NavChat() {
 		</>
 	);
 }
+
+export default memo(NavChat);
