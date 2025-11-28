@@ -68,10 +68,10 @@ const AiActions = memo((props: AiActionsProps) => {
 	});
 	const { data: discussion } = useQuery(
 		convexQuery(
-			api.discussion.queries.getDiscussionByMessageIdAndUserId,
+			api.chatMetadatas.queries.getChatMetadataByLinkedMessageId,
 			message.id
 				? {
-						messageId: message.id,
+						linkedMessageId: message.id,
 						userId,
 					}
 				: "skip",
@@ -94,7 +94,7 @@ const AiActions = memo((props: AiActionsProps) => {
 	);
 	const createDiscussion = useMutation({
 		mutationKey: ["createDiscussion"],
-		mutationFn: useConvexMutation(api.discussion.mutations.createDiscussion),
+		mutationFn: useConvexMutation(api.chatMetadatas.mutations.createDiscussion),
 	});
 
 	const textPart = useMemo(
@@ -194,7 +194,7 @@ const AiActions = memo((props: AiActionsProps) => {
 							createDiscussion.mutate(
 								{
 									parentChatId: chat?._id,
-									messageId: message.id,
+									linkedMessageId: message.id,
 									messages: preDiscussionMessageFinal,
 									agentType: "question-answering",
 									userId,

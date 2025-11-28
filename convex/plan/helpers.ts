@@ -4,18 +4,19 @@ import type { DataModel, Id } from "../_generated/dataModel";
 type ReadCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>;
 
 /**
- * Get a plan resource by ID or throw if not found/unauthorized
+ * Get a resource by ID or throw if not found/unauthorized
+ * Renamed from _getOrThrowPlanResource
  */
-export async function _getOrThrowPlanResource(
+export async function _getOrThrowResource(
 	ctx: ReadCtx,
-	{ resourceId, userId }: { resourceId: Id<"planResources">; userId: string },
+	{ resourceId, userId }: { resourceId: Id<"resources">; userId: string },
 ) {
 	const resource = await ctx.db.get(resourceId);
 	if (!resource) {
-		throw new Error(`Plan resource not found: ${resourceId}`);
+		throw new Error(`Resource not found: ${resourceId}`);
 	}
 	if (resource.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this plan resource`);
+		throw new Error(`Unauthorized: You don't own this resource`);
 	}
 	return resource;
 }
@@ -59,21 +60,22 @@ export async function _getOrThrowPlanByChatId(
 }
 
 /**
- * Get a plan search result by ID or throw if not found/unauthorized
+ * Get a search result by ID or throw if not found/unauthorized
+ * Renamed from _getOrThrowPlanSearchResult
  */
-export async function _getOrThrowPlanSearchResult(
+export async function _getOrThrowSearchResult(
 	ctx: ReadCtx,
 	{
 		searchResultId,
 		userId,
-	}: { searchResultId: Id<"planSearchResults">; userId: string },
+	}: { searchResultId: Id<"searchResults">; userId: string },
 ) {
 	const searchResult = await ctx.db.get(searchResultId);
 	if (!searchResult) {
-		throw new Error(`Plan search result not found: ${searchResultId}`);
+		throw new Error(`Search result not found: ${searchResultId}`);
 	}
 	if (searchResult.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this plan search result`);
+		throw new Error(`Unauthorized: You don't own this search result`);
 	}
 	return searchResult;
 }

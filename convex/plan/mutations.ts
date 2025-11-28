@@ -8,8 +8,8 @@ import { internalMutation, mutation } from "../_generated/server";
 import { chatStatusValidator, freeObjectValidator } from "../schema";
 import {
 	_getOrThrowPlan,
-	_getOrThrowPlanResource,
-	_getOrThrowPlanSearchResult,
+	_getOrThrowResource,
+	_getOrThrowSearchResult,
 } from "./helpers";
 
 /**
@@ -48,9 +48,10 @@ export const updatePlanLearningRequirements = mutation({
 });
 
 /**
- * Upsert plan search results (with optional query embedded)
+ * Upsert search results (with optional query embedded)
+ * Now uses the renamed searchResults table
  */
-export const upsertPlanSearchResults = mutation({
+export const upsertSearchResults = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -75,7 +76,7 @@ export const upsertPlanSearchResults = mutation({
 				// Check if result with same URL already exists
 				if (item.url) {
 					const existing = await ctx.db
-						.query("planSearchResults")
+						.query("searchResults")
 						.withIndex("by_planId_and_userId", (q) =>
 							q.eq("planId", args.planId).eq("userId", args.userId),
 						)
@@ -97,7 +98,7 @@ export const upsertPlanSearchResults = mutation({
 					}
 				}
 
-				return await ctx.db.insert("planSearchResults", {
+				return await ctx.db.insert("searchResults", {
 					planId: args.planId,
 					userId: args.userId,
 					query: item.query,
@@ -144,10 +145,11 @@ export const generateUploadUrl = mutation({
 });
 
 /**
- * Save plan resource (PDF file reference)
+ * Save resource (PDF file reference)
  * Called after file is uploaded to storage
+ * Now uses the renamed resources table
  */
-export const savePlanResource = mutation({
+export const saveResource = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -156,7 +158,7 @@ export const savePlanResource = mutation({
 		fileSize: v.number(),
 		mimeType: v.string(),
 	},
-	returns: v.id("planResources"),
+	returns: v.id("resources"),
 	handler: async (ctx, args) => {
 		await _getOrThrowPlan(ctx, { planId: args.planId, userId: args.userId });
 
@@ -167,7 +169,7 @@ export const savePlanResource = mutation({
 
 		// Check if this file already exists (by storageId)
 		const existing = await ctx.db
-			.query("planResources")
+			.query("resources")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -178,7 +180,7 @@ export const savePlanResource = mutation({
 			return existing._id;
 		}
 
-		return await ctx.db.insert("planResources", {
+		return await ctx.db.insert("resources", {
 			planId: args.planId,
 			userId: args.userId,
 			storageId: args.storageId,
@@ -190,16 +192,17 @@ export const savePlanResource = mutation({
 });
 
 /**
- * Delete plan resource
+ * Delete resource
+ * Now uses the renamed resources table
  */
-export const deletePlanResource = mutation({
+export const deleteResource = mutation({
 	args: {
-		resourceId: v.id("planResources"),
+		resourceId: v.id("resources"),
 		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		const resource = await _getOrThrowPlanResource(ctx, {
+		const resource = await _getOrThrowResource(ctx, {
 			resourceId: args.resourceId,
 			userId: args.userId,
 		});
@@ -215,16 +218,17 @@ export const deletePlanResource = mutation({
 });
 
 /**
- * Delete plan search result (URL)
+ * Delete search result (URL)
+ * Now uses the renamed searchResults table
  */
-export const deletePlanSearchResult = mutation({
+export const deleteSearchResult = mutation({
 	args: {
-		searchResultId: v.id("planSearchResults"),
+		searchResultId: v.id("searchResults"),
 		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		await _getOrThrowPlanSearchResult(ctx, {
+		await _getOrThrowSearchResult(ctx, {
 			searchResultId: args.searchResultId,
 			userId: args.userId,
 		});

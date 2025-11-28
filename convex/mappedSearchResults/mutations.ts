@@ -1,18 +1,20 @@
 /**
- * Plan Mapped Search Results mutations
- * Single responsibility: Write operations for plan mapped search results domain
+ * Mapped Search Results mutations
+ * Single responsibility: Write operations for mapped search results domain
+ * Renamed from planMappedSearchResults - now supports both plan and learning level
  */
 
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
+import { _getOrThrowLearning } from "../learning/helpers";
 import { _getOrThrowPlan } from "../plan/helpers";
-import { _getOrThrowPlanMappedSearchResult } from "./helpers";
+import { _getOrThrowMappedSearchResult } from "./helpers";
 
 /**
- * Create or update a mapped search result
+ * Create or update a mapped search result for a plan
  * Returns the ID of the created/updated record
  */
-export const upsertPlanMappedSearchResult = mutation({
+export const upsertMappedSearchResultForPlan = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -28,7 +30,7 @@ export const upsertPlanMappedSearchResult = mutation({
 
 		// Check if this URL already exists for this plan
 		const existing = await ctx.db
-			.query("planMappedSearchResults")
+			.query("mappedSearchResults")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -47,7 +49,7 @@ export const upsertPlanMappedSearchResult = mutation({
 		}
 
 		// Create new record
-		return await ctx.db.insert("planMappedSearchResults", {
+		return await ctx.db.insert("mappedSearchResults", {
 			planId: args.planId,
 			userId: args.userId,
 			url: args.url,
@@ -60,9 +62,63 @@ export const upsertPlanMappedSearchResult = mutation({
 });
 
 /**
- * Batch upsert mapped search results
+ * Create or update a mapped search result for a learning
+ * Returns the ID of the created/updated record
  */
-export const upsertPlanMappedSearchResults = mutation({
+export const upsertMappedSearchResultForLearning = mutation({
+	args: {
+		learningId: v.id("learnings"),
+		userId: v.string(),
+		url: v.string(),
+		limit: v.optional(v.number()),
+		search: v.optional(v.string()),
+		ignoreSitemap: v.optional(v.boolean()),
+		includeSubdomains: v.optional(v.boolean()),
+	},
+	handler: async (ctx, args) => {
+		// Verify learning ownership
+		await _getOrThrowLearning(ctx, {
+			learningId: args.learningId,
+			userId: args.userId,
+		});
+
+		// Check if this URL already exists for this learning
+		const existing = await ctx.db
+			.query("mappedSearchResults")
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", args.learningId).eq("userId", args.userId),
+			)
+			.filter((q) => q.eq(q.field("url"), args.url))
+			.first();
+
+		if (existing) {
+			// Update existing record
+			await ctx.db.patch(existing._id, {
+				limit: args.limit,
+				search: args.search,
+				ignoreSitemap: args.ignoreSitemap,
+				includeSubdomains: args.includeSubdomains,
+			});
+			return existing._id;
+		}
+
+		// Create new record
+		return await ctx.db.insert("mappedSearchResults", {
+			learningId: args.learningId,
+			userId: args.userId,
+			url: args.url,
+			limit: args.limit,
+			search: args.search,
+			ignoreSitemap: args.ignoreSitemap,
+			includeSubdomains: args.includeSubdomains,
+		});
+	},
+});
+
+/**
+ * Batch upsert mapped search results for a plan
+ */
+export const upsertMappedSearchResultsForPlan = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -77,7 +133,7 @@ export const upsertPlanMappedSearchResults = mutation({
 		),
 	},
 	returns: v.object({
-		mappedSearchResultIds: v.array(v.id("planMappedSearchResults")),
+		mappedSearchResultIds: v.array(v.id("mappedSearchResults")),
 	}),
 	handler: async (ctx, args) => {
 		// Verify plan ownership
@@ -87,7 +143,7 @@ export const upsertPlanMappedSearchResults = mutation({
 			args.data.map(async (item) => {
 				// Check if this URL already exists for this plan
 				const existing = await ctx.db
-					.query("planMappedSearchResults")
+					.query("mappedSearchResults")
 					.withIndex("by_planId_and_userId", (q) =>
 						q.eq("planId", args.planId).eq("userId", args.userId),
 					)
@@ -106,7 +162,7 @@ export const upsertPlanMappedSearchResults = mutation({
 				}
 
 				// Create new record
-				return await ctx.db.insert("planMappedSearchResults", {
+				return await ctx.db.insert("mappedSearchResults", {
 					planId: args.planId,
 					userId: args.userId,
 					url: item.url,
@@ -125,21 +181,21 @@ export const upsertPlanMappedSearchResults = mutation({
 /**
  * Delete a mapped search result
  */
-export const deletePlanMappedSearchResult = mutation({
+export const deleteMappedSearchResult = mutation({
 	args: {
-		mappedSearchResultId: v.id("planMappedSearchResults"),
+		mappedSearchResultId: v.id("mappedSearchResults"),
 		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		await _getOrThrowPlanMappedSearchResult(ctx, {
+		await _getOrThrowMappedSearchResult(ctx, {
 			mappedSearchResultId: args.mappedSearchResultId,
 			userId: args.userId,
 		});
 
-		// Also delete any planSearchResults that reference this mapped URL
+		// Also delete any searchResults that reference this mapped URL
 		const relatedSearchResults = await ctx.db
-			.query("planSearchResults")
+			.query("searchResults")
 			.filter((q) => q.eq(q.field("mappedUrlId"), args.mappedSearchResultId))
 			.collect();
 
@@ -153,3 +209,4 @@ export const deletePlanMappedSearchResult = mutation({
 		return null;
 	},
 });
+

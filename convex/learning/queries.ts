@@ -317,7 +317,7 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 			}
 		}
 
-		// Get plan IDs and fetch search results
+		// Get plan IDs and fetch search results (using renamed table)
 		const planIds = [
 			...new Set(
 				Array.from(plansByChatId.values())
@@ -327,13 +327,13 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 		];
 
 		const allSearchResults = await ctx.db
-			.query("planSearchResults")
+			.query("searchResults")
 			.withIndex("by_userId", (q) => q.eq("userId", args.userId))
 			.collect();
 
-		const searchResultsByPlanId = new Map<string, Doc<"planSearchResults">[]>();
+		const searchResultsByPlanId = new Map<string, Doc<"searchResults">[]>();
 		for (const result of allSearchResults) {
-			if (planIds.includes(result.planId)) {
+			if (result.planId && planIds.includes(result.planId)) {
 				if (!searchResultsByPlanId.has(result.planId)) {
 					searchResultsByPlanId.set(result.planId, []);
 				}

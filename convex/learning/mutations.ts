@@ -268,34 +268,38 @@ export const deleteLearning = mutation({
 			?.map((planChat) => planChat?.threadId)
 			.filter(Boolean);
 
-		// Get plan items and search results
-		const [planItems, planSearchResults] = await Promise.all([
+		// Get plan items and search results (using renamed tables)
+		const [planItems, searchResults] = await Promise.all([
 			Promise.all(
 				planIds.flatMap((planId) =>
 					ctx.db
 						.query("planItems")
-						.withIndex("by_planId", (q) => q.eq("planId", planId))
+						.withIndex("by_planId_and_userId", (q) =>
+							q.eq("planId", planId).eq("userId", userId),
+						)
 						.collect(),
 				),
 			),
 			Promise.all(
 				planIds.flatMap((planId) =>
 					ctx.db
-						.query("planSearchResults")
-						.withIndex("by_planId", (q) => q.eq("planId", planId))
+						.query("searchResults")
+						.withIndex("by_planId_and_userId", (q) =>
+							q.eq("planId", planId).eq("userId", userId),
+						)
 						.collect(),
 				),
 			),
 		]);
 
 		const flatPlanItems = planItems.flat();
-		const flatPlanSearchResults = planSearchResults.flat();
+		const flatSearchResults = searchResults.flat();
 
 		// Delete all related records in proper order
 		// Level 1: Delete plan items and search results
 		await Promise.all([
 			...flatPlanItems.map((item) => ctx.db.delete(item._id)),
-			...flatPlanSearchResults.map((item) => ctx.db.delete(item._id)),
+			...flatSearchResults.map((item) => ctx.db.delete(item._id)),
 		]);
 
 		// Level 2: Delete plan chats and learning content chats

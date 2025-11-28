@@ -39,7 +39,7 @@ type AdvancedUrl = {
 };
 
 type MappedUrlItemData = {
-	_id: Id<"planMappedSearchResults">;
+	_id: Id<"mappedSearchResults">;
 	url?: string;
 	search?: string;
 	limit?: number;
@@ -184,21 +184,21 @@ const FileUploadSection = ({
 	const [isUploading, setIsUploading] = useState(false);
 
 	const { data: existingResources, isLoading } = useQuery(
-		convexQuery(api.plan.queries.getPlanResources, { planId, userId }),
+		convexQuery(api.plan.queries.getResources, { planId, userId }),
 	);
 
 	const generateUploadUrl = useConvexDirectMutation(
 		api.plan.mutations.generateUploadUrl,
 	);
 
-	const savePlanResource = useMutation({
-		mutationKey: ["savePlanResource", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.savePlanResource),
+	const saveResource = useMutation({
+		mutationKey: ["saveResource", planId],
+		mutationFn: useConvexMutation(api.plan.mutations.saveResource),
 	});
 
-	const deletePlanResource = useMutation({
-		mutationKey: ["deletePlanResource", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.deletePlanResource),
+	const deleteResource = useMutation({
+		mutationKey: ["deleteResource", planId],
+		mutationFn: useConvexMutation(api.plan.mutations.deleteResource),
 	});
 
 	const handleFileUpload = async (files: FileList) => {
@@ -234,7 +234,7 @@ const FileUploadSection = ({
 
 				const { storageId } = await result.json();
 
-				await savePlanResource.mutateAsync({
+				await saveResource.mutateAsync({
 					planId,
 					userId,
 					storageId,
@@ -254,9 +254,9 @@ const FileUploadSection = ({
 		}
 	};
 
-	const handleDeleteResource = async (resourceId: Id<"planResources">) => {
+	const handleDeleteResource = async (resourceId: Id<"resources">) => {
 		try {
-			await deletePlanResource.mutateAsync({ resourceId, userId });
+			await deleteResource.mutateAsync({ resourceId, userId });
 			toast.success("File deleted", { position: "top-center" });
 		} catch (error) {
 			toast.error("Failed to delete file", {
@@ -338,7 +338,7 @@ const FileUploadSection = ({
 								variant="ghost"
 								size="sm"
 								className="size-6 p-0! hover:text-destructive"
-								disabled={deletePlanResource.isPending}
+								disabled={deleteResource.isPending}
 								onClick={() => handleDeleteResource(resource._id)}
 							>
 								<SharedIcon icon={Delete01Icon} className="size-4.5" />
@@ -364,22 +364,22 @@ const SimpleUrlsSection = ({
 }) => {
 	const [newUrls, setNewUrls] = useState<string[]>([]);
 	const [editingUrlId, setEditingUrlId] =
-		useState<Id<"planSearchResults"> | null>(null);
+		useState<Id<"searchResults"> | null>(null);
 	const [editingUrlValue, setEditingUrlValue] = useState("");
 	const [editingUrlOriginal, setEditingUrlOriginal] = useState("");
 
 	const { data: existingUrls, isLoading } = useQuery(
-		convexQuery(api.plan.queries.getPlanSearchResults, { planId, userId }),
+		convexQuery(api.plan.queries.getSearchResults, { planId, userId }),
 	);
 
-	const upsertPlanSearchResults = useMutation({
-		mutationKey: ["upsertPlanSearchResults", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.upsertPlanSearchResults),
+	const upsertSearchResults = useMutation({
+		mutationKey: ["upsertSearchResults", planId],
+		mutationFn: useConvexMutation(api.plan.mutations.upsertSearchResults),
 	});
 
-	const deletePlanSearchResult = useMutation({
-		mutationKey: ["deletePlanSearchResult", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.deletePlanSearchResult),
+	const deleteSearchResult = useMutation({
+		mutationKey: ["deleteSearchResult", planId],
+		mutationFn: useConvexMutation(api.plan.mutations.deleteSearchResult),
 	});
 
 	const handleSaveUrls = async () => {
@@ -390,7 +390,7 @@ const SimpleUrlsSection = ({
 		}
 
 		try {
-			await upsertPlanSearchResults.mutateAsync({
+			await upsertSearchResults.mutateAsync({
 				planId,
 				userId,
 				data: validUrls.map((url) => ({
@@ -415,9 +415,9 @@ const SimpleUrlsSection = ({
 		}
 	};
 
-	const handleDeleteUrl = async (searchResultId: Id<"planSearchResults">) => {
+	const handleDeleteUrl = async (searchResultId: Id<"searchResults">) => {
 		try {
-			await deletePlanSearchResult.mutateAsync({ searchResultId, userId });
+			await deleteSearchResult.mutateAsync({ searchResultId, userId });
 			toast.success("URL deleted", { position: "top-center" });
 		} catch (error) {
 			toast.error("Failed to delete URL", {
@@ -429,7 +429,7 @@ const SimpleUrlsSection = ({
 	};
 
 	const handleStartEdit = (
-		urlId: Id<"planSearchResults">,
+		urlId: Id<"searchResults">,
 		currentUrl: string,
 	) => {
 		setEditingUrlId(urlId);
@@ -451,11 +451,11 @@ const SimpleUrlsSection = ({
 
 		try {
 			if (urlChanged) {
-				await deletePlanSearchResult.mutateAsync({
+				await deleteSearchResult.mutateAsync({
 					searchResultId: editingUrlId,
 					userId,
 				});
-				await upsertPlanSearchResults.mutateAsync({
+				await upsertSearchResults.mutateAsync({
 					planId,
 					userId,
 					data: [{ url: newUrl }],
@@ -530,7 +530,7 @@ const SimpleUrlsSection = ({
 											variant="ghost"
 											size="sm"
 											className="size-6 p-0! text-green-600 hover:text-green-700"
-											disabled={upsertPlanSearchResults.isPending}
+											disabled={upsertSearchResults.isPending}
 											onClick={handleSaveEdit}
 										>
 											<SharedIcon icon={Tick01Icon} className="size-4.5" />
@@ -572,7 +572,7 @@ const SimpleUrlsSection = ({
 											variant="ghost"
 											size="sm"
 											className="size-6 p-0! hover:text-destructive"
-											disabled={deletePlanSearchResult.isPending}
+											disabled={deleteSearchResult.isPending}
 											onClick={() => handleDeleteUrl(urlItem._id)}
 										>
 											<SharedIcon icon={Delete01Icon} className="size-4.5" />
@@ -626,10 +626,10 @@ const SimpleUrlsSection = ({
 						type="button"
 						size="sm"
 						className="w-full"
-						disabled={upsertPlanSearchResults.isPending}
+						disabled={upsertSearchResults.isPending}
 						onClick={handleSaveUrls}
 					>
-						{upsertPlanSearchResults.isPending ? (
+						{upsertSearchResults.isPending ? (
 							<>
 								<SharedIcon
 									icon={Loading03Icon}
@@ -666,29 +666,29 @@ const MappedUrlsSection = ({
 }) => {
 	const [newMappedUrls, setNewMappedUrls] = useState<AdvancedUrl[]>([]);
 	const [editingMappedUrlId, setEditingMappedUrlId] =
-		useState<Id<"planMappedSearchResults"> | null>(null);
+		useState<Id<"mappedSearchResults"> | null>(null);
 	const [editingMappedUrl, setEditingMappedUrl] = useState<AdvancedUrl | null>(
 		null,
 	);
 
 	const { data: existingMappedUrls, isLoading } = useQuery(
 		convexQuery(
-			api.planMappedSearchResults.queries.getPlanMappedSearchResults,
+			api.mappedSearchResults.queries.getMappedSearchResultsByPlanId,
 			{ planId, userId },
 		),
 	);
 
-	const upsertPlanMappedSearchResults = useMutation({
-		mutationKey: ["upsertPlanMappedSearchResults", planId],
+	const upsertMappedSearchResults = useMutation({
+		mutationKey: ["upsertMappedSearchResults", planId],
 		mutationFn: useConvexMutation(
-			api.planMappedSearchResults.mutations.upsertPlanMappedSearchResults,
+			api.mappedSearchResults.mutations.upsertMappedSearchResultsForPlan,
 		),
 	});
 
-	const deletePlanMappedSearchResult = useMutation({
-		mutationKey: ["deletePlanMappedSearchResult", planId],
+	const deleteMappedSearchResult = useMutation({
+		mutationKey: ["deleteMappedSearchResult", planId],
 		mutationFn: useConvexMutation(
-			api.planMappedSearchResults.mutations.deletePlanMappedSearchResult,
+			api.mappedSearchResults.mutations.deleteMappedSearchResult,
 		),
 	});
 
@@ -727,7 +727,7 @@ const MappedUrlsSection = ({
 		}
 
 		try {
-			await upsertPlanMappedSearchResults.mutateAsync({
+			await upsertMappedSearchResults.mutateAsync({
 				planId,
 				userId,
 				data: validUrls.map((u) => ({
@@ -751,10 +751,10 @@ const MappedUrlsSection = ({
 	};
 
 	const handleDeleteMappedUrl = async (
-		mappedSearchResultId: Id<"planMappedSearchResults">,
+		mappedSearchResultId: Id<"mappedSearchResults">,
 	) => {
 		try {
-			await deletePlanMappedSearchResult.mutateAsync({
+			await deleteMappedSearchResult.mutateAsync({
 				mappedSearchResultId,
 				userId,
 			});
@@ -771,7 +771,7 @@ const MappedUrlsSection = ({
 	};
 
 	const handleStartEdit = (
-		mappedUrlId: Id<"planMappedSearchResults">,
+		mappedUrlId: Id<"mappedSearchResults">,
 		mappedUrl: MappedUrlItemData,
 	) => {
 		setEditingMappedUrlId(mappedUrlId);
@@ -795,11 +795,11 @@ const MappedUrlsSection = ({
 		const newUrl = editingMappedUrl.url.trim();
 
 		try {
-			await deletePlanMappedSearchResult.mutateAsync({
+			await deleteMappedSearchResult.mutateAsync({
 				mappedSearchResultId: editingMappedUrlId,
 				userId,
 			});
-			await upsertPlanMappedSearchResults.mutateAsync({
+			await upsertMappedSearchResults.mutateAsync({
 				planId,
 				userId,
 				data: [
@@ -897,7 +897,7 @@ const MappedUrlsSection = ({
 											variant="ghost"
 											size="sm"
 											className="size-6 p-0 text-green-600 hover:text-green-700"
-											disabled={upsertPlanMappedSearchResults.isPending}
+											disabled={upsertMappedSearchResults.isPending}
 											onClick={handleSaveEdit}
 										>
 											<SharedIcon icon={Tick01Icon} className="size-4.5" />
@@ -941,7 +941,7 @@ const MappedUrlsSection = ({
 												variant="ghost"
 												size="sm"
 												className="h-6 w-6 p-0 hover:text-destructive"
-												disabled={deletePlanMappedSearchResult.isPending}
+												disabled={deleteMappedSearchResult.isPending}
 												onClick={() => handleDeleteMappedUrl(mappedUrl._id)}
 											>
 												<SharedIcon icon={Delete01Icon} className="size-4.5" />
@@ -1001,10 +1001,10 @@ const MappedUrlsSection = ({
 						type="button"
 						size="sm"
 						className="w-full"
-						disabled={upsertPlanMappedSearchResults.isPending}
+						disabled={upsertMappedSearchResults.isPending}
 						onClick={handleSaveMappedUrls}
 					>
-						{upsertPlanMappedSearchResults.isPending ? (
+						{upsertMappedSearchResults.isPending ? (
 							<>
 								<SharedIcon
 									icon={Loading03Icon}

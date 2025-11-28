@@ -1,5 +1,5 @@
 /**
- * Join queries for plan with related tables (planItems, planSearchResults)
+ * Join queries for plan with related tables (planItems, searchResults)
  * Single responsibility: Combined read operations across plan relationships
  */
 
@@ -174,9 +174,9 @@ export const deleteById = internalMutation({
 			)
 			.collect();
 
-		// Fetch and delete all search results
+		// Fetch and delete all search results (using renamed table)
 		const searchResults = await ctx.db
-			.query("planSearchResults")
+			.query("searchResults")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -224,7 +224,7 @@ export const batchDeleteByChatIds = internalMutation({
 			return { deletedCount: 0, itemsDeletedCount: 0, searchResultsDeletedCount: 0 };
 		}
 
-		// Fetch all items and search results for these plans
+		// Fetch all items and search results for these plans (using renamed table)
 		const itemPromises = flatPlans.map((plan) =>
 			ctx.db
 				.query("planItems")
@@ -236,7 +236,7 @@ export const batchDeleteByChatIds = internalMutation({
 
 		const searchResultPromises = flatPlans.map((plan) =>
 			ctx.db
-				.query("planSearchResults")
+				.query("searchResults")
 				.withIndex("by_planId_and_userId", (q) =>
 					q.eq("planId", plan._id).eq("userId", args.userId),
 				)

@@ -22,9 +22,9 @@ export const getPlanDetail = query({
 			userId: args.userId,
 		});
 
-		// Get search results for this plan
-		const planSearchResults = await ctx.db
-			.query("planSearchResults")
+		// Get search results for this plan (using renamed table)
+		const searchResults = await ctx.db
+			.query("searchResults")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -35,7 +35,7 @@ export const getPlanDetail = query({
 				...plan,
 				detail: {
 					learningRequirement: plan.learningRequirements,
-					planSearchResults,
+					searchResults,
 				},
 			},
 		};
@@ -78,16 +78,17 @@ export const getPlanByChatIdAndUserId = query({
 });
 
 /**
- * Get plan search results by plan ID
+ * Get search results by plan ID
+ * Now uses the renamed searchResults table
  */
-export const getPlanSearchResults = query({
+export const getSearchResults = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("planSearchResults")
+			.query("searchResults")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -96,18 +97,20 @@ export const getPlanSearchResults = query({
 });
 
 /**
- * Get plan resources (PDF files) by plan ID
+ * Get resources (PDF files) by plan ID
+ * Now uses the renamed resources table
  */
-export const getPlanResources = query({
+export const getResources = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	returns: v.array(
 		v.object({
-			_id: v.id("planResources"),
+			_id: v.id("resources"),
 			_creationTime: v.number(),
-			planId: v.id("plans"),
+			planId: v.optional(v.id("plans")),
+			learningId: v.optional(v.id("learnings")),
 			userId: v.string(),
 			storageId: v.id("_storage"),
 			fileName: v.string(),
@@ -118,9 +121,68 @@ export const getPlanResources = query({
 	),
 	handler: async (ctx, args) => {
 		const resources = await ctx.db
-			.query("planResources")
+			.query("resources")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
+
+		return await Promise.all(
+			resources.map(async (resource) => ({
+				...resource,
+				url: await ctx.storage.getUrl(resource.storageId),
+			})),
+		);
+	},
+});
+
+/**
+ * Get search results by learning ID
+ * Uses the renamed searchResults table for learning-level resources
+ */
+export const getSearchResultsByLearningId = query({
+	args: {
+		learningId: v.id("learnings"),
+		userId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db
+			.query("searchResults")
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", args.learningId).eq("userId", args.userId),
+			)
+			.collect();
+	},
+});
+
+/**
+ * Get resources by learning ID
+ * Uses the renamed resources table for learning-level resources
+ */
+export const getResourcesByLearningId = query({
+	args: {
+		learningId: v.id("learnings"),
+		userId: v.string(),
+	},
+	returns: v.array(
+		v.object({
+			_id: v.id("resources"),
+			_creationTime: v.number(),
+			planId: v.optional(v.id("plans")),
+			learningId: v.optional(v.id("learnings")),
+			userId: v.string(),
+			storageId: v.id("_storage"),
+			fileName: v.string(),
+			fileSize: v.number(),
+			mimeType: v.string(),
+			url: v.union(v.string(), v.null()),
+		}),
+	),
+	handler: async (ctx, args) => {
+		const resources = await ctx.db
+			.query("resources")
+			.withIndex("by_learningId_and_userId", (q) =>
+				q.eq("learningId", args.learningId).eq("userId", args.userId),
 			)
 			.collect();
 

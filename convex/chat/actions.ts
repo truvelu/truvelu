@@ -132,7 +132,7 @@ export const generateSearchQueriesTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"plans">["learningRequirements"];
-				planSearchResults: Doc<"planSearchResults">[];
+				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -211,7 +211,7 @@ export const webSearchTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"plans">["learningRequirements"];
-				planSearchResults: Doc<"planSearchResults">[];
+				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -272,8 +272,8 @@ export const webSearchTool = internalAction({
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 			}
 
-			// Save search results to database using the new consolidated table
-			await ctx.runMutation(api.plan.mutations.upsertPlanSearchResults, {
+			// Save search results to database using the renamed table
+			await ctx.runMutation(api.plan.mutations.upsertSearchResults, {
 				planId: plan._id,
 				userId,
 				data: searchResultsToSave,
@@ -322,7 +322,7 @@ export const generateLearningListTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"plans">["learningRequirements"];
-				planSearchResults: Doc<"planSearchResults">[];
+				searchResults: Doc<"searchResults">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -330,7 +330,7 @@ export const generateLearningListTool = internalAction({
 		);
 
 		const learningRequirement = planData.detail.learningRequirement;
-		const searchResults = planData.detail.planSearchResults;
+		const searchResults = planData.detail.searchResults;
 
 		const learningRequirementContent = `
 			<topic>${learningRequirement?.topic}<topic>
@@ -340,7 +340,7 @@ export const generateLearningListTool = internalAction({
 			<other>${JSON.stringify(learningRequirement?.other)}<other>`;
 
 		const searchResultsContent = searchResults?.map(
-			(result: Doc<"planSearchResults">, idx: number) =>
+			(result: Doc<"searchResults">, idx: number) =>
 				`<search_result_${idx}>
 			<title>${result.title}</title>
 			<url>${result.url}</url>

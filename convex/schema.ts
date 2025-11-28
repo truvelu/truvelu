@@ -100,23 +100,28 @@ export default defineSchema({
 		type: chatTypeValidator,
 		status: v.optional(chatStatusValidator),
 	})
-		.index("by_threadId", ["threadId"])
 		.index("by_userId", ["userId"])
 		.index("by_threadId_and_userId", ["threadId", "userId"])
 		.index("by_uuid_and_userId", ["uuid", "userId"])
 		.index("by_type_and_userId", ["type", "userId"]),
 
-	discussions: defineTable({
+	// Generalized chat metadata table (replaces discussions)
+	// Links chats to parent chats, messages, or learnings
+	chatMetadatas: defineTable({
 		chatId: v.id("chats"),
-		parentChatId: v.id("chats"),
-		messageId: v.string(),
 		userId: v.string(),
+		// Optional: parent chat for discussion-type chats
+		parentChatId: v.optional(v.id("chats")),
+		// Optional: linked message ID for discussions on specific messages
+		linkedMessageId: v.optional(v.string()),
+		// Optional: linked learning for learning-related chats
+		learningId: v.optional(v.id("learnings")),
 	})
-		.index("by_chatId", ["chatId"])
-		.index("by_messageId", ["messageId"])
 		.index("by_userId", ["userId"])
-		.index("by_parentChatId", ["parentChatId"])
-		.index("by_parentChatId_and_userId", ["parentChatId", "userId"]),
+		.index("by_chatId_and_userId", ["chatId", "userId"])
+		.index("by_linkedMessageId_and_userId", ["linkedMessageId", "userId"])
+		.index("by_parentChatId_and_userId", ["parentChatId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
 	learnings: defineTable({
 		uuid: v.string(),
@@ -140,10 +145,8 @@ export default defineSchema({
 		priority: v.optional(v.string()),
 		status: chatStatusValidator,
 	})
-		.index("by_learningId", ["learningId"])
 		.index("by_userId", ["userId"])
-		.index("by_learningId_and_userId", ["learningId", "userId"])
-		.index("by_status", ["status"]),
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
 	plans: defineTable({
 		chatId: v.id("chats"),
@@ -165,24 +168,33 @@ export default defineSchema({
 		.index("by_chatId_and_userId", ["chatId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	planMappedSearchResults: defineTable({
-		planId: v.id("plans"),
+	// Renamed from planMappedSearchResults - now supports both plan and learning level
+	mappedSearchResults: defineTable({
 		userId: v.string(),
+		// Optional: link to specific plan
+		planId: v.optional(v.id("plans")),
+		// Optional: link to learning (for learning-level resources)
+		learningId: v.optional(v.id("learnings")),
 		url: v.optional(v.string()),
 		search: v.optional(v.string()),
 		limit: v.optional(v.number()),
 		ignoreSitemap: v.optional(v.boolean()),
 		includeSubdomains: v.optional(v.boolean()),
 	})
-		.index("by_planId", ["planId"])
 		.index("by_userId", ["userId"])
-		.index("by_planId_and_userId", ["planId", "userId"]),
+		.index("by_planId_and_userId", ["planId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	planSearchResults: defineTable({
-		planId: v.id("plans"),
-		mappedUrlId: v.optional(v.id("planMappedSearchResults")),
-		query: v.optional(v.string()),
+	// Renamed from planSearchResults - now supports both plan and learning level
+	searchResults: defineTable({
 		userId: v.string(),
+		// Optional: link to specific plan
+		planId: v.optional(v.id("plans")),
+		// Optional: link to learning (for learning-level resources)
+		learningId: v.optional(v.id("learnings")),
+		// Optional: reference to mapped URL
+		mappedUrlId: v.optional(v.id("mappedSearchResults")),
+		query: v.optional(v.string()),
 		title: v.optional(v.string()),
 		url: v.optional(v.string()),
 		image: v.optional(v.string()),
@@ -191,9 +203,9 @@ export default defineSchema({
 		score: v.optional(v.number()),
 		other: freeObjectValidator,
 	})
-		.index("by_planId", ["planId"])
 		.index("by_userId", ["userId"])
-		.index("by_planId_and_userId", ["planId", "userId"]),
+		.index("by_planId_and_userId", ["planId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
 	planItems: defineTable({
 		planId: v.id("plans"),
@@ -202,18 +214,21 @@ export default defineSchema({
 		description: v.optional(v.string()),
 		order: v.number(),
 		status: chatStatusValidator,
-	})
-		.index("by_planId", ["planId"])
-		.index("by_planId_and_userId", ["planId", "userId"]),
+	}).index("by_planId_and_userId", ["planId", "userId"]),
 
-	planResources: defineTable({
-		planId: v.id("plans"),
+	// Renamed from planResources - now supports both plan and learning level
+	resources: defineTable({
 		userId: v.string(),
+		// Optional: link to specific plan
+		planId: v.optional(v.id("plans")),
+		// Optional: link to learning (for learning-level resources)
+		learningId: v.optional(v.id("learnings")),
 		storageId: v.id("_storage"),
 		fileName: v.string(),
 		fileSize: v.number(),
 		mimeType: v.string(),
 	})
-		.index("by_planId", ["planId"])
-		.index("by_planId_and_userId", ["planId", "userId"]),
+		.index("by_userId", ["userId"])
+		.index("by_planId_and_userId", ["planId", "userId"])
+		.index("by_learningId_and_userId", ["learningId", "userId"]),
 });

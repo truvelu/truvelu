@@ -1,10 +1,15 @@
+/**
+ * ChatMetadata actions
+ * Single responsibility: Action operations for chat metadata domain
+ */
+
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import { action } from "../_generated/server";
 import { createAgent } from "../agent";
 
 /**
- * Delete a discussion
+ * Delete a discussion (action wrapper for thread deletion)
  */
 export const deleteDiscussion = action({
 	args: {
@@ -26,10 +31,11 @@ export const deleteDiscussion = action({
 			throw new Error("Chat not found");
 		}
 
-		await ctx.runMutation(internal.discussion.mutations.deleteDiscussion, {
+		await ctx.runMutation(internal.chatMetadatas.mutations.deleteDiscussion, {
 			threadId,
 			userId,
 		});
 		await agent.deleteThreadSync(ctx, { threadId });
 	},
 });
+

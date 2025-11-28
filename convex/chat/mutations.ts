@@ -50,8 +50,8 @@ export const patchChatStatus = internalMutation({
 	handler: async (ctx, { threadId, status }) => {
 		const chat = await ctx.db
 			.query("chats")
-			.withIndex("by_threadId", (q) => q.eq("threadId", threadId))
-			.unique();
+			.withIndex("by_threadId_and_userId", (q) => q.eq("threadId", threadId))
+			.first();
 
 		if (!chat) {
 			throw new Error("Chat not found");
@@ -111,7 +111,7 @@ export const sendChatMessage = mutation({
 
 /**
  * Send learning preference and update plan's embedded learningRequirements
- * Also saves user-provided URLs to planSearchResults (deduplicates automatically)
+ * Also saves user-provided URLs to searchResults (deduplicates automatically)
  */
 export const sendLearningPreference = mutation({
 	args: {
@@ -143,7 +143,7 @@ export const sendLearningPreference = mutation({
 			},
 		});
 
-		// Extract and save user-provided URLs to planSearchResults
+		// Extract and save user-provided URLs to searchResults (renamed table)
 		// This handles deduplication - if URL already exists, it won't be duplicated
 		if (
 			payload.other &&
@@ -172,7 +172,7 @@ export const sendLearningPreference = mutation({
 				}));
 
 			if (urlsToSave.length > 0) {
-				await ctx.runMutation(api.plan.mutations.upsertPlanSearchResults, {
+				await ctx.runMutation(api.plan.mutations.upsertSearchResults, {
 					planId: lastPlan._id,
 					userId,
 					data: urlsToSave,
@@ -180,7 +180,7 @@ export const sendLearningPreference = mutation({
 			}
 		}
 
-		// Save uploaded file resources (PDFs)
+		// Save uploaded file resources (PDFs) using renamed table
 		if (
 			payload.other &&
 			typeof payload.other === "object" &&
@@ -196,7 +196,7 @@ export const sendLearningPreference = mutation({
 					"fileSize" in fileResource &&
 					"mimeType" in fileResource
 				) {
-					await ctx.runMutation(api.plan.mutations.savePlanResource, {
+					await ctx.runMutation(api.plan.mutations.saveResource, {
 						planId: lastPlan._id,
 						userId,
 						storageId: fileResource.storageId,
@@ -259,19 +259,26 @@ export const deleteChat = internalMutation({
 	},
 	handler: async (ctx, { chatId, userId }) => {
 		await _getOrThrowChat(ctx, { chatId, userId });
-		const discussionChat = await ctx.runQuery(
-			api.discussion.queries.getDiscussionByParentChatId,
+
+		// Get chat metadata records that reference this chat as parent
+		const chatMetadatas = await ctx.runQuery(
+			api.chatMetadatas.queries.getChatMetadatasByParentChatId,
 			{
 				chatId,
 				userId,
 			},
 		);
+
+		// Delete all chat metadata records
 		await Promise.all([
-			...discussionChat.map((discussion) => ctx.db.delete(discussion._id)),
+			...chatMetadatas.map((metadata) => ctx.db.delete(metadata._id)),
 		]);
+
+		// Delete the child chats (discussion chats)
 		await Promise.all([
-			...discussionChat.map((discussion) => ctx.db.delete(discussion.chatId)),
+			...chatMetadatas.map((metadata) => ctx.db.delete(metadata.chatId)),
 		]);
+
 		await ctx.db.delete(chatId);
 	},
 });
