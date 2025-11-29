@@ -327,9 +327,9 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 			),
 		];
 
-		const [allSearchResults, allLearningRequirements] = await Promise.all([
+		const [allWebSearch, allLearningRequirements] = await Promise.all([
 			ctx.db
-				.query("searchResults")
+				.query("webSearch")
 				.withIndex("by_userId", (q) => q.eq("userId", args.userId))
 				.collect(),
 			ctx.db
@@ -340,13 +340,13 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 				.collect(),
 		]);
 
-		const searchResultsByPlanId = new Map<string, Doc<"searchResults">[]>();
-		for (const result of allSearchResults) {
+		const webSearchByPlanId = new Map<string, Doc<"webSearch">[]>();
+		for (const result of allWebSearch) {
 			if (result.planId && planIds.includes(result.planId)) {
-				if (!searchResultsByPlanId.has(result.planId)) {
-					searchResultsByPlanId.set(result.planId, []);
+				if (!webSearchByPlanId.has(result.planId)) {
+					webSearchByPlanId.set(result.planId, []);
 				}
-				const resultList = searchResultsByPlanId.get(result.planId);
+				const resultList = webSearchByPlanId.get(result.planId);
 				if (resultList) {
 					resultList.push(result);
 				}
@@ -385,14 +385,14 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 							status: learningContent.status,
 						},
 						planData: null,
-						planMetadataLearningRequirementData: null,
-						planMetadataSearchQueryData: null,
-						planMetadataSearchResultData: null,
+						learningRequirementData: null,
+						searchQueryData: null,
+						webSearchData: null,
 					};
 				}
 
-				const searchResults = searchResultsByPlanId.get(lastPlan._id) || [];
-				const lastSearchResult = searchResults.sort(
+				const webSearch = webSearchByPlanId.get(lastPlan._id) || [];
+				const lastWebSearch = webSearch.sort(
 					(a, b) => b._creationTime - a._creationTime,
 				)[0];
 
@@ -414,12 +414,12 @@ export const getLearningChatsContentByLearningIdThatStatusDraft = query({
 					},
 					planData: lastPlan,
 					// learningRequirements is now from separate table
-					planMetadataLearningRequirementData: learningRequirements ?? null,
-					// query is embedded in search results
-					planMetadataSearchQueryData: lastSearchResult?.query
-						? { query: lastSearchResult.query }
+					learningRequirementData: learningRequirements ?? null,
+					// query is embedded in web search results
+					searchQueryData: lastWebSearch?.query
+						? { query: lastWebSearch.query }
 						: null,
-					planMetadataSearchResultData: lastSearchResult || null,
+					webSearchData: lastWebSearch || null,
 				};
 			},
 		);

@@ -153,7 +153,7 @@ export const generateSearchQueriesTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"learningRequirements"> | null;
-				searchResults: Doc<"searchResults">[];
+				webSearch: Doc<"webSearch">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -195,7 +195,7 @@ export const generateSearchQueriesTool = internalAction({
 				searchQueries: searchQueriesObject?.object,
 			},
 			message:
-				"Search queries generated successfully. Next continue to call the webSearch tool to find relevant, high-quality educational resources about the search query.",
+				"Search queries generated successfully. Next continue to call the web search tool to find relevant, high-quality educational resources about the search query.",
 		});
 
 		await agent.saveMessages(ctx, {
@@ -232,7 +232,7 @@ export const webSearchTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"learningRequirements"> | null;
-				searchResults: Doc<"searchResults">[];
+				webSearch: Doc<"webSearch">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -263,7 +263,7 @@ export const webSearchTool = internalAction({
 			const Exa = (await import("exa-js")).default;
 			const exa = new Exa(exaApiKey);
 
-			const searchResultsToSave: Array<{
+			const webSearchToSave: Array<{
 				query?: string;
 				title?: string;
 				url?: string;
@@ -289,19 +289,19 @@ export const webSearchTool = internalAction({
 					score: result.score ?? 0,
 				}));
 
-				searchResultsToSave.push(...processedResults);
+				webSearchToSave.push(...processedResults);
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 			}
 
-			// Save search results to database (now includes learningId automatically)
-			await ctx.runMutation(api.plan.mutations.upsertSearchResults, {
+			// Save web search results to database (now includes learningId automatically)
+			await ctx.runMutation(api.plan.mutations.upsertWebSearch, {
 				planId: plan._id,
 				userId,
-				data: searchResultsToSave,
+				data: webSearchToSave,
 			});
 
 			const result = JSON.stringify({
-				data: searchResultsToSave.map((r) => ({
+				data: webSearchToSave.map((r) => ({
 					title: r.title,
 					url: r.url,
 					image: r.image,
@@ -343,7 +343,7 @@ export const generateLearningListTool = internalAction({
 			plan: Doc<"plans">;
 			detail: {
 				learningRequirement: Doc<"learningRequirements"> | null;
-				searchResults: Doc<"searchResults">[];
+				webSearch: Doc<"webSearch">[];
 			};
 		} = await ctx.runAction(
 			internal.plan.actions.getLastPlanWithDetailsByThreadId,
@@ -351,7 +351,7 @@ export const generateLearningListTool = internalAction({
 		);
 
 		const learningRequirement = planData.detail.learningRequirement;
-		const searchResults = planData.detail.searchResults;
+		const webSearch = planData.detail.webSearch;
 
 		const learningRequirementContent = `
 			<topic>${learningRequirement?.topic}<topic>
@@ -360,8 +360,8 @@ export const generateLearningListTool = internalAction({
 			<duration>${learningRequirement?.duration}<duration>
 			<other>${JSON.stringify(learningRequirement?.other)}<other>`;
 
-		const searchResultsContent = searchResults?.map(
-			(result: Doc<"searchResults">, idx: number) =>
+		const webSearchContent = webSearch?.map(
+			(result: Doc<"webSearch">, idx: number) =>
 				`<search_result_${idx}>
 			<title>${result.title}</title>
 			<url>${result.url}</url>
@@ -390,7 +390,7 @@ export const generateLearningListTool = internalAction({
 					prompt: `
 						<metadata>
 						<learning_requirement>${learningRequirementContent}</learning_requirement>
-						<search_results>${searchResultsContent?.join("\n\n")}</search_results>
+						<search_results>${webSearchContent?.join("\n\n")}</search_results>
 						</metadata>
 
 						<the-ask>Generate a learning list for the user's learning plan based on the search results.</the-ask>

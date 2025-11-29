@@ -163,7 +163,7 @@ export default defineSchema({
 		.index("by_planId_and_userId", ["planId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	mappedSearchResults: defineTable({
+	urlToMap: defineTable({
 		userId: v.string(),
 		planId: v.optional(v.id("plans")),
 		learningId: v.optional(v.id("learnings")),
@@ -177,11 +177,11 @@ export default defineSchema({
 		.index("by_planId_and_userId", ["planId", "userId"])
 		.index("by_learningId_and_userId", ["learningId", "userId"]),
 
-	searchResults: defineTable({
+	webSearch: defineTable({
 		userId: v.string(),
 		planId: v.optional(v.id("plans")),
 		learningId: v.optional(v.id("learnings")),
-		mappedUrlId: v.optional(v.id("mappedSearchResults")),
+		mappedUrlId: v.optional(v.id("urlToMap")),
 		query: v.optional(v.string()),
 		title: v.optional(v.string()),
 		url: v.optional(v.string()),
@@ -204,7 +204,7 @@ export default defineSchema({
 		status: chatStatusValidator,
 	}).index("by_planId_and_userId", ["planId", "userId"]),
 
-	resources: defineTable({
+	files: defineTable({
 		userId: v.string(),
 		planId: v.optional(v.id("plans")),
 		learningId: v.optional(v.id("learnings")),

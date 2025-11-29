@@ -8,8 +8,8 @@ import { internalMutation, mutation } from "../_generated/server";
 import { chatStatusValidator, freeObjectValidator } from "../schema";
 import {
 	_getOrThrowPlan,
-	_getOrThrowResource,
-	_getOrThrowSearchResult,
+	_getOrThrowFile,
+	_getOrThrowWebSearch,
 } from "./helpers";
 
 /**
@@ -79,10 +79,10 @@ export const upsertLearningRequirements = mutation({
 });
 
 /**
- * Upsert search results (with optional query embedded)
- * Now uses the renamed searchResults table and includes learningId
+ * Upsert web search results (with optional query embedded)
+ * Now uses the renamed webSearch table and includes learningId
  */
-export const upsertSearchResults = mutation({
+export const upsertWebSearch = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -105,12 +105,12 @@ export const upsertSearchResults = mutation({
 			userId: args.userId,
 		});
 
-		const searchResultIds = await Promise.all(
+		const webSearchIds = await Promise.all(
 			args.data.map(async (item) => {
 				// Check if result with same URL already exists
 				if (item.url) {
 					const existing = await ctx.db
-						.query("searchResults")
+						.query("webSearch")
 						.withIndex("by_planId_and_userId", (q) =>
 							q.eq("planId", args.planId).eq("userId", args.userId),
 						)
@@ -132,7 +132,7 @@ export const upsertSearchResults = mutation({
 					}
 				}
 
-				return await ctx.db.insert("searchResults", {
+				return await ctx.db.insert("webSearch", {
 					planId: args.planId,
 					learningId: plan.learningId, // Include learningId from plan
 					userId: args.userId,
@@ -149,7 +149,7 @@ export const upsertSearchResults = mutation({
 		);
 
 		return {
-			data: { searchResultIds },
+			data: { webSearchIds },
 		};
 	},
 });
@@ -180,11 +180,11 @@ export const generateUploadUrl = mutation({
 });
 
 /**
- * Save resource (PDF file reference)
+ * Save file (PDF file reference)
  * Called after file is uploaded to storage
- * Now uses the renamed resources table and includes learningId
+ * Now uses the renamed files table and includes learningId
  */
-export const saveResource = mutation({
+export const saveFile = mutation({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
@@ -193,7 +193,7 @@ export const saveResource = mutation({
 		fileSize: v.number(),
 		mimeType: v.string(),
 	},
-	returns: v.id("resources"),
+	returns: v.id("files"),
 	handler: async (ctx, args) => {
 		const plan = await _getOrThrowPlan(ctx, {
 			planId: args.planId,
@@ -207,7 +207,7 @@ export const saveResource = mutation({
 
 		// Check if this file already exists (by storageId)
 		const existing = await ctx.db
-			.query("resources")
+			.query("files")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -218,7 +218,7 @@ export const saveResource = mutation({
 			return existing._id;
 		}
 
-		return await ctx.db.insert("resources", {
+		return await ctx.db.insert("files", {
 			planId: args.planId,
 			learningId: plan.learningId, // Include learningId from plan
 			userId: args.userId,
@@ -231,48 +231,48 @@ export const saveResource = mutation({
 });
 
 /**
- * Delete resource
- * Now uses the renamed resources table
+ * Delete file
+ * Now uses the renamed files table
  */
-export const deleteResource = mutation({
+export const deleteFile = mutation({
 	args: {
-		resourceId: v.id("resources"),
+		fileId: v.id("files"),
 		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		const resource = await _getOrThrowResource(ctx, {
-			resourceId: args.resourceId,
+		const file = await _getOrThrowFile(ctx, {
+			fileId: args.fileId,
 			userId: args.userId,
 		});
 
 		// Delete from storage
-		await ctx.storage.delete(resource.storageId);
+		await ctx.storage.delete(file.storageId);
 
 		// Delete the record
-		await ctx.db.delete(args.resourceId);
+		await ctx.db.delete(args.fileId);
 
 		return null;
 	},
 });
 
 /**
- * Delete search result (URL)
- * Now uses the renamed searchResults table
+ * Delete web search result (URL)
+ * Now uses the renamed webSearch table
  */
-export const deleteSearchResult = mutation({
+export const deleteWebSearch = mutation({
 	args: {
-		searchResultId: v.id("searchResults"),
+		webSearchId: v.id("webSearch"),
 		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		await _getOrThrowSearchResult(ctx, {
-			searchResultId: args.searchResultId,
+		await _getOrThrowWebSearch(ctx, {
+			webSearchId: args.webSearchId,
 			userId: args.userId,
 		});
 
-		await ctx.db.delete(args.searchResultId);
+		await ctx.db.delete(args.webSearchId);
 
 		return null;
 	},

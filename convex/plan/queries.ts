@@ -31,9 +31,9 @@ export const getPlanDetail = query({
 			)
 			.unique();
 
-		// Get search results for this plan
-		const searchResults = await ctx.db
-			.query("searchResults")
+		// Get web search results for this plan
+		const webSearch = await ctx.db
+			.query("webSearch")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -44,7 +44,7 @@ export const getPlanDetail = query({
 				...plan,
 				detail: {
 					learningRequirement: learningRequirements,
-					searchResults,
+					webSearch,
 				},
 			},
 		};
@@ -106,17 +106,17 @@ export const getLearningRequirements = query({
 });
 
 /**
- * Get search results by plan ID
- * Now uses the renamed searchResults table
+ * Get web search results by plan ID
+ * Now uses the renamed webSearch table
  */
-export const getSearchResults = query({
+export const getWebSearch = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("searchResults")
+			.query("webSearch")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -125,17 +125,17 @@ export const getSearchResults = query({
 });
 
 /**
- * Get resources (PDF files) by plan ID
- * Now uses the renamed resources table
+ * Get files (PDF files) by plan ID
+ * Now uses the renamed files table
  */
-export const getResources = query({
+export const getFiles = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	returns: v.array(
 		v.object({
-			_id: v.id("resources"),
+			_id: v.id("files"),
 			_creationTime: v.number(),
 			planId: v.optional(v.id("plans")),
 			learningId: v.optional(v.id("learnings")),
@@ -148,34 +148,34 @@ export const getResources = query({
 		}),
 	),
 	handler: async (ctx, args) => {
-		const resources = await ctx.db
-			.query("resources")
+		const files = await ctx.db
+			.query("files")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
 			.collect();
 
 		return await Promise.all(
-			resources.map(async (resource) => ({
-				...resource,
-				url: await ctx.storage.getUrl(resource.storageId),
+			files.map(async (file) => ({
+				...file,
+				url: await ctx.storage.getUrl(file.storageId),
 			})),
 		);
 	},
 });
 
 /**
- * Get search results by learning ID
- * Uses the renamed searchResults table for learning-level resources
+ * Get web search results by learning ID
+ * Uses the renamed webSearch table for learning-level resources
  */
-export const getSearchResultsByLearningId = query({
+export const getWebSearchByLearningId = query({
 	args: {
 		learningId: v.id("learnings"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("searchResults")
+			.query("webSearch")
 			.withIndex("by_learningId_and_userId", (q) =>
 				q.eq("learningId", args.learningId).eq("userId", args.userId),
 			)
@@ -184,17 +184,17 @@ export const getSearchResultsByLearningId = query({
 });
 
 /**
- * Get resources by learning ID
- * Uses the renamed resources table for learning-level resources
+ * Get files by learning ID
+ * Uses the renamed files table for learning-level resources
  */
-export const getResourcesByLearningId = query({
+export const getFilesByLearningId = query({
 	args: {
 		learningId: v.id("learnings"),
 		userId: v.string(),
 	},
 	returns: v.array(
 		v.object({
-			_id: v.id("resources"),
+			_id: v.id("files"),
 			_creationTime: v.number(),
 			planId: v.optional(v.id("plans")),
 			learningId: v.optional(v.id("learnings")),
@@ -207,17 +207,17 @@ export const getResourcesByLearningId = query({
 		}),
 	),
 	handler: async (ctx, args) => {
-		const resources = await ctx.db
-			.query("resources")
+		const files = await ctx.db
+			.query("files")
 			.withIndex("by_learningId_and_userId", (q) =>
 				q.eq("learningId", args.learningId).eq("userId", args.userId),
 			)
 			.collect();
 
 		return await Promise.all(
-			resources.map(async (resource) => ({
-				...resource,
-				url: await ctx.storage.getUrl(resource.storageId),
+			files.map(async (file) => ({
+				...file,
+				url: await ctx.storage.getUrl(file.storageId),
 			})),
 		);
 	},

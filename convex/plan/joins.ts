@@ -1,5 +1,5 @@
 /**
- * Join queries for plan with related tables (planItems, searchResults, learningRequirements)
+ * Join queries for plan with related tables (planItems, webSearch, learningRequirements)
  * Single responsibility: Combined read operations across plan relationships
  */
 
@@ -158,7 +158,7 @@ export const batchGetByChatIds = internalQuery({
 });
 
 /**
- * Delete plan and all its items, search results, and learning requirements
+ * Delete plan and all its items, web search results, and learning requirements
  */
 export const deleteById = internalMutation({
 	args: {
@@ -174,9 +174,9 @@ export const deleteById = internalMutation({
 			)
 			.collect();
 
-		// Fetch and delete all search results
-		const searchResults = await ctx.db
-			.query("searchResults")
+		// Fetch and delete all web search results
+		const webSearch = await ctx.db
+			.query("webSearch")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -192,7 +192,7 @@ export const deleteById = internalMutation({
 
 		await Promise.all([
 			...items.map((item) => ctx.db.delete(item._id)),
-			...searchResults.map((result) => ctx.db.delete(result._id)),
+			...webSearch.map((result) => ctx.db.delete(result._id)),
 			...learningRequirements.map((lr) => ctx.db.delete(lr._id)),
 		]);
 
@@ -202,7 +202,7 @@ export const deleteById = internalMutation({
 		return {
 			deletedCount: 1,
 			itemsDeletedCount: items.length,
-			searchResultsDeletedCount: searchResults.length,
+			webSearchDeletedCount: webSearch.length,
 			learningRequirementsDeletedCount: learningRequirements.length,
 		};
 	},
@@ -234,12 +234,12 @@ export const batchDeleteByChatIds = internalMutation({
 			return {
 				deletedCount: 0,
 				itemsDeletedCount: 0,
-				searchResultsDeletedCount: 0,
+				webSearchDeletedCount: 0,
 				learningRequirementsDeletedCount: 0,
 			};
 		}
 
-		// Fetch all items, search results, and learning requirements for these plans
+		// Fetch all items, web search results, and learning requirements for these plans
 		const itemPromises = flatPlans.map((plan) =>
 			ctx.db
 				.query("planItems")
@@ -249,9 +249,9 @@ export const batchDeleteByChatIds = internalMutation({
 				.collect(),
 		);
 
-		const searchResultPromises = flatPlans.map((plan) =>
+		const webSearchPromises = flatPlans.map((plan) =>
 			ctx.db
-				.query("searchResults")
+				.query("webSearch")
 				.withIndex("by_planId_and_userId", (q) =>
 					q.eq("planId", plan._id).eq("userId", args.userId),
 				)
@@ -267,21 +267,21 @@ export const batchDeleteByChatIds = internalMutation({
 				.collect(),
 		);
 
-		const [itemResults, searchResultResults, learningRequirementsResults] =
+		const [itemResults, webSearchResults, learningRequirementsResults] =
 			await Promise.all([
 				Promise.all(itemPromises),
-				Promise.all(searchResultPromises),
+				Promise.all(webSearchPromises),
 				Promise.all(learningRequirementsPromises),
 			]);
 
 		const flatItems = itemResults.flat();
-		const flatSearchResults = searchResultResults.flat();
+		const flatWebSearch = webSearchResults.flat();
 		const flatLearningRequirements = learningRequirementsResults.flat();
 
-		// Delete all items, search results, and learning requirements first
+		// Delete all items, web search results, and learning requirements first
 		await Promise.all([
 			...flatItems.map((item) => ctx.db.delete(item._id)),
-			...flatSearchResults.map((result) => ctx.db.delete(result._id)),
+			...flatWebSearch.map((result) => ctx.db.delete(result._id)),
 			...flatLearningRequirements.map((lr) => ctx.db.delete(lr._id)),
 		]);
 
@@ -291,7 +291,7 @@ export const batchDeleteByChatIds = internalMutation({
 		return {
 			deletedCount: flatPlans.length,
 			itemsDeletedCount: flatItems.length,
-			searchResultsDeletedCount: flatSearchResults.length,
+			webSearchDeletedCount: flatWebSearch.length,
 			learningRequirementsDeletedCount: flatLearningRequirements.length,
 		};
 	},

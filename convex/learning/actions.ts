@@ -88,9 +88,9 @@ export const streamGenerateLearningContent = internalAction({
 			const generateSearchQueries = await generateObject({
 				model: courseContentGeneratorAgent.options.languageModel,
 				system: courseContentGeneratorAgent.options.instructions,
-				prompt: `<initial-learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</initial-learning-requirement>
-				<initial-search-query>${JSON.stringify(data?.planMetadataSearchQueryData)}</initial-search-query>
-				<initial-search-results>${JSON.stringify(data?.planMetadataSearchResultData)}</initial-search-results>
+				prompt: `<initial-learning-requirement>${JSON.stringify(data?.learningRequirementData)}</initial-learning-requirement>
+				<initial-search-query>${JSON.stringify(data?.searchQueryData)}</initial-search-query>
+				<initial-search-results>${JSON.stringify(data?.webSearchData)}</initial-search-results>
 				<title>${data?.metadata?.title}</title>
 				<description>${data?.metadata?.description}</description>
 				<learning-objectives>${JSON.stringify(data?.metadata?.learningObjectives)}</learning-objectives>
@@ -167,7 +167,7 @@ export const streamGenerateLearningContent = internalAction({
 				system: courseContentGeneratorAgent.options.instructions,
 				prompt: `
 				<search-results>${JSON.stringify(searchResultsToSave)}</search-results>
-				<learning-requirement>${JSON.stringify(data?.planMetadataLearningRequirementData)}</learning-requirement>
+				<learning-requirement>${JSON.stringify(data?.learningRequirementData)}</learning-requirement>
 				<title>${data?.metadata?.title}</title>
 				<description>${data?.metadata?.description}</description>
 				<learning-objectives>${JSON.stringify(data?.metadata?.learningObjectives)}</learning-objectives>

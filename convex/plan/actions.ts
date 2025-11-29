@@ -24,7 +24,7 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 		plan: Doc<"plans">;
 		detail: {
 			learningRequirement: Doc<"learningRequirements"> | null;
-			searchResults: Doc<"searchResults">[];
+			webSearch: Doc<"webSearch">[];
 		};
 	}> => {
 		// Get the last plan
@@ -43,9 +43,9 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 				userId: args.userId,
 			});
 
-		// Get search results
-		const searchResults: Doc<"searchResults">[] = await ctx.runQuery(
-			api.plan.queries.getSearchResults,
+		// Get web search results
+		const webSearch: Doc<"webSearch">[] = await ctx.runQuery(
+			api.plan.queries.getWebSearch,
 			{
 				planId: lastPlan._id,
 				userId: args.userId,
@@ -56,7 +56,7 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 			plan: lastPlan,
 			detail: {
 				learningRequirement: learningRequirements,
-				searchResults,
+				webSearch,
 			},
 		};
 	},

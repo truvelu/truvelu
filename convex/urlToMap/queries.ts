@@ -1,23 +1,23 @@
 /**
- * Mapped Search Results queries
- * Single responsibility: Read operations for mapped search results domain
- * Renamed from planMappedSearchResults - now supports both plan and learning level
+ * URL to Map queries
+ * Single responsibility: Read operations for URL to map domain
+ * Renamed from mappedSearchResults - now supports both plan and learning level
  */
 
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 
 /**
- * Get all mapped search results for a plan
+ * Get all URL to map entries for a plan
  */
-export const getMappedSearchResultsByPlanId = query({
+export const getUrlToMapByPlanId = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("mappedSearchResults")
+			.query("urlToMap")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -26,16 +26,16 @@ export const getMappedSearchResultsByPlanId = query({
 });
 
 /**
- * Get all mapped search results for a learning
+ * Get all URL to map entries for a learning
  */
-export const getMappedSearchResultsByLearningId = query({
+export const getUrlToMapByLearningId = query({
 	args: {
 		learningId: v.id("learnings"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("mappedSearchResults")
+			.query("urlToMap")
 			.withIndex("by_learningId_and_userId", (q) =>
 				q.eq("learningId", args.learningId).eq("userId", args.userId),
 			)
@@ -44,15 +44,15 @@ export const getMappedSearchResultsByLearningId = query({
 });
 
 /**
- * Get a single mapped search result by ID
+ * Get a single URL to map entry by ID
  */
-export const getMappedSearchResultById = query({
+export const getUrlToMapById = query({
 	args: {
-		mappedSearchResultId: v.id("mappedSearchResults"),
+		urlToMapId: v.id("urlToMap"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const result = await ctx.db.get(args.mappedSearchResultId);
+		const result = await ctx.db.get(args.urlToMapId);
 		if (!result || result.userId !== args.userId) {
 			return null;
 		}

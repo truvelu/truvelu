@@ -4,21 +4,21 @@ import type { DataModel, Id } from "../_generated/dataModel";
 type ReadCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>;
 
 /**
- * Get a resource by ID or throw if not found/unauthorized
- * Renamed from _getOrThrowPlanResource
+ * Get a file by ID or throw if not found/unauthorized
+ * Renamed from _getOrThrowResource
  */
-export async function _getOrThrowResource(
+export async function _getOrThrowFile(
 	ctx: ReadCtx,
-	{ resourceId, userId }: { resourceId: Id<"resources">; userId: string },
+	{ fileId, userId }: { fileId: Id<"files">; userId: string },
 ) {
-	const resource = await ctx.db.get(resourceId);
-	if (!resource) {
-		throw new Error(`Resource not found: ${resourceId}`);
+	const file = await ctx.db.get(fileId);
+	if (!file) {
+		throw new Error(`File not found: ${fileId}`);
 	}
-	if (resource.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this resource`);
+	if (file.userId !== userId) {
+		throw new Error(`Unauthorized: You don't own this file`);
 	}
-	return resource;
+	return file;
 }
 
 /**
@@ -60,22 +60,22 @@ export async function _getOrThrowPlanByChatId(
 }
 
 /**
- * Get a search result by ID or throw if not found/unauthorized
- * Renamed from _getOrThrowPlanSearchResult
+ * Get a web search result by ID or throw if not found/unauthorized
+ * Renamed from _getOrThrowSearchResult
  */
-export async function _getOrThrowSearchResult(
+export async function _getOrThrowWebSearch(
 	ctx: ReadCtx,
 	{
-		searchResultId,
+		webSearchId,
 		userId,
-	}: { searchResultId: Id<"searchResults">; userId: string },
+	}: { webSearchId: Id<"webSearch">; userId: string },
 ) {
-	const searchResult = await ctx.db.get(searchResultId);
-	if (!searchResult) {
-		throw new Error(`Search result not found: ${searchResultId}`);
+	const webSearch = await ctx.db.get(webSearchId);
+	if (!webSearch) {
+		throw new Error(`Web search result not found: ${webSearchId}`);
 	}
-	if (searchResult.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this search result`);
+	if (webSearch.userId !== userId) {
+		throw new Error(`Unauthorized: You don't own this web search result`);
 	}
-	return searchResult;
+	return webSearch;
 }

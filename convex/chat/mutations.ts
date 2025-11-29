@@ -31,7 +31,10 @@ export const createChat = mutation({
 		learningId: v.optional(v.id("learnings")),
 		planId: v.optional(v.id("plans")),
 	},
-	handler: async (ctx, { agentType, userId, type, title, summary, learningId, planId }) => {
+	handler: async (
+		ctx,
+		{ agentType, userId, type, title, summary, learningId, planId },
+	) => {
 		return await _createChatService(ctx, {
 			agentType,
 			userId,
@@ -67,7 +70,7 @@ export const createDiscussion = mutation({
 		const parentChat = await ctx.db.get(parentChatId);
 
 		// Create a chat record for this discussion
-		const { id: discussionChatId, threadId } = await _createChatService(ctx, {
+		const { threadId } = await _createChatService(ctx, {
 			agentType,
 			userId,
 			type: "discussion",
@@ -166,7 +169,7 @@ export const sendChatMessage = mutation({
 
 /**
  * Send learning preference and update learningRequirements (separate table)
- * Also saves user-provided URLs to searchResults (deduplicates automatically)
+ * Also saves user-provided URLs to webSearch (deduplicates automatically)
  */
 export const sendLearningPreference = mutation({
 	args: {
@@ -200,7 +203,7 @@ export const sendLearningPreference = mutation({
 			},
 		});
 
-		// Extract and save user-provided URLs to searchResults (renamed table)
+		// Extract and save user-provided URLs to webSearch (renamed table)
 		// This handles deduplication - if URL already exists, it won't be duplicated
 		if (
 			payload.other &&
@@ -229,7 +232,7 @@ export const sendLearningPreference = mutation({
 				}));
 
 			if (urlsToSave.length > 0) {
-				await ctx.runMutation(api.plan.mutations.upsertSearchResults, {
+				await ctx.runMutation(api.plan.mutations.upsertWebSearch, {
 					planId: lastPlan._id,
 					userId,
 					data: urlsToSave,
@@ -237,7 +240,7 @@ export const sendLearningPreference = mutation({
 			}
 		}
 
-		// Save uploaded file resources (PDFs) using renamed table
+		// Save uploaded files (PDFs) using renamed table
 		if (
 			payload.other &&
 			typeof payload.other === "object" &&
@@ -253,7 +256,7 @@ export const sendLearningPreference = mutation({
 					"fileSize" in fileResource &&
 					"mimeType" in fileResource
 				) {
-					await ctx.runMutation(api.plan.mutations.saveResource, {
+					await ctx.runMutation(api.plan.mutations.saveFile, {
 						planId: lastPlan._id,
 						userId,
 						storageId: fileResource.storageId,

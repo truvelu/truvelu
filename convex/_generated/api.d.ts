@@ -21,15 +21,15 @@ import type * as learning_actions from "../learning/actions.js";
 import type * as learning_helpers from "../learning/helpers.js";
 import type * as learning_mutations from "../learning/mutations.js";
 import type * as learning_queries from "../learning/queries.js";
-import type * as mappedSearchResults_helpers from "../mappedSearchResults/helpers.js";
-import type * as mappedSearchResults_mutations from "../mappedSearchResults/mutations.js";
-import type * as mappedSearchResults_queries from "../mappedSearchResults/queries.js";
 import type * as migrations from "../migrations.js";
 import type * as plan_actions from "../plan/actions.js";
 import type * as plan_helpers from "../plan/helpers.js";
 import type * as plan_joins from "../plan/joins.js";
 import type * as plan_mutations from "../plan/mutations.js";
 import type * as plan_queries from "../plan/queries.js";
+import type * as urlToMap_helpers from "../urlToMap/helpers.js";
+import type * as urlToMap_mutations from "../urlToMap/mutations.js";
+import type * as urlToMap_queries from "../urlToMap/queries.js";
 import type * as workflow from "../workflow.js";
 
 import type {
@@ -52,15 +52,15 @@ declare const fullApi: ApiFromModules<{
   "learning/helpers": typeof learning_helpers;
   "learning/mutations": typeof learning_mutations;
   "learning/queries": typeof learning_queries;
-  "mappedSearchResults/helpers": typeof mappedSearchResults_helpers;
-  "mappedSearchResults/mutations": typeof mappedSearchResults_mutations;
-  "mappedSearchResults/queries": typeof mappedSearchResults_queries;
   migrations: typeof migrations;
   "plan/actions": typeof plan_actions;
   "plan/helpers": typeof plan_helpers;
   "plan/joins": typeof plan_joins;
   "plan/mutations": typeof plan_mutations;
   "plan/queries": typeof plan_queries;
+  "urlToMap/helpers": typeof urlToMap_helpers;
+  "urlToMap/mutations": typeof urlToMap_mutations;
+  "urlToMap/queries": typeof urlToMap_queries;
   workflow: typeof workflow;
 }>;
 
