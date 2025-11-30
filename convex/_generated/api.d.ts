@@ -33,6 +33,8 @@ import type * as plan_helpers from "../plan/helpers.js";
 import type * as plan_joins from "../plan/joins.js";
 import type * as plan_mutations from "../plan/mutations.js";
 import type * as plan_queries from "../plan/queries.js";
+import type * as resources_mutations from "../resources/mutations.js";
+import type * as resources_queries from "../resources/queries.js";
 import type * as urlToMap_actions from "../urlToMap/actions.js";
 import type * as urlToMap_helpers from "../urlToMap/helpers.js";
 import type * as urlToMap_mutations from "../urlToMap/mutations.js";
@@ -74,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   "plan/joins": typeof plan_joins;
   "plan/mutations": typeof plan_mutations;
   "plan/queries": typeof plan_queries;
+  "resources/mutations": typeof resources_mutations;
+  "resources/queries": typeof resources_queries;
   "urlToMap/actions": typeof urlToMap_actions;
   "urlToMap/helpers": typeof urlToMap_helpers;
   "urlToMap/mutations": typeof urlToMap_mutations;

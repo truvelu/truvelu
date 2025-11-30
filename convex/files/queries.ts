@@ -5,6 +5,7 @@
 
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { publishedStatusValidator } from "../schema";
 
 /**
  * Get files by plan ID
@@ -26,6 +27,9 @@ export const getByPlanId = query({
 			fileSize: v.number(),
 			mimeType: v.string(),
 			url: v.union(v.string(), v.null()),
+			publishedStatus: v.optional(publishedStatusValidator),
+			pendingDelete: v.optional(v.boolean()),
+			replacesId: v.optional(v.id("files")),
 		}),
 	),
 	handler: async (ctx, args) => {
@@ -65,6 +69,9 @@ export const getByLearningId = query({
 			fileSize: v.number(),
 			mimeType: v.string(),
 			url: v.union(v.string(), v.null()),
+			publishedStatus: v.optional(publishedStatusValidator),
+			pendingDelete: v.optional(v.boolean()),
+			replacesId: v.optional(v.id("files")),
 		}),
 	),
 	handler: async (ctx, args) => {

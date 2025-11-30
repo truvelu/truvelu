@@ -4,7 +4,7 @@
  */
 
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { _getOrThrowPlan } from "../plan/helpers";
 import { _getOrThrowFile } from "./helpers";
 
@@ -65,24 +65,27 @@ export const saveForPlan = mutation({
 			fileName: args.fileName,
 			fileSize: args.fileSize,
 			mimeType: args.mimeType,
+			publishedStatus: {
+				type: "draft",
+				date: new Date().toISOString(),
+			},
 		});
 	},
 });
 
 /**
- * Delete a file
+ * Hard delete a file (internal use only - used by publish)
  */
-export const deleteById = mutation({
+export const hardDeleteById = internalMutation({
 	args: {
 		fileId: v.id("files"),
-		userId: v.string(),
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
-		const file = await _getOrThrowFile(ctx, {
-			fileId: args.fileId,
-			userId: args.userId,
-		});
+		const file = await ctx.db.get(args.fileId);
+		if (!file) {
+			return null;
+		}
 
 		// Delete from storage
 		await ctx.storage.delete(file.storageId);
@@ -94,3 +97,80 @@ export const deleteById = mutation({
 	},
 });
 
+/**
+ * Mark a file for deletion (soft delete)
+ * The file will be deleted when the user publishes
+ */
+export const markForDeletion = mutation({
+	args: {
+		fileId: v.id("files"),
+		userId: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		await _getOrThrowFile(ctx, {
+			fileId: args.fileId,
+			userId: args.userId,
+		});
+
+		await ctx.db.patch(args.fileId, {
+			pendingDelete: true,
+		});
+
+		return null;
+	},
+});
+
+/**
+ * Cancel pending deletion of a file
+ */
+export const cancelDeletion = mutation({
+	args: {
+		fileId: v.id("files"),
+		userId: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		await _getOrThrowFile(ctx, {
+			fileId: args.fileId,
+			userId: args.userId,
+		});
+
+		await ctx.db.patch(args.fileId, {
+			pendingDelete: false,
+		});
+
+		return null;
+	},
+});
+
+/**
+ * Delete a draft file immediately
+ * Only works for files that are not yet published
+ */
+export const deleteDraft = mutation({
+	args: {
+		fileId: v.id("files"),
+		userId: v.string(),
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		const file = await _getOrThrowFile(ctx, {
+			fileId: args.fileId,
+			userId: args.userId,
+		});
+
+		// Only allow deletion of draft files
+		if (file.publishedStatus?.type === "published") {
+			throw new Error("Cannot directly delete published files. Use markForDeletion instead.");
+		}
+
+		// Delete from storage
+		await ctx.storage.delete(file.storageId);
+
+		// Delete the record
+		await ctx.db.delete(args.fileId);
+
+		return null;
+	},
+});

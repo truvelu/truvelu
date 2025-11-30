@@ -29,6 +29,9 @@ export async function _createWebSearch(
 		score,
 		other,
 		searchStatus,
+		publishedStatus,
+		pendingDelete,
+		replacesId,
 	}: WithoutSystemFields<Doc<"webSearch">>,
 ) {
 	return await ctx.db.insert("webSearch", {
@@ -45,6 +48,9 @@ export async function _createWebSearch(
 		score,
 		other,
 		searchStatus,
+		publishedStatus,
+		pendingDelete,
+		replacesId,
 	});
 }
 

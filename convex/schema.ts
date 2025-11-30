@@ -90,6 +90,12 @@ export const activeStatusValidator = v.union(
 	v.literal("archived"),
 );
 
+export const publishedStatusValidator = v.object({
+	type: v.union(v.literal("draft"), v.literal("published")),
+	date: v.string(),
+	message: v.optional(v.string()),
+});
+
 export const chatTypeValidator = v.union(
 	v.literal("main"),
 	v.literal("discussion"),
@@ -110,6 +116,7 @@ export const learningPreferenceValidator = v.object({
 export type ModelOptionsKey = Infer<typeof modelOptionsValidator>;
 export type SectionType = Infer<typeof chatTypeValidator>;
 export type ChatMode = Infer<typeof chatModeValidator>;
+export type PublishedStatus = Infer<typeof publishedStatusValidator>;
 
 export default defineSchema({
 	chats: defineTable({
@@ -192,6 +199,9 @@ export default defineSchema({
 		ignoreSitemap: v.optional(v.boolean()),
 		includeSubdomains: v.optional(v.boolean()),
 		mapStatus: v.optional(processStatusValidator),
+		publishedStatus: v.optional(publishedStatusValidator),
+		pendingDelete: v.optional(v.boolean()),
+		replacesId: v.optional(v.id("urlToMap")),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"])
@@ -211,6 +221,9 @@ export default defineSchema({
 		score: v.optional(v.number()),
 		other: freeObjectValidator,
 		searchStatus: v.optional(processStatusValidator),
+		publishedStatus: v.optional(publishedStatusValidator),
+		pendingDelete: v.optional(v.boolean()),
+		replacesId: v.optional(v.id("webSearch")),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"])
@@ -233,6 +246,9 @@ export default defineSchema({
 		fileName: v.string(),
 		fileSize: v.number(),
 		mimeType: v.string(),
+		publishedStatus: v.optional(publishedStatusValidator),
+		pendingDelete: v.optional(v.boolean()),
+		replacesId: v.optional(v.id("files")),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"])
