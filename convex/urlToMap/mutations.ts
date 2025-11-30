@@ -8,6 +8,7 @@ import { v } from "convex/values";
 import { mutation } from "../_generated/server";
 import { _getOrThrowLearning } from "../learning/helpers";
 import { _getOrThrowPlan } from "../plan/helpers";
+import { processStatusValidator } from "../schema";
 import { _getOrThrowUrlToMap } from "./helpers";
 
 /**
@@ -24,6 +25,7 @@ export const upsertUrlToMapForPlan = mutation({
 		search: v.optional(v.string()),
 		ignoreSitemap: v.optional(v.boolean()),
 		includeSubdomains: v.optional(v.boolean()),
+		mapStatus: v.optional(processStatusValidator),
 	},
 	handler: async (ctx, args) => {
 		// Verify plan ownership and get learningId
@@ -48,6 +50,7 @@ export const upsertUrlToMapForPlan = mutation({
 				search: args.search,
 				ignoreSitemap: args.ignoreSitemap,
 				includeSubdomains: args.includeSubdomains,
+				mapStatus: args.mapStatus,
 			});
 			return existing._id;
 		}
@@ -62,6 +65,9 @@ export const upsertUrlToMapForPlan = mutation({
 			search: args.search,
 			ignoreSitemap: args.ignoreSitemap,
 			includeSubdomains: args.includeSubdomains,
+			mapStatus: {
+				type: "draft",
+			},
 		});
 	},
 });
@@ -185,6 +191,25 @@ export const upsertUrlToMapForPlanBatch = mutation({
 		);
 
 		return { urlToMapIds };
+	},
+});
+
+export const updateUrlToMapStatus = mutation({
+	args: {
+		urlToMapId: v.id("urlToMap"),
+		userId: v.string(),
+		mapStatus: processStatusValidator,
+	},
+	handler: async (ctx, args) => {
+		await _getOrThrowUrlToMap(ctx, {
+			urlToMapId: args.urlToMapId,
+			userId: args.userId,
+		});
+		await ctx.db.patch(args.urlToMapId, {
+			mapStatus: args.mapStatus,
+		});
+
+		return args.urlToMapId;
 	},
 });
 

@@ -1,6 +1,6 @@
 /**
  * Plan queries
- * Single responsibility: Read operations for plan domain
+ * Single responsibility: Read operations for plan domain only
  */
 
 import { v } from "convex/values";
@@ -10,7 +10,7 @@ import { _getOrThrowPlan, _getOrThrowPlanByChatId } from "./helpers";
 
 /**
  * Get plan details with learningRequirements and search results
- * Now queries learningRequirements from separate table
+ * Uses cross-domain queries from other domain folders
  */
 export const getPlanDetail = query({
 	args: {
@@ -23,7 +23,7 @@ export const getPlanDetail = query({
 			userId: args.userId,
 		});
 
-		// Get learning requirements from separate table
+		// Get learning requirements from learningRequirements domain
 		const learningRequirements = await ctx.db
 			.query("learningRequirements")
 			.withIndex("by_planId_and_userId", (q) =>
@@ -31,7 +31,7 @@ export const getPlanDetail = query({
 			)
 			.unique();
 
-		// Get web search results for this plan
+		// Get web search results from webSearch domain
 		const webSearch = await ctx.db
 			.query("webSearch")
 			.withIndex("by_planId_and_userId", (q) =>
@@ -73,6 +73,9 @@ export const getLastPlanByThreadId = query({
 	},
 });
 
+/**
+ * Get plan by chatId and userId
+ */
 export const getPlanByChatIdAndUserId = query({
 	args: {
 		chatId: v.id("chats"),
@@ -87,138 +90,19 @@ export const getPlanByChatIdAndUserId = query({
 });
 
 /**
- * Get learning requirements by plan ID
- * New query for the separate learningRequirements table
+ * Get plan items by plan ID
  */
-export const getLearningRequirements = query({
+export const getPlanItems = query({
 	args: {
 		planId: v.id("plans"),
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await ctx.db
-			.query("learningRequirements")
-			.withIndex("by_planId_and_userId", (q) =>
-				q.eq("planId", args.planId).eq("userId", args.userId),
-			)
-			.unique();
-	},
-});
-
-/**
- * Get web search results by plan ID
- * Now uses the renamed webSearch table
- */
-export const getWebSearch = query({
-	args: {
-		planId: v.id("plans"),
-		userId: v.string(),
-	},
-	handler: async (ctx, args) => {
-		return await ctx.db
-			.query("webSearch")
+			.query("planItems")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
 			.collect();
-	},
-});
-
-/**
- * Get files (PDF files) by plan ID
- * Now uses the renamed files table
- */
-export const getFiles = query({
-	args: {
-		planId: v.id("plans"),
-		userId: v.string(),
-	},
-	returns: v.array(
-		v.object({
-			_id: v.id("files"),
-			_creationTime: v.number(),
-			planId: v.optional(v.id("plans")),
-			learningId: v.optional(v.id("learnings")),
-			userId: v.string(),
-			storageId: v.id("_storage"),
-			fileName: v.string(),
-			fileSize: v.number(),
-			mimeType: v.string(),
-			url: v.union(v.string(), v.null()),
-		}),
-	),
-	handler: async (ctx, args) => {
-		const files = await ctx.db
-			.query("files")
-			.withIndex("by_planId_and_userId", (q) =>
-				q.eq("planId", args.planId).eq("userId", args.userId),
-			)
-			.collect();
-
-		return await Promise.all(
-			files.map(async (file) => ({
-				...file,
-				url: await ctx.storage.getUrl(file.storageId),
-			})),
-		);
-	},
-});
-
-/**
- * Get web search results by learning ID
- * Uses the renamed webSearch table for learning-level resources
- */
-export const getWebSearchByLearningId = query({
-	args: {
-		learningId: v.id("learnings"),
-		userId: v.string(),
-	},
-	handler: async (ctx, args) => {
-		return await ctx.db
-			.query("webSearch")
-			.withIndex("by_learningId_and_userId", (q) =>
-				q.eq("learningId", args.learningId).eq("userId", args.userId),
-			)
-			.collect();
-	},
-});
-
-/**
- * Get files by learning ID
- * Uses the renamed files table for learning-level resources
- */
-export const getFilesByLearningId = query({
-	args: {
-		learningId: v.id("learnings"),
-		userId: v.string(),
-	},
-	returns: v.array(
-		v.object({
-			_id: v.id("files"),
-			_creationTime: v.number(),
-			planId: v.optional(v.id("plans")),
-			learningId: v.optional(v.id("learnings")),
-			userId: v.string(),
-			storageId: v.id("_storage"),
-			fileName: v.string(),
-			fileSize: v.number(),
-			mimeType: v.string(),
-			url: v.union(v.string(), v.null()),
-		}),
-	),
-	handler: async (ctx, args) => {
-		const files = await ctx.db
-			.query("files")
-			.withIndex("by_learningId_and_userId", (q) =>
-				q.eq("learningId", args.learningId).eq("userId", args.userId),
-			)
-			.collect();
-
-		return await Promise.all(
-			files.map(async (file) => ({
-				...file,
-				url: await ctx.storage.getUrl(file.storageId),
-			})),
-		);
 	},
 });

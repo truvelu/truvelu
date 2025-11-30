@@ -184,21 +184,21 @@ const FileUploadSection = ({
 	const [isUploading, setIsUploading] = useState(false);
 
 	const { data: existingFiles, isLoading } = useQuery(
-		convexQuery(api.plan.queries.getFiles, { planId, userId }),
+		convexQuery(api.files.queries.getByPlanId, { planId, userId }),
 	);
 
 	const generateUploadUrl = useConvexDirectMutation(
-		api.plan.mutations.generateUploadUrl,
+		api.files.mutations.generateUploadUrl,
 	);
 
 	const saveFile = useMutation({
 		mutationKey: ["saveFile", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.saveFile),
+		mutationFn: useConvexMutation(api.files.mutations.saveForPlan),
 	});
 
 	const deleteFile = useMutation({
 		mutationKey: ["deleteFile", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.deleteFile),
+		mutationFn: useConvexMutation(api.files.mutations.deleteById),
 	});
 
 	const handleFileUpload = async (files: FileList) => {
@@ -370,17 +370,17 @@ const SimpleUrlsSection = ({
 	const [editingUrlOriginal, setEditingUrlOriginal] = useState("");
 
 	const { data: existingUrls, isLoading } = useQuery(
-		convexQuery(api.plan.queries.getWebSearch, { planId, userId }),
+		convexQuery(api.webSearch.queries.getByPlanId, { planId, userId }),
 	);
 
 	const upsertWebSearch = useMutation({
 		mutationKey: ["upsertWebSearch", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.upsertWebSearch),
+		mutationFn: useConvexMutation(api.webSearch.mutations.upsertForPlan),
 	});
 
 	const deleteWebSearch = useMutation({
 		mutationKey: ["deleteWebSearch", planId],
-		mutationFn: useConvexMutation(api.plan.mutations.deleteWebSearch),
+		mutationFn: useConvexMutation(api.webSearch.mutations.deleteById),
 	});
 
 	const handleSaveUrls = async () => {
@@ -787,10 +787,10 @@ const MappedUrlsSection = ({
 		const newUrl = editingMappedUrl.url.trim();
 
 		try {
-			await deleteUrlToMap.mutateAsync({
-				urlToMapId: editingMappedUrlId,
-				userId,
-			});
+			// await deleteUrlToMap.mutateAsync({
+			// 	urlToMapId: editingMappedUrlId,
+			// 	userId,
+			// });
 			await upsertUrlToMap.mutateAsync({
 				planId,
 				userId,

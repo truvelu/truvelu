@@ -16,7 +16,13 @@ import type * as chat_helpers from "../chat/helpers.js";
 import type * as chat_mutations from "../chat/mutations.js";
 import type * as chat_queries from "../chat/queries.js";
 import type * as chat_workflow from "../chat/workflow.js";
+import type * as files_helpers from "../files/helpers.js";
+import type * as files_mutations from "../files/mutations.js";
+import type * as files_queries from "../files/queries.js";
 import type * as http from "../http.js";
+import type * as learningRequirements_helpers from "../learningRequirements/helpers.js";
+import type * as learningRequirements_mutations from "../learningRequirements/mutations.js";
+import type * as learningRequirements_queries from "../learningRequirements/queries.js";
 import type * as learning_actions from "../learning/actions.js";
 import type * as learning_helpers from "../learning/helpers.js";
 import type * as learning_mutations from "../learning/mutations.js";
@@ -27,9 +33,13 @@ import type * as plan_helpers from "../plan/helpers.js";
 import type * as plan_joins from "../plan/joins.js";
 import type * as plan_mutations from "../plan/mutations.js";
 import type * as plan_queries from "../plan/queries.js";
+import type * as urlToMap_actions from "../urlToMap/actions.js";
 import type * as urlToMap_helpers from "../urlToMap/helpers.js";
 import type * as urlToMap_mutations from "../urlToMap/mutations.js";
 import type * as urlToMap_queries from "../urlToMap/queries.js";
+import type * as webSearch_helpers from "../webSearch/helpers.js";
+import type * as webSearch_mutations from "../webSearch/mutations.js";
+import type * as webSearch_queries from "../webSearch/queries.js";
 import type * as workflow from "../workflow.js";
 
 import type {
@@ -47,7 +57,13 @@ declare const fullApi: ApiFromModules<{
   "chat/mutations": typeof chat_mutations;
   "chat/queries": typeof chat_queries;
   "chat/workflow": typeof chat_workflow;
+  "files/helpers": typeof files_helpers;
+  "files/mutations": typeof files_mutations;
+  "files/queries": typeof files_queries;
   http: typeof http;
+  "learningRequirements/helpers": typeof learningRequirements_helpers;
+  "learningRequirements/mutations": typeof learningRequirements_mutations;
+  "learningRequirements/queries": typeof learningRequirements_queries;
   "learning/actions": typeof learning_actions;
   "learning/helpers": typeof learning_helpers;
   "learning/mutations": typeof learning_mutations;
@@ -58,9 +74,13 @@ declare const fullApi: ApiFromModules<{
   "plan/joins": typeof plan_joins;
   "plan/mutations": typeof plan_mutations;
   "plan/queries": typeof plan_queries;
+  "urlToMap/actions": typeof urlToMap_actions;
   "urlToMap/helpers": typeof urlToMap_helpers;
   "urlToMap/mutations": typeof urlToMap_mutations;
   "urlToMap/queries": typeof urlToMap_queries;
+  "webSearch/helpers": typeof webSearch_helpers;
+  "webSearch/mutations": typeof webSearch_mutations;
+  "webSearch/queries": typeof webSearch_queries;
   workflow: typeof workflow;
 }>;
 

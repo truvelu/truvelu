@@ -1,6 +1,9 @@
 /**
- * Join queries for plan with related tables (planItems, webSearch, learningRequirements)
+ * Join queries for plan with related tables (planItems)
  * Single responsibility: Combined read operations across plan relationships
+ * 
+ * Note: For cross-domain operations (webSearch, files, learningRequirements),
+ * import from their respective domain folders.
  */
 
 import { v } from "convex/values";
@@ -158,7 +161,9 @@ export const batchGetByChatIds = internalQuery({
 });
 
 /**
- * Delete plan and all its items, web search results, and learning requirements
+ * Delete plan and all its related items
+ * Cross-domain deletes (webSearch, learningRequirements) should be handled
+ * by calling their respective domain mutations
  */
 export const deleteById = internalMutation({
 	args: {
@@ -166,7 +171,7 @@ export const deleteById = internalMutation({
 		userId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		// Fetch and delete all items
+		// Fetch and delete all plan items
 		const items = await ctx.db
 			.query("planItems")
 			.withIndex("by_planId_and_userId", (q) =>
@@ -174,7 +179,7 @@ export const deleteById = internalMutation({
 			)
 			.collect();
 
-		// Fetch and delete all web search results
+		// Fetch and delete all web search results (cross-domain)
 		const webSearch = await ctx.db
 			.query("webSearch")
 			.withIndex("by_planId_and_userId", (q) =>
@@ -182,9 +187,17 @@ export const deleteById = internalMutation({
 			)
 			.collect();
 
-		// Fetch and delete learning requirements
+		// Fetch and delete learning requirements (cross-domain)
 		const learningRequirements = await ctx.db
 			.query("learningRequirements")
+			.withIndex("by_planId_and_userId", (q) =>
+				q.eq("planId", args.planId).eq("userId", args.userId),
+			)
+			.collect();
+
+		// Fetch and delete files (cross-domain)
+		const files = await ctx.db
+			.query("files")
 			.withIndex("by_planId_and_userId", (q) =>
 				q.eq("planId", args.planId).eq("userId", args.userId),
 			)
@@ -194,6 +207,7 @@ export const deleteById = internalMutation({
 			...items.map((item) => ctx.db.delete(item._id)),
 			...webSearch.map((result) => ctx.db.delete(result._id)),
 			...learningRequirements.map((lr) => ctx.db.delete(lr._id)),
+			...files.map((file) => ctx.db.delete(file._id)),
 		]);
 
 		// Delete the plan
@@ -204,6 +218,7 @@ export const deleteById = internalMutation({
 			itemsDeletedCount: items.length,
 			webSearchDeletedCount: webSearch.length,
 			learningRequirementsDeletedCount: learningRequirements.length,
+			filesDeletedCount: files.length,
 		};
 	},
 });
@@ -236,10 +251,11 @@ export const batchDeleteByChatIds = internalMutation({
 				itemsDeletedCount: 0,
 				webSearchDeletedCount: 0,
 				learningRequirementsDeletedCount: 0,
+				filesDeletedCount: 0,
 			};
 		}
 
-		// Fetch all items, web search results, and learning requirements for these plans
+		// Fetch all related records for these plans
 		const itemPromises = flatPlans.map((plan) =>
 			ctx.db
 				.query("planItems")
@@ -267,22 +283,34 @@ export const batchDeleteByChatIds = internalMutation({
 				.collect(),
 		);
 
-		const [itemResults, webSearchResults, learningRequirementsResults] =
+		const filesPromises = flatPlans.map((plan) =>
+			ctx.db
+				.query("files")
+				.withIndex("by_planId_and_userId", (q) =>
+					q.eq("planId", plan._id).eq("userId", args.userId),
+				)
+				.collect(),
+		);
+
+		const [itemResults, webSearchResults, learningRequirementsResults, filesResults] =
 			await Promise.all([
 				Promise.all(itemPromises),
 				Promise.all(webSearchPromises),
 				Promise.all(learningRequirementsPromises),
+				Promise.all(filesPromises),
 			]);
 
 		const flatItems = itemResults.flat();
 		const flatWebSearch = webSearchResults.flat();
 		const flatLearningRequirements = learningRequirementsResults.flat();
+		const flatFiles = filesResults.flat();
 
-		// Delete all items, web search results, and learning requirements first
+		// Delete all related records first
 		await Promise.all([
 			...flatItems.map((item) => ctx.db.delete(item._id)),
 			...flatWebSearch.map((result) => ctx.db.delete(result._id)),
 			...flatLearningRequirements.map((lr) => ctx.db.delete(lr._id)),
+			...flatFiles.map((file) => ctx.db.delete(file._id)),
 		]);
 
 		// Delete all plans
@@ -293,6 +321,7 @@ export const batchDeleteByChatIds = internalMutation({
 			itemsDeletedCount: flatItems.length,
 			webSearchDeletedCount: flatWebSearch.length,
 			learningRequirementsDeletedCount: flatLearningRequirements.length,
+			filesDeletedCount: flatFiles.length,
 		};
 	},
 });

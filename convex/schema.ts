@@ -66,6 +66,25 @@ export const chatStatusValidator = v.union(
 	}),
 );
 
+export const processStatusValidator = v.union(
+	v.object({
+		type: v.literal("draft"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("processing"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("success"),
+		message: v.optional(v.string()),
+	}),
+	v.object({
+		type: v.literal("error"),
+		message: v.optional(v.string()),
+	}),
+);
+
 export const activeStatusValidator = v.union(
 	v.literal("active"),
 	v.literal("archived"),
@@ -172,6 +191,7 @@ export default defineSchema({
 		limit: v.optional(v.number()),
 		ignoreSitemap: v.optional(v.boolean()),
 		includeSubdomains: v.optional(v.boolean()),
+		mapStatus: v.optional(processStatusValidator),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"])
@@ -190,6 +210,7 @@ export default defineSchema({
 		publishedDate: v.optional(v.string()),
 		score: v.optional(v.number()),
 		other: freeObjectValidator,
+		searchStatus: v.optional(processStatusValidator),
 	})
 		.index("by_userId", ["userId"])
 		.index("by_planId_and_userId", ["planId", "userId"])

@@ -10,7 +10,8 @@ import { internalAction } from "../_generated/server";
 
 /**
  * Get the last plan with all details by threadId
- * This is a reusable action that returns full details including learningRequirements from separate table
+ * This is a reusable action that returns full details
+ * Uses cross-domain queries from webSearch and learningRequirements
  */
 export const getLastPlanWithDetailsByThreadId = internalAction({
 	args: {
@@ -36,16 +37,16 @@ export const getLastPlanWithDetailsByThreadId = internalAction({
 			},
 		);
 
-		// Get learning requirements from separate table
+		// Get learning requirements from learningRequirements domain
 		const learningRequirements: Doc<"learningRequirements"> | null =
-			await ctx.runQuery(api.plan.queries.getLearningRequirements, {
+			await ctx.runQuery(api.learningRequirements.queries.getByPlanId, {
 				planId: lastPlan._id,
 				userId: args.userId,
 			});
 
-		// Get web search results
+		// Get web search results from webSearch domain
 		const webSearch: Doc<"webSearch">[] = await ctx.runQuery(
-			api.plan.queries.getWebSearch,
+			api.webSearch.queries.getByPlanId,
 			{
 				planId: lastPlan._id,
 				userId: args.userId,

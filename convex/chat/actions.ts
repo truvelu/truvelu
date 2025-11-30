@@ -294,7 +294,7 @@ export const webSearchTool = internalAction({
 			}
 
 			// Save web search results to database (now includes learningId automatically)
-			await ctx.runMutation(api.plan.mutations.upsertWebSearch, {
+			await ctx.runMutation(api.webSearch.mutations.upsertForPlan, {
 				planId: plan._id,
 				userId,
 				data: webSearchToSave,

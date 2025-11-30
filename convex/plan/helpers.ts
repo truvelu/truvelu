@@ -1,25 +1,12 @@
+/**
+ * Plan helpers
+ * Single responsibility: Helper functions for plan domain only
+ */
+
 import type { GenericMutationCtx, GenericQueryCtx } from "convex/server";
 import type { DataModel, Id } from "../_generated/dataModel";
 
 type ReadCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>;
-
-/**
- * Get a file by ID or throw if not found/unauthorized
- * Renamed from _getOrThrowResource
- */
-export async function _getOrThrowFile(
-	ctx: ReadCtx,
-	{ fileId, userId }: { fileId: Id<"files">; userId: string },
-) {
-	const file = await ctx.db.get(fileId);
-	if (!file) {
-		throw new Error(`File not found: ${fileId}`);
-	}
-	if (file.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this file`);
-	}
-	return file;
-}
 
 /**
  * Get a plan by ID or throw if not found/unauthorized
@@ -60,22 +47,18 @@ export async function _getOrThrowPlanByChatId(
 }
 
 /**
- * Get a web search result by ID or throw if not found/unauthorized
- * Renamed from _getOrThrowSearchResult
+ * Get a plan item by ID or throw if not found/unauthorized
  */
-export async function _getOrThrowWebSearch(
+export async function _getOrThrowPlanItem(
 	ctx: ReadCtx,
-	{
-		webSearchId,
-		userId,
-	}: { webSearchId: Id<"webSearch">; userId: string },
+	{ planItemId, userId }: { planItemId: Id<"planItems">; userId: string },
 ) {
-	const webSearch = await ctx.db.get(webSearchId);
-	if (!webSearch) {
-		throw new Error(`Web search result not found: ${webSearchId}`);
+	const planItem = await ctx.db.get(planItemId);
+	if (!planItem) {
+		throw new Error(`Plan item not found: ${planItemId}`);
 	}
-	if (webSearch.userId !== userId) {
-		throw new Error(`Unauthorized: You don't own this web search result`);
+	if (planItem.userId !== userId) {
+		throw new Error(`Unauthorized: You don't own this plan item`);
 	}
-	return webSearch;
+	return planItem;
 }

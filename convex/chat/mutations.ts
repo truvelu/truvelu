@@ -191,7 +191,7 @@ export const sendLearningPreference = mutation({
 		}
 
 		// Upsert learning requirements in separate table
-		await ctx.runMutation(api.plan.mutations.upsertLearningRequirements, {
+		await ctx.runMutation(api.learningRequirements.mutations.upsertForPlan, {
 			planId: lastPlan._id,
 			userId,
 			data: {
@@ -232,7 +232,7 @@ export const sendLearningPreference = mutation({
 				}));
 
 			if (urlsToSave.length > 0) {
-				await ctx.runMutation(api.plan.mutations.upsertWebSearch, {
+				await ctx.runMutation(api.webSearch.mutations.upsertForPlan, {
 					planId: lastPlan._id,
 					userId,
 					data: urlsToSave,
@@ -256,7 +256,7 @@ export const sendLearningPreference = mutation({
 					"fileSize" in fileResource &&
 					"mimeType" in fileResource
 				) {
-					await ctx.runMutation(api.plan.mutations.saveFile, {
+					await ctx.runMutation(api.files.mutations.saveForPlan, {
 						planId: lastPlan._id,
 						userId,
 						storageId: fileResource.storageId,
